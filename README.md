@@ -3,129 +3,82 @@
 
 [![NPM version](https://img.shields.io/npm/v/iobroker.hannah.svg)](https://www.npmjs.com/package/iobroker.hannah)
 [![Downloads](https://img.shields.io/npm/dm/iobroker.hannah.svg)](https://www.npmjs.com/package/iobroker.hannah)
-![Number of Installations](https://iobroker.live/badges/hannah-installed.svg)
-![Current version in stable repository](https://iobroker.live/badges/hannah-stable.svg)
-
-[![NPM](https://nodei.co/npm/iobroker.hannah.png?downloads=true)](https://nodei.co/npm/iobroker.hannah/)
-
 **Tests:** ![Test and Release](https://github.com/NurPech/ioBroker.hannah/workflows/Test%20and%20Release/badge.svg)
 
-## hannah adapter for ioBroker
+## Hannah adapter for ioBroker
 
-Connects ioBroker to Hannah voice assistant via bidirectional gRPC — streams device states, presence and commands in real time.
+Connects ioBroker to the [Hannah](https://github.com/NurPech/hannah) voice assistant via a bidirectional gRPC stream. Device states, presence information and text commands flow from ioBroker to Hannah in real time; Hannah sends SetState commands back when it controls devices.
 
-## Developer manual
-This section is intended for the developer. It can be deleted later.
+This adapter replaces the previous MQTT-based integration and eliminates the message-loop problems that came with retained topics and wildcard subscriptions.
 
-### DISCLAIMER
+## Features
 
-Please make sure that you consider copyrights and trademarks when you use names or logos of a company and add a disclaimer to your README.
-You can check other adapters for examples or ask in the developer community. Using a name or logo of a company without permission may cause legal problems for you.
+- **Bidirectional gRPC stream** — persistent connection with automatic reconnect
+- **Device discovery** via ioBroker enums (rooms × functions) with configurable filters
+- **Extra state prefixes** — subscribe to any additional state tree (e.g. car tracker, weather adapter)
+- **Snapshot on connect** — current state values are pushed to Hannah immediately after connecting, replacing MQTT retained messages
+- **Resident presence** — forwards presence state changes from the Residents adapter
+- **Text commands** — a configurable ioBroker state can be used to send text queries to Hannah
+- **SetState** — Hannah can set ioBroker states directly via the same gRPC channel
 
-### Getting started
+## Requirements
 
-You are almost done, only a few steps left:
-1. Create a new repository on GitHub with the name `ioBroker.hannah`
-1. Initialize the current folder as a new git repository:  
-    ```bash
-    git init -b main
-    git add .
-    git commit -m "Initial commit"
-    ```
-1. Link your local repository with the one on GitHub:  
-    ```bash
-    git remote add origin https://github.com/NurPech/ioBroker.hannah
-    ```
+- ioBroker js-controller ≥ 5.0
+- Node.js ≥ 20
+- A running [Hannah Core](https://github.com/NurPech/hannah) instance with gRPC enabled (default port 50051)
 
-1. Push all files to the GitHub repo:  
-    ```bash
-    git push origin main
-    ```
-1. Add a new secret under https://github.com/NurPech/ioBroker.hannah/settings/secrets. It must be named `AUTO_MERGE_TOKEN` and contain a personal access token with push access to the repository, e.g. yours. You can create a new token under https://github.com/settings/tokens.
+## Installation
 
-1. Head over to [src/main.ts](src/main.ts) and start programming!
+Install via the ioBroker admin interface
 
-### Best Practices
-We've collected some [best practices](https://github.com/ioBroker/ioBroker.repositories#development-and-coding-best-practices) regarding ioBroker development and coding in general. If you're new to ioBroker or Node.js, you should
-check them out. If you're already experienced, you should also take a look at them - you might learn something new :)
+## Configuration
 
-### State Roles
-When creating state objects, it is important to use the correct role for the state. The role defines how the state should be interpreted by visualizations and other adapters. For a list of available roles and their meanings, please refer to the [state roles documentation](https://www.iobroker.net/#en/documentation/dev/stateroles.md).
+### Connection tab
 
-**Important:** Do not invent your own custom role names. If you need a role that is not part of the official list, please contact the ioBroker developer community for guidance and discussion about adding new roles.
+| Field | Description | Default |
+|-------|-------------|---------|
+| Hannah Host | IP address or hostname of the Hannah Core server | `127.0.0.1` |
+| gRPC Port | Port Hannah Core listens on | `50051` |
 
-### Scripts in `package.json`
-Several npm scripts are predefined for your convenience. You can run them using `npm run <scriptname>`
-| Script name | Description |
-|-------------|-------------|
-| `build` | Compile the TypeScript and React sources. |
-| `watch` | Compile the TypeScript and React sources and watch for changes. |
-| `build:ts` | Compile the TypeScript sources. |
-| `watch:ts` | Compile the TypeScript sources and watch for changes. |
-| `build:react` | Compile the React sources. |
-| `watch:react` | Compile the React sources and watch for changes. |
-| `test:ts` | Executes the tests you defined in `*.test.ts` files. |
-| `test:package` | Ensures your `package.json` and `io-package.json` are valid. |
-| `test:integration` | Tests the adapter startup with an actual instance of ioBroker. |
-| `test` | Performs a minimal test run on package files and your tests. |
-| `check` | Performs a type-check on your code (without compiling anything). |
-| `lint` | Runs `ESLint` to check your code for formatting errors and potential bugs. |
-| `translate` | Translates texts in your adapter to all required languages, see [`@iobroker/adapter-dev`](https://github.com/ioBroker/adapter-dev#manage-translations) for more details. |
-| `release` | Creates a new release, see [`@alcalzone/release-script`](https://github.com/AlCalzone/release-script#usage) for more details. |
+### Device Discovery tab
 
-### Configuring the compilation
-The adapter template uses [esbuild](https://esbuild.github.io/) to compile TypeScript and/or React code. You can configure many compilation settings 
-either in `tsconfig.json` or by changing options for the build tasks. These options are described in detail in the
-[`@iobroker/adapter-dev` documentation](https://github.com/ioBroker/adapter-dev#compile-adapter-files).
+Select which **rooms** and **functions** Hannah should be aware of. Leaving both lists empty includes everything.
 
-### Writing tests
-When done right, testing code is invaluable, because it gives you the 
-confidence to change your code while knowing exactly if and when 
-something breaks. A good read on the topic of test-driven development 
-is https://hackernoon.com/introduction-to-test-driven-development-tdd-61a13bc92d92. 
-Although writing tests before the code might seem strange at first, but it has very 
-clear upsides.
+**Extra State Prefixes** — additional ioBroker state ID prefixes to stream to Hannah, e.g.:
 
-The template provides you with basic tests for the adapter startup and package files.
-It is recommended that you add your own tests into the mix.
+| Use case | Prefix |
+|----------|--------|
+| Car tracker (VW-Connect) | `javascript.0.virtualDevice.Auto` |
+| Weather (openweathermap adapter) | `openweathermap.0.forecast` |
+| User variables | `0_userdata.0` |
 
-### Publishing the adapter
-Using GitHub Actions, you can enable automatic releases on npm whenever you push a new git tag that matches the form 
-`v<major>.<minor>.<patch>`. We **strongly recommend** that you do. The necessary steps are described in `.github/workflows/test-and-release.yml`.
+### Integrations tab
 
-Since you installed the release script, you can create a new
-release simply by calling:
-```bash
-npm run release
-```
-Additional command line options for the release script are explained in the
-[release-script documentation](https://github.com/AlCalzone/release-script#command-line).
+| Field | Description |
+|-------|-------------|
+| Residents Adapter Instance | Instance number of the Residents adapter for presence tracking |
+| Text Command State ID | ioBroker state ID to watch for text queries sent to Hannah |
 
-To get your adapter released in ioBroker, please refer to the documentation 
-of [ioBroker.repositories](https://github.com/ioBroker/ioBroker.repositories#requirements-for-adapter-to-get-added-to-the-latest-repository).
+## Hannah Core configuration
 
-### Test the adapter manually with dev-server
-Since you set up `dev-server`, you can use it to run, test and debug your adapter.
-
-You may start `dev-server` by calling from your dev directory:
-```bash
-dev-server watch
-```
-
-The ioBroker.admin interface will then be available at http://localhost:undefined/
-
-Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev-server#command-line) for more details.
+The adapter expects `HannahService.AgentConnect` to be available on the configured host/port. No additional Hannah-side configuration is required — the adapter identifies itself automatically on connect.
 
 ## Changelog
+
 <!--
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
-* (M1kad0) initial release
+### 0.0.1 (2026-04-27)
+* Initial release
+* Bidirectional gRPC stream (state updates, resident presence, text commands, SetState)
+* Enum-based device discovery with room × function filtering
+* Extra state prefix support for arbitrary state trees
+* Snapshot-on-connect replaces MQTT retained messages
 
 ## License
+
 MIT License
 
 Copyright (c) 2026 M1kad0 <leonie+iobroker@sgessinger.de>
