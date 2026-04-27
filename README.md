@@ -69,6 +69,8 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+Bug: ControlDevice-Rückkanal defekt
 
 ### 0.0.1 (2026-04-27)
 * Initial release
