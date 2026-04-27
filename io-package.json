@@ -68,7 +68,7 @@
         "connectionType": "local",
         "dataSource": "poll",
         "adminUI": {
-            "config": "materialize"
+            "config": "html"
         },
         "eraseOnUpload": true,
         "dependencies": [
@@ -78,7 +78,7 @@
         ],
         "globalDependencies": [
             {
-                "admin": ">=7.0.23"
+                "admin": ">=7.6.20"
             }
         ]
     },
@@ -92,5 +92,19 @@
         "textCommandStateId": "0_userdata.0.hannah.set.textCommand"
     },
     "objects": [],
-    "instanceObjects": []
+    "instanceObjects": [
+        {
+            "_id": "info.connection",
+            "type": "state",
+            "common": {
+                "name": "Connected to Hannah Core",
+                "type": "boolean",
+                "role": "indicator.connected",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        }
+    ]
 }

@@ -59,30 +59,31 @@ export class GrpcClient {
             return;
         }
         const addr = `${host}:${port}`;
-        this.log.info(`[grpc] Verbinde zu Hannah Core: ${addr}`);
+        this.log.info(`[grpc] Connecting to Hannah Core: ${addr}`);
         this.client = new proto.hannah.HannahService(addr, grpc.credentials.createInsecure());
         this.stream = this.client.AgentConnect();
+
+        // metadata fires when the server accepts the stream — this is the right "connected" signal
+        this.stream.on('metadata', () => {
+            this.log.info('[grpc] Connected to Hannah Core.');
+            (this.onConnected() as unknown as Promise<void>).catch((e: Error) => {
+                this.log.error(`[grpc] onConnected error: ${e.message}`);
+            });
+        });
 
         this.stream.on('data', (cmd: object) => {
             this.onCommand(cmd);
         });
 
         this.stream.on('error', (err: Error) => {
-            this.log.warn(`[grpc] Stream-Fehler: ${err.message}`);
+            this.log.warn(`[grpc] Stream error: ${err.message}`);
             this._scheduleReconnect(host, port);
         });
 
         this.stream.on('end', () => {
-            this.log.info('[grpc] Stream beendet.');
+            this.log.info('[grpc] Stream ended.');
             this.onDisconnected();
             this._scheduleReconnect(host, port);
-        });
-
-        this.stream.on('status', (status: any) => {
-            if (status.code === grpc.status.OK) {
-                this.log.info('[grpc] Verbunden mit Hannah Core.');
-                this.onConnected();
-            }
         });
     }
 
@@ -93,7 +94,7 @@ export class GrpcClient {
         if (this.reconnectTimer) {
             return;
         }
-        this.log.info('[grpc] Reconnect in 10s...');
+        this.log.info('[grpc] Reconnecting in 10s...');
         this.reconnectTimer = setTimeout(() => {
             this.reconnectTimer = null;
             this._connect(host, port);
@@ -107,7 +108,7 @@ export class GrpcClient {
         try {
             this.stream.write(msg);
         } catch (e) {
-            this.log.warn(`[grpc] Send fehlgeschlagen: ${(e as Error).message}`);
+            this.log.warn(`[grpc] Send failed: ${(e as Error).message}`);
         }
     }
 

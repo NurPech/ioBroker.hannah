@@ -84,14 +84,15 @@ export class StateWatcher {
         }
 
         // Regular state → AgentStateUpdate
-        this.send({
+        const msg = {
             state_update: {
                 state_id: id,
                 value: JSON.stringify(state.val),
                 ack: state.ack ?? false,
                 ts: state.ts ?? Date.now(),
             },
-        });
+        };
+        this.send(msg);
         return true;
     }
 
@@ -107,7 +108,7 @@ export class StateWatcher {
             await this.adapter.setForeignStateAsync(stateId, { val: parsed, ack: false });
             this.adapter.log.debug(`[states] SetState ${stateId} = ${value}`);
         } catch (e) {
-            this.adapter.log.error(`[states] SetState fehlgeschlagen für ${stateId}: ${(e as Error).message}`);
+            this.adapter.log.error(`[states] SetState failed for ${stateId}: ${(e as Error).message}`);
         }
     }
 
@@ -119,50 +120,88 @@ export class StateWatcher {
     }
 
     private async _subscribeEnumStates(selectedRooms: string[], selectedFunctions: string[]): Promise<void> {
-        const roomEnumId = 'enum.rooms';
-        const funcEnumId = 'enum.functions';
-
-        const [roomsObj, funcsObj] = await Promise.all([
-            this.adapter.getObjectAsync(roomEnumId),
-            this.adapter.getObjectAsync(funcEnumId),
-        ]);
-
-        const roomIds = this._collectEnumMembers(roomsObj, selectedRooms);
-        const funcIds = this._collectEnumMembers(funcsObj, selectedFunctions);
-
-        // Union of all state IDs referenced by selected (or all) rooms AND functions
-        const stateIds =
-            selectedRooms.length === 0 && selectedFunctions.length === 0
-                ? new Set([...roomIds, ...funcIds])
-                : new Set([...roomIds].filter(id => funcIds.has(id)));
-
-        for (const id of stateIds) {
-            if (this.subscribedIds.has(id)) {
-                continue;
-            }
-            await this.adapter.subscribeForeignStatesAsync(id);
-            this.subscribedIds.add(id);
+        this.adapter.log.info('[states] Enum-Discovery: Loading rooms and functions...');
+        let roomResult: { rows: Array<{ id: string; value: ioBroker.Object | null }> };
+        let funcResult: typeof roomResult;
+        try {
+            [roomResult, funcResult] = await Promise.all([
+                this.adapter.getObjectViewAsync('system', 'enum', {
+                    startkey: 'enum.rooms.',
+                    endkey: 'enum.rooms.香',
+                }),
+                this.adapter.getObjectViewAsync('system', 'enum', {
+                    startkey: 'enum.functions.',
+                    endkey: 'enum.functions.香',
+                }),
+            ]);
+        } catch (e) {
+            this.adapter.log.error(`[states] getObjectViewAsync fehlgeschlagen: ${(e as Error).message}`);
+            return;
         }
 
-        this.adapter.log.info(`[states] Enum-Discovery: ${stateIds.size} States (rooms × functions).`);
+        // Raum-Enums enthalten Device-IDs; Funktions-Enums enthalten State-IDs direkt
+        const roomDevices = this._extractViewMembers(roomResult.rows, selectedRooms);
+        const funcStates = this._extractViewMembers(funcResult.rows, selectedFunctions);
+
+        this.adapter.log.info(
+            `[states] Enum-Discovery: ${roomResult.rows.length} room enums (${roomDevices.size} devices), ${funcResult.rows.length} function enums (${funcStates.size} states)`,
+        );
+
+        if (selectedRooms.length === 0 && selectedFunctions.length === 0) {
+            // Keine Selektion → alle Funktions-States + Pattern-Subscribe für alle Raum-Devices
+            for (const deviceId of roomDevices) {
+                const pattern = `${deviceId}.*`;
+                if (this.subscribedIds.has(pattern)) { continue; }
+                await this.adapter.subscribeForeignStatesAsync(pattern);
+                this.subscribedIds.add(pattern);
+            }
+            for (const stateId of funcStates) {
+                if (this.subscribedIds.has(stateId)) { continue; }
+                await this.adapter.subscribeForeignStatesAsync(stateId);
+                this.subscribedIds.add(stateId);
+            }
+        } else if (selectedRooms.length === 0) {
+            // Nur Funktionen gewählt → alle States der gewählten Funktions-Enums
+            for (const stateId of funcStates) {
+                if (this.subscribedIds.has(stateId)) { continue; }
+                await this.adapter.subscribeForeignStatesAsync(stateId);
+                this.subscribedIds.add(stateId);
+            }
+        } else if (selectedFunctions.length === 0) {
+            // Nur Räume gewählt → Pattern-Subscribe für alle States unter den Raum-Devices
+            for (const deviceId of roomDevices) {
+                const pattern = `${deviceId}.*`;
+                if (this.subscribedIds.has(pattern)) { continue; }
+                await this.adapter.subscribeForeignStatesAsync(pattern);
+                this.subscribedIds.add(pattern);
+            }
+        } else {
+            // Beide gewählt → Funktions-States die zu einem Device des gewählten Raums gehören
+            for (const stateId of funcStates) {
+                const belongsToRoom = [...roomDevices].some(d => stateId.startsWith(`${d}.`));
+                if (!belongsToRoom) { continue; }
+                if (this.subscribedIds.has(stateId)) { continue; }
+                await this.adapter.subscribeForeignStatesAsync(stateId);
+                this.subscribedIds.add(stateId);
+            }
+        }
+
+        this.adapter.log.info(`[states] Enum-Discovery: ${this.subscribedIds.size} states subscribed.`);
     }
 
-    private _collectEnumMembers(enumObj: ioBroker.Object | null | undefined, selected: string[]): Set<string> {
+    private _extractViewMembers(
+        rows: Array<{ id: string; value: ioBroker.Object | null }>,
+        selected: string[],
+    ): Set<string> {
         const ids = new Set<string>();
-        if (!enumObj || enumObj.type !== 'enum') {
-            return ids;
-        }
-
-        const children = (enumObj as any).children as Record<string, { common?: { members?: string[] } }> | undefined;
-        if (!children) {
-            return ids;
-        }
-
-        for (const [childId, child] of Object.entries(children)) {
-            if (selected.length > 0 && !selected.includes(childId)) {
+        for (const row of rows) {
+            if (!row.value || row.value.type !== 'enum') {
                 continue;
             }
-            for (const memberId of child.common?.members ?? []) {
+            if (selected.length > 0 && !selected.includes(row.id)) {
+                continue;
+            }
+            for (const memberId of (row.value.common as any).members ?? []) {
                 ids.add(memberId);
             }
         }

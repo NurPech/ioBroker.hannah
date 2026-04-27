@@ -86,14 +86,15 @@ class StateWatcher {
       }
       return true;
     }
-    this.send({
+    const msg = {
       state_update: {
         state_id: id,
         value: JSON.stringify(state.val),
         ack: (_b = state.ack) != null ? _b : false,
         ts: (_c = state.ts) != null ? _c : Date.now()
       }
-    });
+    };
+    this.send(msg);
     return true;
   }
   /**
@@ -108,7 +109,7 @@ class StateWatcher {
       await this.adapter.setForeignStateAsync(stateId, { val: parsed, ack: false });
       this.adapter.log.debug(`[states] SetState ${stateId} = ${value}`);
     } catch (e) {
-      this.adapter.log.error(`[states] SetState fehlgeschlagen f\xFCr ${stateId}: ${e.message}`);
+      this.adapter.log.error(`[states] SetState failed for ${stateId}: ${e.message}`);
     }
   }
   async stop() {
@@ -118,39 +119,88 @@ class StateWatcher {
     this.subscribedIds.clear();
   }
   async _subscribeEnumStates(selectedRooms, selectedFunctions) {
-    const roomEnumId = "enum.rooms";
-    const funcEnumId = "enum.functions";
-    const [roomsObj, funcsObj] = await Promise.all([
-      this.adapter.getObjectAsync(roomEnumId),
-      this.adapter.getObjectAsync(funcEnumId)
-    ]);
-    const roomIds = this._collectEnumMembers(roomsObj, selectedRooms);
-    const funcIds = this._collectEnumMembers(funcsObj, selectedFunctions);
-    const stateIds = selectedRooms.length === 0 && selectedFunctions.length === 0 ? /* @__PURE__ */ new Set([...roomIds, ...funcIds]) : new Set([...roomIds].filter((id) => funcIds.has(id)));
-    for (const id of stateIds) {
-      if (this.subscribedIds.has(id)) {
-        continue;
-      }
-      await this.adapter.subscribeForeignStatesAsync(id);
-      this.subscribedIds.add(id);
+    this.adapter.log.info("[states] Enum-Discovery: Loading rooms and functions...");
+    let roomResult;
+    let funcResult;
+    try {
+      [roomResult, funcResult] = await Promise.all([
+        this.adapter.getObjectViewAsync("system", "enum", {
+          startkey: "enum.rooms.",
+          endkey: "enum.rooms.\u9999"
+        }),
+        this.adapter.getObjectViewAsync("system", "enum", {
+          startkey: "enum.functions.",
+          endkey: "enum.functions.\u9999"
+        })
+      ]);
+    } catch (e) {
+      this.adapter.log.error(`[states] getObjectViewAsync fehlgeschlagen: ${e.message}`);
+      return;
     }
-    this.adapter.log.info(`[states] Enum-Discovery: ${stateIds.size} States (rooms \xD7 functions).`);
+    const roomDevices = this._extractViewMembers(roomResult.rows, selectedRooms);
+    const funcStates = this._extractViewMembers(funcResult.rows, selectedFunctions);
+    this.adapter.log.info(
+      `[states] Enum-Discovery: ${roomResult.rows.length} room enums (${roomDevices.size} devices), ${funcResult.rows.length} function enums (${funcStates.size} states)`
+    );
+    if (selectedRooms.length === 0 && selectedFunctions.length === 0) {
+      for (const deviceId of roomDevices) {
+        const pattern = `${deviceId}.*`;
+        if (this.subscribedIds.has(pattern)) {
+          continue;
+        }
+        await this.adapter.subscribeForeignStatesAsync(pattern);
+        this.subscribedIds.add(pattern);
+      }
+      for (const stateId of funcStates) {
+        if (this.subscribedIds.has(stateId)) {
+          continue;
+        }
+        await this.adapter.subscribeForeignStatesAsync(stateId);
+        this.subscribedIds.add(stateId);
+      }
+    } else if (selectedRooms.length === 0) {
+      for (const stateId of funcStates) {
+        if (this.subscribedIds.has(stateId)) {
+          continue;
+        }
+        await this.adapter.subscribeForeignStatesAsync(stateId);
+        this.subscribedIds.add(stateId);
+      }
+    } else if (selectedFunctions.length === 0) {
+      for (const deviceId of roomDevices) {
+        const pattern = `${deviceId}.*`;
+        if (this.subscribedIds.has(pattern)) {
+          continue;
+        }
+        await this.adapter.subscribeForeignStatesAsync(pattern);
+        this.subscribedIds.add(pattern);
+      }
+    } else {
+      for (const stateId of funcStates) {
+        const belongsToRoom = [...roomDevices].some((d) => stateId.startsWith(`${d}.`));
+        if (!belongsToRoom) {
+          continue;
+        }
+        if (this.subscribedIds.has(stateId)) {
+          continue;
+        }
+        await this.adapter.subscribeForeignStatesAsync(stateId);
+        this.subscribedIds.add(stateId);
+      }
+    }
+    this.adapter.log.info(`[states] Enum-Discovery: ${this.subscribedIds.size} states subscribed.`);
   }
-  _collectEnumMembers(enumObj, selected) {
-    var _a, _b;
+  _extractViewMembers(rows, selected) {
+    var _a;
     const ids = /* @__PURE__ */ new Set();
-    if (!enumObj || enumObj.type !== "enum") {
-      return ids;
-    }
-    const children = enumObj.children;
-    if (!children) {
-      return ids;
-    }
-    for (const [childId, child] of Object.entries(children)) {
-      if (selected.length > 0 && !selected.includes(childId)) {
+    for (const row of rows) {
+      if (!row.value || row.value.type !== "enum") {
         continue;
       }
-      for (const memberId of (_b = (_a = child.common) == null ? void 0 : _a.members) != null ? _b : []) {
+      if (selected.length > 0 && !selected.includes(row.id)) {
+        continue;
+      }
+      for (const memberId of (_a = row.value.common.members) != null ? _a : []) {
         ids.add(memberId);
       }
     }
