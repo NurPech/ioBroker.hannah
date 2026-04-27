@@ -12,6 +12,11 @@ export class StateWatcher {
     private subscribedIds = new Set<string>();
     private textCommandStateId: string;
 
+    /**
+     * @param adapter - ioBroker adapter instance
+     * @param send - Function to send messages to Hannah Core
+     * @param textCommandStateId - State ID used for text command input
+     */
     constructor(adapter: utils.AdapterInstance, send: AgentMessageSender, textCommandStateId: string) {
         this.adapter = adapter;
         this.send = send;
@@ -21,10 +26,10 @@ export class StateWatcher {
     /**
      * Discover and subscribe to all relevant states.
      *
-     * @param config
-     * @param config.selectedRooms
-     * @param config.selectedFunctions
-     * @param config.extraStatePrefixes
+     * @param config - Subscription filter configuration
+     * @param config.selectedRooms - Room enum IDs to include (empty = all)
+     * @param config.selectedFunctions - Function enum IDs to include (empty = all)
+     * @param config.extraStatePrefixes - Additional state ID prefixes to subscribe
      */
     async start(config: {
         selectedRooms: string[];
@@ -46,7 +51,7 @@ export class StateWatcher {
     /**
      * Subscribe additional state IDs on demand (from AgentWatchMore).
      *
-     * @param stateIds
+     * @param stateIds - State IDs to subscribe
      */
     async watchMore(stateIds: string[]): Promise<void> {
         for (const id of stateIds) {
@@ -62,8 +67,8 @@ export class StateWatcher {
     /**
      * Call from onForeignStateChange. Returns true if the state was handled.
      *
-     * @param id
-     * @param state
+     * @param id - State ID that changed
+     * @param state - New state value, or null/undefined if deleted
      */
     onStateChange(id: string, state: ioBroker.State | null | undefined): boolean {
         if (!this.subscribedIds.has(id) && !id.startsWith('residents.')) {
@@ -99,8 +104,8 @@ export class StateWatcher {
     /**
      * Hannah instructs the adapter to set a state in ioBroker.
      *
-     * @param stateId
-     * @param value
+     * @param stateId - Target state ID
+     * @param value - JSON-encoded value to set
      */
     async handleSetState(stateId: string, value: string): Promise<void> {
         try {
@@ -112,6 +117,9 @@ export class StateWatcher {
         }
     }
 
+    /**
+     * Unsubscribe all states and clear the subscription set.
+     */
     async stop(): Promise<void> {
         for (const id of this.subscribedIds) {
             await this.adapter.unsubscribeForeignStatesAsync(id);
@@ -135,11 +143,11 @@ export class StateWatcher {
                 }),
             ]);
         } catch (e) {
-            this.adapter.log.error(`[states] getObjectViewAsync fehlgeschlagen: ${(e as Error).message}`);
+            this.adapter.log.error(`[states] getObjectViewAsync failed: ${(e as Error).message}`);
             return;
         }
 
-        // Raum-Enums enthalten Device-IDs; Funktions-Enums enthalten State-IDs direkt
+        // Room enums contain device IDs; function enums contain state IDs directly
         const roomDevices = this._extractViewMembers(roomResult.rows, selectedRooms);
         const funcStates = this._extractViewMembers(funcResult.rows, selectedFunctions);
 
@@ -148,39 +156,51 @@ export class StateWatcher {
         );
 
         if (selectedRooms.length === 0 && selectedFunctions.length === 0) {
-            // Keine Selektion → alle Funktions-States + Pattern-Subscribe für alle Raum-Devices
+            // No filter → all function states + pattern-subscribe for all room devices
             for (const deviceId of roomDevices) {
                 const pattern = `${deviceId}.*`;
-                if (this.subscribedIds.has(pattern)) { continue; }
+                if (this.subscribedIds.has(pattern)) {
+                    continue;
+                }
                 await this.adapter.subscribeForeignStatesAsync(pattern);
                 this.subscribedIds.add(pattern);
             }
             for (const stateId of funcStates) {
-                if (this.subscribedIds.has(stateId)) { continue; }
+                if (this.subscribedIds.has(stateId)) {
+                    continue;
+                }
                 await this.adapter.subscribeForeignStatesAsync(stateId);
                 this.subscribedIds.add(stateId);
             }
         } else if (selectedRooms.length === 0) {
-            // Nur Funktionen gewählt → alle States der gewählten Funktions-Enums
+            // Functions only → all states from selected function enums
             for (const stateId of funcStates) {
-                if (this.subscribedIds.has(stateId)) { continue; }
+                if (this.subscribedIds.has(stateId)) {
+                    continue;
+                }
                 await this.adapter.subscribeForeignStatesAsync(stateId);
                 this.subscribedIds.add(stateId);
             }
         } else if (selectedFunctions.length === 0) {
-            // Nur Räume gewählt → Pattern-Subscribe für alle States unter den Raum-Devices
+            // Rooms only → pattern-subscribe for all states under room devices
             for (const deviceId of roomDevices) {
                 const pattern = `${deviceId}.*`;
-                if (this.subscribedIds.has(pattern)) { continue; }
+                if (this.subscribedIds.has(pattern)) {
+                    continue;
+                }
                 await this.adapter.subscribeForeignStatesAsync(pattern);
                 this.subscribedIds.add(pattern);
             }
         } else {
-            // Beide gewählt → Funktions-States die zu einem Device des gewählten Raums gehören
+            // Both → function states whose device prefix is in a selected room
             for (const stateId of funcStates) {
                 const belongsToRoom = [...roomDevices].some(d => stateId.startsWith(`${d}.`));
-                if (!belongsToRoom) { continue; }
-                if (this.subscribedIds.has(stateId)) { continue; }
+                if (!belongsToRoom) {
+                    continue;
+                }
+                if (this.subscribedIds.has(stateId)) {
+                    continue;
+                }
                 await this.adapter.subscribeForeignStatesAsync(stateId);
                 this.subscribedIds.add(stateId);
             }

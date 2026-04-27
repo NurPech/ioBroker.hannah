@@ -10,6 +10,11 @@ export class ResidentsWatcher {
     private send: AgentMessageSender;
     private instance: string;
 
+    /**
+     * @param adapter - ioBroker adapter instance
+     * @param send - Function to send messages to Hannah Core
+     * @param instance - Residents adapter instance number (e.g. "0")
+     */
     constructor(adapter: utils.AdapterInstance, send: AgentMessageSender, instance: string) {
         this.adapter = adapter;
         this.send = send;
@@ -26,8 +31,8 @@ export class ResidentsWatcher {
     /**
      * Call from onForeignStateChange when a residents state changes.
      *
-     * @param id
-     * @param state
+     * @param id - State ID that changed
+     * @param state - New state value, or null/undefined if deleted
      */
     onStateChange(id: string, state: ioBroker.State | null | undefined): void {
         if (!state || state.val === null) {
@@ -54,6 +59,7 @@ export class ResidentsWatcher {
         this.adapter.log.debug(`[residents] ${roomieId} → presence_state=${presenceState}`);
     }
 
+    /** Unsubscribe from all presence states. */
     async unsubscribe(): Promise<void> {
         const pattern = `residents.${this.instance}.roomie.*.presence.state`;
         await this.adapter.unsubscribeForeignStatesAsync(pattern);

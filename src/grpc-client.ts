@@ -17,6 +17,24 @@ const proto = grpc.loadPackageDefinition(packageDef) as any;
 export type AgentMessageSender = (msg: object) => void;
 export type CommandHandler = (cmd: object) => void;
 
+interface LogAdapter {
+    info: (s: string) => void;
+    warn: (s: string) => void;
+    error: (s: string) => void;
+    debug: (s: string) => void;
+}
+
+interface GrpcClientOptions {
+    onCommand: CommandHandler;
+    onConnected: () => void;
+    onDisconnected: () => void;
+    log: LogAdapter;
+}
+
+/**
+ * Manages the bidirectional gRPC stream connection to Hannah Core.
+ * Automatically reconnects on error or stream end.
+ */
 export class GrpcClient {
     private client: any = null;
     private stream: any = null;
@@ -25,30 +43,24 @@ export class GrpcClient {
     private onCommand: CommandHandler;
     private onConnected: () => void;
     private onDisconnected: () => void;
-    private log: {
-        info: (s: string) => void;
-        warn: (s: string) => void;
-        error: (s: string) => void;
-        debug: (s: string) => void;
-    };
+    private log: LogAdapter;
 
-    constructor(opts: {
-        onCommand: CommandHandler;
-        onConnected: () => void;
-        onDisconnected: () => void;
-        log: {
-            info: (s: string) => void;
-            warn: (s: string) => void;
-            error: (s: string) => void;
-            debug: (s: string) => void;
-        };
-    }) {
+    /**
+     * @param opts - Configuration options including callbacks and logger
+     */
+    constructor(opts: GrpcClientOptions) {
         this.onCommand = opts.onCommand;
         this.onConnected = opts.onConnected;
         this.onDisconnected = opts.onDisconnected;
         this.log = opts.log;
     }
 
+    /**
+     * Start the connection to Hannah Core. Reconnects automatically on failure.
+     *
+     * @param host - gRPC server host
+     * @param port - gRPC server port
+     */
     connect(host: string, port: number): void {
         this.running = true;
         this._connect(host, port);
@@ -101,6 +113,11 @@ export class GrpcClient {
         }, 10_000);
     }
 
+    /**
+     * Send a message to Hannah Core.
+     *
+     * @param msg - Protobuf message object
+     */
     send(msg: object): void {
         if (!this.stream) {
             return;
@@ -112,6 +129,9 @@ export class GrpcClient {
         }
     }
 
+    /**
+     * Stop the connection and cancel any pending reconnect.
+     */
     disconnect(): void {
         this.running = false;
         if (this.reconnectTimer) {
