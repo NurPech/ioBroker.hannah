@@ -6,12 +6,10 @@ declare global {
         interface AdapterConfig {
             hannahHost: string;
             hannahPort: number;
-            enumFunctions: string;
-            enumRooms: string;
+            selectedRooms: string[];
+            selectedFunctions: string[];
             extraStatePrefixes: Array<{ prefix: string }>;
-            residentsStatePrefix: string;
-            residentsGuestPrefix: string;
-            residentsStateKey: string;
+            residentsInstance: string;
             textCommandStateId: string;
         }
     }

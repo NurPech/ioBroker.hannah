@@ -85,12 +85,10 @@
     "native": {
         "hannahHost": "",
         "hannahPort": 50051,
-        "enumFunctions": "enum.functions",
-        "enumRooms": "enum.rooms",
+        "selectedRooms": [],
+        "selectedFunctions": [],
         "extraStatePrefixes": [],
-        "residentsStatePrefix": "residents.0.roomie",
-        "residentsGuestPrefix": "residents.0.guest",
-        "residentsStateKey": "mood.state",
+        "residentsInstance": "0",
         "textCommandStateId": "0_userdata.0.hannah.set.textCommand"
     },
     "objects": [],
