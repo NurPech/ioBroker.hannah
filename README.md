@@ -71,6 +71,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
 -->
 ### **WORK IN PROGRESS**
 Bug: ControlDevice-Rückkanal defekt
+Bug: Extra States not working
 
 ### 0.0.1 (2026-04-27)
 * Initial release
