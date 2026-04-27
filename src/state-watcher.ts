@@ -46,6 +46,7 @@ export class StateWatcher {
         }
 
         this.adapter.log.info(`[states] ${this.subscribedIds.size} States subscribed.`);
+        await this._sendSnapshot();
     }
 
     /**
@@ -115,6 +116,36 @@ export class StateWatcher {
         } catch (e) {
             this.adapter.log.error(`[states] SetState failed for ${stateId}: ${(e as Error).message}`);
         }
+    }
+
+    /**
+     * Read and forward the current value of all subscribed states.
+     * Replaces MQTT retained messages — called once after all subscriptions are set up.
+     */
+    private async _sendSnapshot(): Promise<void> {
+        let sent = 0;
+        for (const pattern of this.subscribedIds) {
+            try {
+                const states = await this.adapter.getForeignStatesAsync(pattern);
+                for (const [id, state] of Object.entries(states)) {
+                    if (!state) {
+                        continue;
+                    }
+                    this.send({
+                        state_update: {
+                            state_id: id,
+                            value: JSON.stringify(state.val),
+                            ack: state.ack ?? false,
+                            ts: state.ts ?? Date.now(),
+                        },
+                    });
+                    sent++;
+                }
+            } catch (e) {
+                this.adapter.log.warn(`[states] Snapshot failed for ${pattern}: ${(e as Error).message}`);
+            }
+        }
+        this.adapter.log.info(`[states] Snapshot: ${sent} current state values sent.`);
     }
 
     /**
