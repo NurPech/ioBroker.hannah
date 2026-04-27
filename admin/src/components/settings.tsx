@@ -291,7 +291,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
     render(): React.JSX.Element {
         const { activeTab } = this.state;
         return (
-            <Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <AppBar
                     position="static"
                     color="default"
@@ -308,9 +308,11 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                         <Tab label={I18n.t('Integrations')} />
                     </Tabs>
                 </AppBar>
-                {activeTab === 0 && this.renderConnectionTab()}
-                {activeTab === 1 && this.renderDiscoveryTab()}
-                {activeTab === 2 && this.renderIntegrationsTab()}
+                <Box sx={{ flex: 1, overflowY: 'auto', pb: '70px' }}>
+                    {activeTab === 0 && this.renderConnectionTab()}
+                    {activeTab === 1 && this.renderDiscoveryTab()}
+                    {activeTab === 2 && this.renderIntegrationsTab()}
+                </Box>
             </Box>
         );
     }
