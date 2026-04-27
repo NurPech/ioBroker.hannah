@@ -1,0 +1,91 @@
+{
+    "common": {
+        "name": "hannah",
+        "version": "0.0.1",
+        "news": {
+            "0.0.1": {
+                "en": "initial release",
+                "de": "Erstveröffentlichung",
+                "ru": "Начальная версия",
+                "pt": "lançamento inicial",
+                "nl": "Eerste uitgave",
+                "fr": "Première version",
+                "it": "Versione iniziale",
+                "es": "Versión inicial",
+                "pl": "Pierwsze wydanie",
+                "uk": "Початкова версія",
+                "zh-cn": "首次出版"
+            }
+        },
+        "titleLang": {
+            "en": "Hannah",
+            "de": "Hannah",
+            "ru": "Ханна",
+            "pt": "Ana",
+            "nl": "Hanna",
+            "fr": "Hannah",
+            "it": "Anna",
+            "es": "hanna",
+            "pl": "Hanna",
+            "uk": "Ханна",
+            "zh-cn": "汉娜"
+        },
+        "desc": {
+            "en": "Connects ioBroker to Hannah voice assistant via bidirectional gRPC — streams device states, presence and commands in real time.",
+            "de": "Verbindet ioBroker über bidirektionales gRPC mit dem Hannah-Sprachassistenten – streamt Gerätestatus, Anwesenheit und Befehle in Echtzeit.",
+            "ru": "Подключает ioBroker к голосовому помощнику Ханны через двунаправленный gRPC — передает в режиме реального времени состояние устройства, его присутствие и команды.",
+            "pt": "Conecta o ioBroker ao assistente de voz Hannah via gRPC bidirecional – transmite estados, presença e comandos do dispositivo em tempo real.",
+            "nl": "Verbindt ioBroker met Hannah-stemassistent via bidirectionele gRPC - streamt apparaatstatussen, aanwezigheid en opdrachten in realtime.",
+            "fr": "Connecte ioBroker à l'assistant vocal Hannah via gRPC bidirectionnel – diffuse les états, la présence et les commandes de l'appareil en temps réel.",
+            "it": "Connette ioBroker all'assistente vocale Hannah tramite gRPC bidirezionale: trasmette in streaming gli stati, la presenza e i comandi del dispositivo in tempo reale.",
+            "es": "Conecta ioBroker al asistente de voz de Hannah a través de gRPC bidireccional: transmite los estados, la presencia y los comandos del dispositivo en tiempo real.",
+            "pl": "Łączy ioBroker z asystentem głosowym Hannah za pośrednictwem dwukierunkowego gRPC — przesyła strumieniowo stany urządzeń, obecność i polecenia w czasie rzeczywistym.",
+            "uk": "Підключає ioBroker до голосового помічника Hannah через двонаправлений gRPC — транслює стан пристрою, присутність і команди в реальному часі.",
+            "zh-cn": "通过双向 gRPC 将 ioBroker 连接到 Hannah 语音助手 — 实时传输设备状态、状态和命令。"
+        },
+        "authors": [
+            "M1kad0 <leonie+iobroker@sgessinger.de>"
+        ],
+        "keywords": [
+            "hannah",
+            "gRPC",
+            "voice assistant"
+        ],
+        "licenseInformation": {
+            "type": "free",
+            "license": "MIT"
+        },
+        "platform": "Javascript/Node.js",
+        "icon": "hannah.png",
+        "enabled": true,
+        "extIcon": "https://raw.githubusercontent.com/NurPech/ioBroker.hannah/main/admin/hannah.png",
+        "readme": "https://github.com/NurPech/ioBroker.hannah/blob/main/README.md",
+        "loglevel": "info",
+        "tier": 3,
+        "mode": "daemon",
+        "type": "protocols",
+        "compact": true,
+        "connectionType": "local",
+        "dataSource": "poll",
+        "adminUI": {
+            "config": "materialize"
+        },
+        "eraseOnUpload": true,
+        "dependencies": [
+            {
+                "js-controller": ">=6.0.11"
+            }
+        ],
+        "globalDependencies": [
+            {
+                "admin": ">=7.0.23"
+            }
+        ]
+    },
+    "native": {
+        "option1": true,
+        "option2": "42"
+    },
+    "objects": [],
+    "instanceObjects": []
+}

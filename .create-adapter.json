@@ -1,0 +1,42 @@
+{
+    "cli": true,
+    "target": "directory",
+    "adapterName": "hannah",
+    "title": "Hannah",
+    "description": "Connects ioBroker to Hannah voice assistant via bidirectional gRPC — streams device states, presence and commands in real time.",
+    "keywords": [
+        "hannah",
+        "gRPC",
+        "voice assistant"
+    ],
+    "expert": "no",
+    "features": [
+        "adapter"
+    ],
+    "adminFeatures": [],
+    "type": "protocols",
+    "startMode": "daemon",
+    "connectionType": "local",
+    "dataSource": "poll",
+    "connectionIndicator": "no",
+    "language": "TypeScript",
+    "nodeVersion": "20",
+    "adminUi": "react",
+    "tools": [
+        "ESLint"
+    ],
+    "eslintConfig": "official",
+    "releaseScript": "yes",
+    "devServer": "local",
+    "indentation": "Space (4)",
+    "quotes": "single",
+    "authorName": "M1kad0",
+    "authorGithub": "NurPech",
+    "authorEmail": "leonie+iobroker@sgessinger.de",
+    "gitRemoteProtocol": "HTTPS",
+    "gitCommit": "no",
+    "defaultBranch": "main",
+    "license": "MIT License",
+    "dependabot": "yes",
+    "creatorVersion": "3.1.2"
+}
