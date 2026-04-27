@@ -52,12 +52,21 @@ class GrpcClient {
   onConnected;
   onDisconnected;
   log;
+  /**
+   * @param opts - Configuration options including callbacks and logger
+   */
   constructor(opts) {
     this.onCommand = opts.onCommand;
     this.onConnected = opts.onConnected;
     this.onDisconnected = opts.onDisconnected;
     this.log = opts.log;
   }
+  /**
+   * Start the connection to Hannah Core. Reconnects automatically on failure.
+   *
+   * @param host - gRPC server host
+   * @param port - gRPC server port
+   */
   connect(host, port) {
     this.running = true;
     this._connect(host, port);
@@ -102,6 +111,11 @@ class GrpcClient {
       this._connect(host, port);
     }, 1e4);
   }
+  /**
+   * Send a message to Hannah Core.
+   *
+   * @param msg - Protobuf message object
+   */
   send(msg) {
     if (!this.stream) {
       return;
@@ -112,6 +126,9 @@ class GrpcClient {
       this.log.warn(`[grpc] Send failed: ${e.message}`);
     }
   }
+  /**
+   * Stop the connection and cancel any pending reconnect.
+   */
   disconnect() {
     var _a, _b;
     this.running = false;

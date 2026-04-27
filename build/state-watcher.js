@@ -26,6 +26,11 @@ class StateWatcher {
   send;
   subscribedIds = /* @__PURE__ */ new Set();
   textCommandStateId;
+  /**
+   * @param adapter - ioBroker adapter instance
+   * @param send - Function to send messages to Hannah Core
+   * @param textCommandStateId - State ID used for text command input
+   */
   constructor(adapter, send, textCommandStateId) {
     this.adapter = adapter;
     this.send = send;
@@ -34,10 +39,10 @@ class StateWatcher {
   /**
    * Discover and subscribe to all relevant states.
    *
-   * @param config
-   * @param config.selectedRooms
-   * @param config.selectedFunctions
-   * @param config.extraStatePrefixes
+   * @param config - Subscription filter configuration
+   * @param config.selectedRooms - Room enum IDs to include (empty = all)
+   * @param config.selectedFunctions - Function enum IDs to include (empty = all)
+   * @param config.extraStatePrefixes - Additional state ID prefixes to subscribe
    */
   async start(config) {
     await this._subscribeEnumStates(config.selectedRooms, config.selectedFunctions);
@@ -48,11 +53,12 @@ class StateWatcher {
       this.adapter.log.info(`[states] Text-Command-State: ${this.textCommandStateId}`);
     }
     this.adapter.log.info(`[states] ${this.subscribedIds.size} States subscribed.`);
+    await this._sendSnapshot();
   }
   /**
    * Subscribe additional state IDs on demand (from AgentWatchMore).
    *
-   * @param stateIds
+   * @param stateIds - State IDs to subscribe
    */
   async watchMore(stateIds) {
     for (const id of stateIds) {
@@ -67,8 +73,8 @@ class StateWatcher {
   /**
    * Call from onForeignStateChange. Returns true if the state was handled.
    *
-   * @param id
-   * @param state
+   * @param id - State ID that changed
+   * @param state - New state value, or null/undefined if deleted
    */
   onStateChange(id, state) {
     var _a, _b, _c;
@@ -100,8 +106,8 @@ class StateWatcher {
   /**
    * Hannah instructs the adapter to set a state in ioBroker.
    *
-   * @param stateId
-   * @param value
+   * @param stateId - Target state ID
+   * @param value - JSON-encoded value to set
    */
   async handleSetState(stateId, value) {
     try {
@@ -112,6 +118,39 @@ class StateWatcher {
       this.adapter.log.error(`[states] SetState failed for ${stateId}: ${e.message}`);
     }
   }
+  /**
+   * Read and forward the current value of all subscribed states.
+   * Replaces MQTT retained messages — called once after all subscriptions are set up.
+   */
+  async _sendSnapshot() {
+    var _a, _b;
+    let sent = 0;
+    for (const pattern of this.subscribedIds) {
+      try {
+        const states = await this.adapter.getForeignStatesAsync(pattern);
+        for (const [id, state] of Object.entries(states)) {
+          if (!state) {
+            continue;
+          }
+          this.send({
+            state_update: {
+              state_id: id,
+              value: JSON.stringify(state.val),
+              ack: (_a = state.ack) != null ? _a : false,
+              ts: (_b = state.ts) != null ? _b : Date.now()
+            }
+          });
+          sent++;
+        }
+      } catch (e) {
+        this.adapter.log.warn(`[states] Snapshot failed for ${pattern}: ${e.message}`);
+      }
+    }
+    this.adapter.log.info(`[states] Snapshot: ${sent} current state values sent.`);
+  }
+  /**
+   * Unsubscribe all states and clear the subscription set.
+   */
   async stop() {
     for (const id of this.subscribedIds) {
       await this.adapter.unsubscribeForeignStatesAsync(id);
@@ -134,7 +173,7 @@ class StateWatcher {
         })
       ]);
     } catch (e) {
-      this.adapter.log.error(`[states] getObjectViewAsync fehlgeschlagen: ${e.message}`);
+      this.adapter.log.error(`[states] getObjectViewAsync failed: ${e.message}`);
       return;
     }
     const roomDevices = this._extractViewMembers(roomResult.rows, selectedRooms);
