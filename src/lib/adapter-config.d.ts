@@ -4,8 +4,15 @@
 declare global {
     namespace ioBroker {
         interface AdapterConfig {
-            option1: boolean;
-            option2: string;
+            hannahHost: string;
+            hannahPort: number;
+            enumFunctions: string;
+            enumRooms: string;
+            extraStatePrefixes: Array<{ prefix: string }>;
+            residentsStatePrefix: string;
+            residentsGuestPrefix: string;
+            residentsStateKey: string;
+            textCommandStateId: string;
         }
     }
 }

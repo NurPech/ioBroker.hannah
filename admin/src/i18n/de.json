@@ -1,5 +1,25 @@
 {
-    "hannah adapter settings": "Adaptereinstellungen für hannah",
-    "option1": "option1",
-    "option2": "Option2"
+    "hannah adapter settings": "Adaptereinstellungen für Hannah",
+    "Connection": "Verbindung",
+    "Device Discovery": "Geräteerkennung",
+    "Integrations": "Integrationen",
+    "Hannah Host": "Hannah Host",
+    "IP address or hostname of the Hannah Core server": "IP-Adresse oder Hostname des Hannah-Core-Servers",
+    "gRPC Port": "gRPC-Port",
+    "Functions Enum": "Funktionen-Enum",
+    "ioBroker enum for device functions (e.g. lights, heating)": "ioBroker-Enum für Gerätefunktionen (z.B. Licht, Heizung)",
+    "Rooms Enum": "Räume-Enum",
+    "ioBroker enum for rooms": "ioBroker-Enum für Räume",
+    "Extra State Prefixes": "Zusätzliche State-Prefixe",
+    "Additional state ID prefixes to stream to Hannah (e.g. 0_userdata.0)": "Weitere State-ID-Prefixe, die an Hannah gestreamt werden (z.B. 0_userdata.0)",
+    "Prefix": "Prefix",
+    "Add prefix": "Prefix hinzufügen",
+    "Residents State Prefix": "Residents State-Prefix",
+    "ioBroker state prefix for the residents adapter (roomies)": "ioBroker-State-Prefix für den Residents-Adapter (Bewohner)",
+    "Residents Guest Prefix": "Residents Gast-Prefix",
+    "ioBroker state prefix for guest presence": "ioBroker-State-Prefix für Gastanwesenheit",
+    "Residents State Key": "Residents State-Key",
+    "Sub-key for presence value under each resident (default: mood.state)": "Unter-Key für den Anwesenheitswert je Bewohner (Standard: mood.state)",
+    "Text Command State ID": "Text-Command State-ID",
+    "ioBroker state ID to watch for text commands sent to Hannah": "ioBroker-State-ID für Textbefehle an Hannah"
 }
