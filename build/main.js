@@ -22,101 +22,94 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 var utils = __toESM(require("@iobroker/adapter-core"));
+var import_grpc_client = require("./grpc-client");
+var import_state_watcher = require("./state-watcher");
+var import_residents = require("./residents");
 class Hannah extends utils.Adapter {
+  grpc = null;
+  states = null;
+  residents = null;
   constructor(options = {}) {
-    super({
-      ...options,
-      name: "hannah"
-    });
+    super({ ...options, name: "hannah" });
     this.on("ready", this.onReady.bind(this));
     this.on("stateChange", this.onStateChange.bind(this));
     this.on("unload", this.onUnload.bind(this));
   }
-  /**
-   * Is called when databases are connected and adapter received configuration.
-   */
+  /** @inheritdoc */
   async onReady() {
-    this.log.debug("config option1: ${this.config.option1}");
-    this.log.debug("config option2: ${this.config.option2}");
-    await this.setObjectNotExistsAsync("testVariable", {
+    await this.setObjectNotExistsAsync("info.connection", {
       type: "state",
       common: {
-        name: "testVariable",
+        name: "Connected to Hannah Core",
         type: "boolean",
-        role: "indicator",
+        role: "indicator.connected",
         read: true,
-        write: true
+        write: false,
+        def: false
       },
       native: {}
     });
-    this.subscribeStates("testVariable");
-    await this.setState("testVariable", true);
-    await this.setState("testVariable", { val: true, ack: true });
-    await this.setState("testVariable", { val: true, ack: true, expire: 30 });
-    const pwdResult = await this.checkPasswordAsync("admin", "iobroker");
-    this.log.info(`check user admin pw iobroker: ${JSON.stringify(pwdResult)}`);
-    const groupResult = await this.checkGroupAsync("admin", "admin");
-    this.log.info(`check group user admin group admin: ${JSON.stringify(groupResult)}`);
+    await this.setState("info.connection", false, true);
+    const cfg = this.config;
+    const host = cfg.hannahHost || "127.0.0.1";
+    const port = cfg.hannahPort || 50051;
+    const send = (msg) => {
+      var _a;
+      (_a = this.grpc) == null ? void 0 : _a.send(msg);
+    };
+    this.states = new import_state_watcher.StateWatcher(this, send, cfg.textCommandStateId || "");
+    this.residents = cfg.residentsInstance ? new import_residents.ResidentsWatcher(this, send, cfg.residentsInstance) : null;
+    this.grpc = new import_grpc_client.GrpcClient({
+      log: this.log,
+      onConnected: async () => {
+        var _a;
+        await this.setState("info.connection", true, true);
+        await this.states.start({
+          selectedRooms: cfg.selectedRooms || [],
+          selectedFunctions: cfg.selectedFunctions || [],
+          extraStatePrefixes: cfg.extraStatePrefixes || []
+        });
+        await ((_a = this.residents) == null ? void 0 : _a.subscribe());
+      },
+      onDisconnected: async () => {
+        var _a, _b;
+        await this.setState("info.connection", false, true);
+        await ((_a = this.states) == null ? void 0 : _a.stop());
+        await ((_b = this.residents) == null ? void 0 : _b.unsubscribe());
+      },
+      onCommand: (cmd) => {
+        var _a, _b, _c;
+        const which = Object.keys(cmd).find((k) => k !== "command" && cmd[k]);
+        if (which === "set_state" && cmd.set_state) {
+          void ((_a = this.states) == null ? void 0 : _a.handleSetState(cmd.set_state.state_id, cmd.set_state.value));
+        } else if (which === "watch_more" && ((_b = cmd.watch_more) == null ? void 0 : _b.state_ids)) {
+          void ((_c = this.states) == null ? void 0 : _c.watchMore(cmd.watch_more.state_ids));
+        }
+      }
+    });
+    this.grpc.connect(host, port);
+  }
+  /** @inheritdoc */
+  onStateChange(id, state) {
+    var _a, _b;
+    (_a = this.residents) == null ? void 0 : _a.onStateChange(id, state);
+    (_b = this.states) == null ? void 0 : _b.onStateChange(id, state);
   }
   /**
-   * Is called when adapter shuts down - callback has to be called under any circumstances!
+   * Is called when adapter shuts down — callback has to be called under any circumstances!
    *
    * @param callback - Callback function
    */
   onUnload(callback) {
+    var _a;
     try {
+      (_a = this.grpc) == null ? void 0 : _a.disconnect();
       callback();
-    } catch (error) {
-      this.log.error(`Error during unloading: ${error.message}`);
+    } catch (e) {
+      this.log.error(`Error during shutdown: ${e.message}`);
       callback();
     }
   }
-  // If you need to react to object changes, uncomment the following block and the corresponding line in the constructor.
-  // You also need to subscribe to the objects with `this.subscribeObjects`, similar to `this.subscribeStates`.
-  // /**
-  //  * Is called if a subscribed object changes
-  //  */
-  // private onObjectChange(id: string, obj: ioBroker.Object | null | undefined): void {
-  //     if (obj) {
-  //         // The object was changed
-  //         this.log.info(`object ${id} changed: ${JSON.stringify(obj)}`);
-  //     } else {
-  //         // The object was deleted
-  //         this.log.info(`object ${id} deleted`);
-  //     }
-  // }
-  /**
-   * Is called if a subscribed state changes
-   *
-   * @param id - State ID
-   * @param state - State object
-   */
-  onStateChange(id, state) {
-    if (state) {
-      this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
-      if (state.ack === false) {
-        this.log.info(`User command received for ${id}: ${state.val}`);
-      }
-    } else {
-      this.log.info(`state ${id} deleted`);
-    }
-  }
-  // If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
-  // /**
-  //  * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
-  //  * Using this method requires "common.messagebox" property to be set to true in io-package.json
-  //  */
-  //
-  // private onMessage(obj: ioBroker.Message): void {
-  //     if (typeof obj === 'object' && obj.message) {
-  //         if (obj.command === 'send') {
-  //             // e.g. send email or pushover or whatever
-  //             this.log.info('send command');
-  //             // Send response in callback if required
-  //             if (obj.callback) this.sendTo(obj.from, obj.command, 'Message received', obj.callback);
-  //         }
-  //     }
-  // }
 }
 if (require.main !== module) {
   module.exports = (options) => new Hannah(options);

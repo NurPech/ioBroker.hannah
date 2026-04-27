@@ -1,167 +1,100 @@
-/*
- * Created with @iobroker/create-adapter v3.1.2
- */
-
-// The adapter-core module gives you access to the core ioBroker functions
-// you need to create an adapter
 import * as utils from '@iobroker/adapter-core';
-
-// Load your modules here, e.g.:
-// import * as fs from 'fs';
+import { GrpcClient } from './grpc-client';
+import { StateWatcher } from './state-watcher';
+import { ResidentsWatcher } from './residents';
 
 class Hannah extends utils.Adapter {
+    private grpc: GrpcClient | null = null;
+    private states: StateWatcher | null = null;
+    private residents: ResidentsWatcher | null = null;
+
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
-        super({
-            ...options,
-            name: 'hannah',
-        });
+        super({ ...options, name: 'hannah' });
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
-        // this.on('objectChange', this.onObjectChange.bind(this));
-        // this.on('message', this.onMessage.bind(this));
         this.on('unload', this.onUnload.bind(this));
     }
 
-    /**
-     * Is called when databases are connected and adapter received configuration.
-     */
+    /** @inheritdoc */
     private async onReady(): Promise<void> {
-        // Initialize your adapter here
-
-        // The adapters config (in the instance object everything under the attribute "native") is accessible via
-        // this.config:
-        this.log.debug('config option1: ${this.config.option1}');
-        this.log.debug('config option2: ${this.config.option2}');
-
-        /*
-        For every state in the system there has to be also an object of type state
-        Here a simple template for a boolean variable named "testVariable"
-        Because every adapter instance uses its own unique namespace variable names can't collide with other adapters variables
-
-        IMPORTANT: State roles should be chosen carefully based on the state's purpose.
-                   Please refer to the state roles documentation for guidance:
-                   https://www.iobroker.net/#en/documentation/dev/stateroles.md
-        */
-        await this.setObjectNotExistsAsync('testVariable', {
+        await this.setObjectNotExistsAsync('info.connection', {
             type: 'state',
             common: {
-                name: 'testVariable',
+                name: 'Connected to Hannah Core',
                 type: 'boolean',
-                role: 'indicator',
+                role: 'indicator.connected',
                 read: true,
-                write: true,
+                write: false,
+                def: false,
             },
             native: {},
         });
+        await this.setState('info.connection', false, true);
 
-        // In order to get state updates, you need to subscribe to them. The following line adds a subscription for our variable we have created above.
-        this.subscribeStates('testVariable');
-        // You can also add a subscription for multiple states. The following line watches all states starting with "lights."
-        // this.subscribeStates('lights.*');
-        // Or, if you really must, you can also watch all states. Don't do this if you don't need to. Otherwise this will cause a lot of unnecessary load on the system:
-        // this.subscribeStates('*');
+        const cfg = this.config;
+        const host: string = cfg.hannahHost || '127.0.0.1';
+        const port: number = cfg.hannahPort || 50051;
 
-        /*
-            setState examples
-            you will notice that each setState will cause the stateChange event to fire (because of above subscribeStates cmd)
-        */
-        // the variable testVariable is set to true as command (ack=false)
-        await this.setState('testVariable', true);
+        const send = (msg: object): void => {
+            this.grpc?.send(msg);
+        };
 
-        // same thing, but the value is flagged "ack"
-        // ack should be always set to true if the value is received from or acknowledged from the target system
-        await this.setState('testVariable', { val: true, ack: true });
+        this.states = new StateWatcher(this, send, cfg.textCommandStateId || '');
+        this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
 
-        // same thing, but the state is deleted after 30s (getState will return null afterwards)
-        await this.setState('testVariable', { val: true, ack: true, expire: 30 });
+        this.grpc = new GrpcClient({
+            log: this.log,
+            onConnected: async () => {
+                await this.setState('info.connection', true, true);
+                await this.states!.start({
+                    selectedRooms: cfg.selectedRooms || [],
+                    selectedFunctions: cfg.selectedFunctions || [],
+                    extraStatePrefixes: cfg.extraStatePrefixes || [],
+                });
+                await this.residents?.subscribe();
+            },
+            onDisconnected: async () => {
+                await this.setState('info.connection', false, true);
+                await this.states?.stop();
+                await this.residents?.unsubscribe();
+            },
+            onCommand: (cmd: any) => {
+                const which = Object.keys(cmd).find(k => k !== 'command' && cmd[k]);
+                if (which === 'set_state' && cmd.set_state) {
+                    void this.states?.handleSetState(cmd.set_state.state_id, cmd.set_state.value);
+                } else if (which === 'watch_more' && cmd.watch_more?.state_ids) {
+                    void this.states?.watchMore(cmd.watch_more.state_ids);
+                }
+            },
+        });
 
-        // examples for the checkPassword/checkGroup functions
-        const pwdResult = await this.checkPasswordAsync('admin', 'iobroker');
-        this.log.info(`check user admin pw iobroker: ${JSON.stringify(pwdResult)}`);
+        this.grpc.connect(host, port);
+    }
 
-        const groupResult = await this.checkGroupAsync('admin', 'admin');
-        this.log.info(`check group user admin group admin: ${JSON.stringify(groupResult)}`);
+    /** @inheritdoc */
+    private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
+        this.residents?.onStateChange(id, state);
+        this.states?.onStateChange(id, state);
     }
 
     /**
-     * Is called when adapter shuts down - callback has to be called under any circumstances!
+     * Is called when adapter shuts down — callback has to be called under any circumstances!
      *
      * @param callback - Callback function
      */
     private onUnload(callback: () => void): void {
         try {
-            // Here you must clear all timeouts or intervals that may still be active
-            // clearTimeout(timeout1);
-            // clearTimeout(timeout2);
-            // ...
-            // clearInterval(interval1);
-
+            this.grpc?.disconnect();
             callback();
-        } catch (error) {
-            this.log.error(`Error during unloading: ${(error as Error).message}`);
+        } catch (e) {
+            this.log.error(`Error during shutdown: ${(e as Error).message}`);
             callback();
         }
     }
-
-    // If you need to react to object changes, uncomment the following block and the corresponding line in the constructor.
-    // You also need to subscribe to the objects with `this.subscribeObjects`, similar to `this.subscribeStates`.
-    // /**
-    //  * Is called if a subscribed object changes
-    //  */
-    // private onObjectChange(id: string, obj: ioBroker.Object | null | undefined): void {
-    //     if (obj) {
-    //         // The object was changed
-    //         this.log.info(`object ${id} changed: ${JSON.stringify(obj)}`);
-    //     } else {
-    //         // The object was deleted
-    //         this.log.info(`object ${id} deleted`);
-    //     }
-    // }
-
-    /**
-     * Is called if a subscribed state changes
-     *
-     * @param id - State ID
-     * @param state - State object
-     */
-    private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
-        if (state) {
-            // The state was changed
-            this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
-
-            if (state.ack === false) {
-                // This is a command from the user (e.g., from the UI or other adapter)
-                // and should be processed by the adapter
-                this.log.info(`User command received for ${id}: ${state.val}`);
-
-                // TODO: Add your control logic here
-            }
-        } else {
-            // The object was deleted or the state value has expired
-            this.log.info(`state ${id} deleted`);
-        }
-    }
-    // If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
-    // /**
-    //  * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
-    //  * Using this method requires "common.messagebox" property to be set to true in io-package.json
-    //  */
-    //
-    // private onMessage(obj: ioBroker.Message): void {
-    //     if (typeof obj === 'object' && obj.message) {
-    //         if (obj.command === 'send') {
-    //             // e.g. send email or pushover or whatever
-    //             this.log.info('send command');
-    //             // Send response in callback if required
-    //             if (obj.callback) this.sendTo(obj.from, obj.command, 'Message received', obj.callback);
-    //         }
-    //     }
-    // }
 }
+
 if (require.main !== module) {
-    // Export the constructor in compact mode
     module.exports = (options: Partial<utils.AdapterOptions> | undefined) => new Hannah(options);
 } else {
-    // otherwise start the instance directly
     (() => new Hannah())();
 }
