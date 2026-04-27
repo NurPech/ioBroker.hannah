@@ -23,6 +23,8 @@
     "node": ">= 20"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.12.0",
+    "@grpc/proto-loader": "^0.7.15",
     "@iobroker/adapter-core": "^3.3.2"
   },
   "devDependencies": {
@@ -56,13 +58,14 @@
     "admin{,/!(src)/**}/*.{html,css,png,svg,jpg,js}",
     "admin/build/",
     "build/",
+    "build/proto/",
     "www/",
     "io-package.json",
     "LICENSE"
   ],
   "scripts": {
     "prebuild": "rimraf build admin/build",
-    "build": "build-adapter all",
+    "build": "build-adapter all && node -e \"require('fs').mkdirSync('build/proto',{recursive:true});require('fs').copyFileSync('src/proto/hannah.proto','build/proto/hannah.proto')\"",
     "watch": "build-adapter all --watch",
     "prebuild:ts": "rimraf build",
     "build:ts": "build-adapter ts",
