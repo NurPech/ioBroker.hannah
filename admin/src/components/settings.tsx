@@ -35,7 +35,9 @@ interface SettingsState {
     activeTab: number;
 }
 
+/** Settings component for the Hannah ioBroker adapter. */
 class Settings extends React.Component<SettingsProps, SettingsState> {
+    /** @inheritdoc */
     constructor(props: SettingsProps) {
         super(props);
         this.state = { activeTab: 0 };
@@ -50,11 +52,17 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
     }
 
     private removePrefix(index: number): void {
-        this.props.onChange('extraStatePrefixes', this.getPrefixes().filter((_, i) => i !== index));
+        this.props.onChange(
+            'extraStatePrefixes',
+            this.getPrefixes().filter((_, i) => i !== index),
+        );
     }
 
     private updatePrefix(index: number, value: string): void {
-        this.props.onChange('extraStatePrefixes', this.getPrefixes().map((p, i) => (i === index ? { prefix: value } : p)));
+        this.props.onChange(
+            'extraStatePrefixes',
+            this.getPrefixes().map((p, i) => (i === index ? { prefix: value } : p)),
+        );
     }
 
     private renderConnectionTab(): React.JSX.Element {
@@ -83,11 +91,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
         );
     }
 
-    private renderEnumColumn(
-        title: string,
-        items: EnumItem[],
-        selectedKey: string,
-    ): React.JSX.Element {
+    private renderEnumColumn(title: string, items: EnumItem[], selectedKey: string): React.JSX.Element {
         const { enumsLoaded } = this.props;
         const selected: string[] = this.props.native[selectedKey] || [];
         const toggle = (id: string): void => {
@@ -97,44 +101,68 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
 
         return (
             <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    px: 1.5,
-                    py: 0.75,
-                    borderRadius: '4px 4px 0 0',
-                }}>
+                <Box
+                    sx={{
+                        bgcolor: 'primary.main',
+                        color: 'primary.contrastText',
+                        px: 1.5,
+                        py: 0.75,
+                        borderRadius: '4px 4px 0 0',
+                    }}
+                >
                     <Typography variant="subtitle2">{title}</Typography>
                 </Box>
-                <Paper variant="outlined" sx={{ borderTop: 'none', borderRadius: '0 0 4px 4px', maxHeight: 380, overflowY: 'auto' }}>
+                <Paper
+                    variant="outlined"
+                    sx={{ borderTop: 'none', borderRadius: '0 0 4px 4px', maxHeight: 380, overflowY: 'auto' }}
+                >
                     {!enumsLoaded ? (
-                        <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ p: 2 }}
+                        >
                             {I18n.t('Loading...')}
                         </Typography>
                     ) : items.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ p: 2 }}
+                        >
                             {I18n.t('No entries found')}
                         </Typography>
-                    ) : items.map((item, idx) => (
-                        <React.Fragment key={item.id}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 0.5 }}>
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography variant="body2" noWrap fontWeight={selected.includes(item.id) ? 600 : 400}>
-                                        {item.name}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                                        {item.id}
-                                    </Typography>
+                    ) : (
+                        items.map((item, idx) => (
+                            <React.Fragment key={item.id}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 0.5 }}>
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Typography
+                                            variant="body2"
+                                            noWrap
+                                            fontWeight={selected.includes(item.id) ? 600 : 400}
+                                        >
+                                            {item.name}
+                                        </Typography>
+                                        <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                            noWrap
+                                            sx={{ display: 'block' }}
+                                        >
+                                            {item.id}
+                                        </Typography>
+                                    </Box>
+                                    <Switch
+                                        size="small"
+                                        checked={selected.includes(item.id)}
+                                        onChange={() => toggle(item.id)}
+                                    />
                                 </Box>
-                                <Switch
-                                    size="small"
-                                    checked={selected.includes(item.id)}
-                                    onChange={() => toggle(item.id)}
-                                />
-                            </Box>
-                            {idx < items.length - 1 && <Divider />}
-                        </React.Fragment>
-                    ))}
+                                {idx < items.length - 1 && <Divider />}
+                            </React.Fragment>
+                        ))
+                    )}
                 </Paper>
             </Box>
         );
@@ -145,18 +173,31 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
         const prefixes = this.getPrefixes();
         return (
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                    {I18n.t('Select which rooms and functions Hannah should know about. Leave all off to include everything.')}
+                <Typography
+                    variant="body2"
+                    color="text.secondary"
+                >
+                    {I18n.t(
+                        'Select which rooms and functions Hannah should know about. Leave all off to include everything.',
+                    )}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                     {this.renderEnumColumn(I18n.t('Rooms'), allRooms, 'selectedRooms')}
                     {this.renderEnumColumn(I18n.t('Functions'), allFunctions, 'selectedFunctions')}
                 </Box>
                 <Box>
-                    <Typography variant="subtitle2" color="text.primary" sx={{ mb: 0.5 }}>
+                    <Typography
+                        variant="subtitle2"
+                        color="text.primary"
+                        sx={{ mb: 0.5 }}
+                    >
                         {I18n.t('Extra State Prefixes')}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mb: 1 }}
+                    >
                         {I18n.t('Additional state ID prefixes to stream to Hannah (e.g. 0_userdata.0)')}
                     </Typography>
                     <Table size="small">
@@ -179,14 +220,23 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                                         />
                                     </TableCell>
                                     <TableCell sx={{ py: 0.5 }}>
-                                        <IconButton size="small" onClick={() => this.removePrefix(i)}>✕</IconButton>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => this.removePrefix(i)}
+                                        >
+                                            ✕
+                                        </IconButton>
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
                     <Box sx={{ mt: 1 }}>
-                        <Button variant="outlined" size="small" onClick={() => this.addPrefix()}>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => this.addPrefix()}
+                        >
                             + {I18n.t('Add prefix')}
                         </Button>
                     </Box>
@@ -207,10 +257,20 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                         onChange={e => onChange('residentsInstance', e.target.value)}
                     >
                         {residentsInstances.length === 0 ? (
-                            <MenuItem value="" disabled>{I18n.t('No residents adapter found')}</MenuItem>
+                            <MenuItem
+                                value=""
+                                disabled
+                            >
+                                {I18n.t('No residents adapter found')}
+                            </MenuItem>
                         ) : (
                             residentsInstances.map(inst => (
-                                <MenuItem key={inst} value={inst}>residents.{inst}</MenuItem>
+                                <MenuItem
+                                    key={inst}
+                                    value={inst}
+                                >
+                                    residents.{inst}
+                                </MenuItem>
                             ))
                         )}
                     </Select>
@@ -227,11 +287,16 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
         );
     }
 
+    /** @inheritdoc */
     render(): React.JSX.Element {
         const { activeTab } = this.state;
         return (
             <Box>
-                <AppBar position="static" color="default" elevation={1}>
+                <AppBar
+                    position="static"
+                    color="default"
+                    elevation={1}
+                >
                     <Tabs
                         value={activeTab}
                         onChange={(_, v: number) => this.setState({ activeTab: v })}

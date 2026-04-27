@@ -15,8 +15,11 @@ import plI18n from './i18n/pl.json';
 import ukI18n from './i18n/uk.json';
 import zhCnI18n from './i18n/zh-cn.json';
 
+/** A single enum entry with id and display name. */
 export interface EnumItem {
+    /** Full ioBroker enum ID, e.g. enum.rooms.Schlafzimmer */
     id: string;
+    /** Display name resolved from the enum's common.name */
     name: string;
 }
 
@@ -27,12 +30,21 @@ interface AppState extends GenericAppState {
     enumsLoaded: boolean;
 }
 
+/**
+ * Resolves a multilingual or plain string enum name to a display string.
+ *
+ * @param name - The enum common.name value (string or language map)
+ */
 function enumName(name: string | Record<string, string>): string {
-    if (typeof name === 'string') return name;
+    if (typeof name === 'string') {
+        return name;
+    }
     return name.de || name.en || Object.values(name)[0] || '';
 }
 
+/** Root application component for the Hannah adapter admin UI. */
 class App extends GenericApp<GenericAppProps, AppState> {
+    /** @inheritdoc */
     constructor(props: GenericAppProps) {
         const extendedProps: GenericAppSettings = {
             ...props,
@@ -55,6 +67,7 @@ class App extends GenericApp<GenericAppProps, AppState> {
         this.state = { ...this.state, residentsInstances: [], allRooms: [], allFunctions: [], enumsLoaded: false };
     }
 
+    /** @inheritdoc */
     async onConnectionReady(): Promise<void> {
         try {
             const [roomEnums, funcEnums, resInstances] = await Promise.all([
@@ -80,6 +93,7 @@ class App extends GenericApp<GenericAppProps, AppState> {
         }
     }
 
+    /** @inheritdoc */
     render(): React.JSX.Element {
         if (!this.state.loaded) {
             return super.render();
