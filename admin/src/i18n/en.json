@@ -16,7 +16,5 @@
     "Prefix": "Prefix",
     "Add prefix": "Add prefix",
     "Residents Adapter Instance": "Residents Adapter Instance",
-    "No residents adapter found": "No residents adapter found",
-    "Text Command State ID": "Text Command State ID",
-    "ioBroker state ID to watch for text commands sent to Hannah": "ioBroker state ID to watch for text commands sent to Hannah"
+    "No residents adapter found": "No residents adapter found"
 }

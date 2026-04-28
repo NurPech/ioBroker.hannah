@@ -4,11 +4,13 @@ import type { AgentMessageSender } from './grpc-client';
 /**
  * Watches the residents adapter presence states and forwards changes
  * as AgentResidentUpdate messages to Hannah Core.
+ * Covers roomies, guests, and any other resident types (e.g. pets).
  */
 export class ResidentsWatcher {
     private adapter: utils.AdapterInstance;
     private send: AgentMessageSender;
     private instance: string;
+    private lastSent = new Map<string, number>();
 
     /**
      * @param adapter - ioBroker adapter instance
@@ -21,9 +23,9 @@ export class ResidentsWatcher {
         this.instance = instance;
     }
 
-    /** Subscribe to all presence states under residents.<instance>.roomie.*.presence.state */
+    /** Subscribe to all presence states under residents.<instance>.*.*.presence.state */
     async subscribe(): Promise<void> {
-        const pattern = `residents.${this.instance}.roomie.*.presence.state`;
+        const pattern = `residents.${this.instance}.*.*.presence.state`;
         await this.adapter.subscribeForeignStatesAsync(pattern);
         this.adapter.log.info(`[residents] Subscribed: ${pattern}`);
     }
@@ -39,29 +41,38 @@ export class ResidentsWatcher {
             return;
         }
 
-        // Extract roomie_id from: residents.<instance>.roomie.<roomie_id>.presence.state
-        const match = id.match(/\.roomie\.([^.]+)\.presence\.state$/);
+        // Extract type and id from: residents.<instance>.<type>.<resident_id>.presence.state
+        const match = id.match(/\.(roomie|guest)\.([^.]+)\.presence\.state$/);
         if (!match) {
+            // Silently skip unknown resident types (e.g. pet) — AgentResidentUpdate only
+            // supports roomie/guest via is_guest:bool. Proto extension needed for pets.
             return;
         }
 
-        const roomieId = match[1];
+        const residentType = match[1];
+        const residentId = match[2];
         const presenceState = typeof state.val === 'number' ? state.val : parseInt(String(state.val), 10) || 0;
+
+        const key = `${residentType}/${residentId}`;
+        if (this.lastSent.get(key) === presenceState) {
+            return;
+        }
+        this.lastSent.set(key, presenceState);
 
         this.send({
             resident_update: {
-                roomie_id: roomieId,
+                roomie_id: residentId,
                 presence_state: presenceState,
-                is_guest: false,
+                is_guest: residentType === 'guest',
             },
         });
 
-        this.adapter.log.debug(`[residents] ${roomieId} → presence_state=${presenceState}`);
+        this.adapter.log.info(`[residents] ${key} → presence_state=${presenceState}`);
     }
 
     /** Unsubscribe from all presence states. */
     async unsubscribe(): Promise<void> {
-        const pattern = `residents.${this.instance}.roomie.*.presence.state`;
+        const pattern = `residents.${this.instance}.*.*.presence.state`;
         await this.adapter.unsubscribeForeignStatesAsync(pattern);
     }
 }

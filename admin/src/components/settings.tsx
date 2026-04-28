@@ -275,14 +275,6 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                         )}
                     </Select>
                 </FormControl>
-                <TextField
-                    label={I18n.t('Text Command State ID')}
-                    value={native.textCommandStateId || ''}
-                    onChange={e => onChange('textCommandStateId', e.target.value)}
-                    variant="outlined"
-                    size="small"
-                    helperText={I18n.t('ioBroker state ID to watch for text commands sent to Hannah')}
-                />
             </Box>
         );
     }
