@@ -75,7 +75,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.2 (2026-04-28)
 * Fixed: ControlDevice feedback channel — device state updates correctly after Hannah sets a state
 * Fixed: Wildcard pattern matching for subscribed states
 * Fixed: Resident presence subscription restricted to configured instance

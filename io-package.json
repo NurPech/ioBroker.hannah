@@ -1,110 +1,123 @@
 {
-    "common": {
-        "name": "hannah",
-        "version": "0.0.1",
-        "news": {
-            "0.0.1": {
-                "en": "initial release",
-                "de": "Erstveröffentlichung",
-                "ru": "Начальная версия",
-                "pt": "lançamento inicial",
-                "nl": "Eerste uitgave",
-                "fr": "Première version",
-                "it": "Versione iniziale",
-                "es": "Versión inicial",
-                "pl": "Pierwsze wydanie",
-                "uk": "Початкова версія",
-                "zh-cn": "首次出版"
-            }
-        },
-        "titleLang": {
-            "en": "Hannah",
-            "de": "Hannah",
-            "ru": "Ханна",
-            "pt": "Ana",
-            "nl": "Hanna",
-            "fr": "Hannah",
-            "it": "Anna",
-            "es": "hanna",
-            "pl": "Hanna",
-            "uk": "Ханна",
-            "zh-cn": "汉娜"
-        },
-        "desc": {
-            "en": "Connects ioBroker to Hannah voice assistant via bidirectional gRPC — streams device states, presence and commands in real time.",
-            "de": "Verbindet ioBroker über bidirektionales gRPC mit dem Hannah-Sprachassistenten – streamt Gerätestatus, Anwesenheit und Befehle in Echtzeit.",
-            "ru": "Подключает ioBroker к голосовому помощнику Ханны через двунаправленный gRPC — передает в режиме реального времени состояние устройства, его присутствие и команды.",
-            "pt": "Conecta o ioBroker ao assistente de voz Hannah via gRPC bidirecional – transmite estados, presença e comandos do dispositivo em tempo real.",
-            "nl": "Verbindt ioBroker met Hannah-stemassistent via bidirectionele gRPC - streamt apparaatstatussen, aanwezigheid en opdrachten in realtime.",
-            "fr": "Connecte ioBroker à l'assistant vocal Hannah via gRPC bidirectionnel – diffuse les états, la présence et les commandes de l'appareil en temps réel.",
-            "it": "Connette ioBroker all'assistente vocale Hannah tramite gRPC bidirezionale: trasmette in streaming gli stati, la presenza e i comandi del dispositivo in tempo reale.",
-            "es": "Conecta ioBroker al asistente de voz de Hannah a través de gRPC bidireccional: transmite los estados, la presencia y los comandos del dispositivo en tiempo real.",
-            "pl": "Łączy ioBroker z asystentem głosowym Hannah za pośrednictwem dwukierunkowego gRPC — przesyła strumieniowo stany urządzeń, obecność i polecenia w czasie rzeczywistym.",
-            "uk": "Підключає ioBroker до голосового помічника Hannah через двонаправлений gRPC — транслює стан пристрою, присутність і команди в реальному часі.",
-            "zh-cn": "通过双向 gRPC 将 ioBroker 连接到 Hannah 语音助手 — 实时传输设备状态、状态和命令。"
-        },
-        "authors": [
-            "M1kad0 <leonie+iobroker@sgessinger.de>"
-        ],
-        "keywords": [
-            "hannah",
-            "gRPC",
-            "voice assistant"
-        ],
-        "licenseInformation": {
-            "type": "free",
-            "license": "MIT"
-        },
-        "platform": "Javascript/Node.js",
-        "icon": "hannah.png",
-        "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/NurPech/ioBroker.hannah/main/admin/hannah.png",
-        "readme": "https://github.com/NurPech/ioBroker.hannah/blob/main/README.md",
-        "loglevel": "info",
-        "tier": 3,
-        "mode": "daemon",
-        "type": "protocols",
-        "compact": true,
-        "connectionType": "local",
-        "dataSource": "poll",
-        "adminUI": {
-            "config": "html"
-        },
-        "eraseOnUpload": true,
-        "dependencies": [
-            {
-                "js-controller": ">=6.0.11"
-            }
-        ],
-        "globalDependencies": [
-            {
-                "admin": ">=7.6.20"
-            }
-        ]
+  "common": {
+    "name": "hannah",
+    "version": "0.0.2",
+    "news": {
+      "0.0.2": {
+        "en": "Fixed: ControlDevice feedback channel — device state updates correctly after Hannah sets a state\nFixed: Wildcard pattern matching for subscribed states\nFixed: Resident presence subscription restricted to configured instance\nFixed: Only forward confirmed states (ack=true) to Hannah; commands (ack=false) are ignored\nNew: Text command state moved into adapter namespace (`hannah.<instance>.textCommand`)\nNew: Automatic reloading of enum subscriptions when rooms or functions change in ioBroker",
+        "de": "Fix: ControlDevice Feedback-Kanal – Gerätezustand aktualisiert korrekt, nachdem Hannah einen Zustand setzt\nFix: Wildcard-Musteranpassung für abonnierte Zustände\nBehoben: Resident Präsenz Abonnement beschränkt auf konfigurierte Instanz\nBehoben: Nur weiter bestätigte Zustände (ack=true) zu Hannah; Befehle (ack=false) werden ignoriert\nNeu: Text-Befehlszustand in Adapternamespace verschoben (`hannah.<instance>.textCommand`)\nNeu: Automatische Umladung von enum-Abonnements, wenn Räume oder Funktionen in ioBroker ändern",
+        "ru": "Исправлено: канал обратной связи ControlDevice - состояние устройства обновляется правильно после того, как Ханна устанавливает состояние\nФиксированный: соответствие шаблона Wildcard для подписных государств\nИсправлено: подписка на постоянное присутствие ограничена настроенным экземпляром\nИсправлено: только вперед подтвержденные состояния (ack=true) к Ханне; команды (ack=false) игнорируются\nНовое: текстовое командное состояние переместилось в пространство имен адаптера ('hannah.<instance>.textCommand')\nАвтоматическая перезагрузка подписок enum при смене номеров или функций в ioBroker",
+        "pt": "Fixo: Canal de feedback ControlDevice — atualizações do estado do dispositivo corretamente após Hannah definir um estado\nFixo: Correspondência do padrão Wildcard para estados subscritos\nFixo: Assinatura de presença residente restrita à instância configurada\nFixo: Apenas estados confirmados (ack=true) para Hannah; os comandos (ack=false) são ignorados\nNovo: O estado do comando Text foi movido para o espaço de nomes do adaptador (`hannah.<instance>.textCommand`)\nNovo: Recarregamento automático de assinaturas de enum quando quartos ou funções mudam em ioBroker",
+        "nl": "Fixed: ControlDevice feedback kanaal \nVast: Wildcard patroon matching voor geabonneerde landen\nFixed: Resident aanwezigheid abonnement beperkt tot geconfigureerde instantie\nVast: Alleen doorsturen bevestigde toestanden (ack=true) naar Hannah; commando's (ack=false) worden genegeerd\nNieuw: Tekstopdrachtstatus verplaatst naar de naamruimte van de adapter (\nNieuw: Automatisch herladen van enum abonnementen wanneer kamers of functies veranderen in ioBroker",
+        "fr": "Correction: ControlDevice feedback canal — mises à jour de l'état du périphérique correctement après Hannah définit un état\nCorrection : Modèle Wildcard correspondant aux états souscrits\nCorrection : abonnement de présence résidente limité à l'instance configurée\nCorrection : Seuls les états confirmés (ack=true) vers Hannah; les commandes (ack=false) sont ignorées\nNouveau : État de commande texte déplacé dans l'espace de noms d'adaptateur (`hannah.<instance>.textCommand`)\nNouveau: Rechargement automatique des abonnements enum lorsque les salles ou fonctions changent dans ioBroker",
+        "it": "Fisso: ControlDevice canale di feedback — gli aggiornamenti dello stato del dispositivo correttamente dopo Hannah imposta uno stato\nFisso: modello Wildcard corrispondente per gli stati abbonati\nRisolto: abbonamento di presenza residente limitato all'istanza configurata\nRisolto: Solo gli stati confermati in avanti (ack=true) ad Hannah; i comandi (ack=false) vengono ignorati\nNuovo: Stato di comando del testo si è trasferito nello spazio dei nomi dell'adattatore ( `hannah\nNovità: ricarica automatica degli abbonamenti enum quando le camere o le funzioni cambiano in ioBroker",
+        "es": "Corregido: ControlDevice feedback channel — actualizaciones del estado del dispositivo correctamente después de que Hannah establezca un estado\nFijo: Patrón de Wildcard que coincide con los estados suscritos\nFijo: Suscripción de la presencia residencial restringida a instancias configuradas\nArreglado: Sólo los estados confirmados por adelantado (ack=true) a Hannah; los comandos (ack=false) son ignorados\nNuevo: El estado del comando de texto se trasladó en el espacio de nombres del adaptador (`hannah\nNuevo: Recarga automática de suscripciones enum cuando las habitaciones o funciones cambian en ioBroker",
+        "pl": "Naprawiono: Kanał zwrotny ControlDevice - aktualizacja stanu urządzenia poprawnie po ustawieniu stanu Hannah\nNaprawiono: wzór Wildcard pasujący do subskrybowanych stanów\nNaprawiono: Subskrypcja obecności rezydenta ograniczona do skonfigurowanej instancji\nNaprawiono: tylko stany potwierdzone do przodu (ack = true) do Hannah; polecenia (ack = false) są ignorowane\nNew: Text command state przeniesione do adaptera namespace ('hannah. < instance > .textCommand')\nNowy: Automatyczne przeładowanie subskrypcji enum, gdy pokoje lub funkcje zmieniają się w jOBroker",
+        "uk": "Виправлено: controlDevice зворотний зв'язок каналу — пристрій стану оновлення правильно після Hannah встановлює стан\nВиправлено: шаблон Wildcard, що відповідає підписам\nВиправлено: Заява про наявність резидента обмежена для налаштування екземпляра\nВиправлено: ігноруються тільки перевірені штати (ack=true) до Ганна; команди (ack=false)\nНовий: Текстовий стан, переведений в простір назв адаптерів (`hannah.<instance>.textCommand`)\nНовий: Автоматичне перевантаження підписок на енму при зміні номерів або функцій в ioBroker",
+        "zh-cn": "固定: ControlDevice 反馈通道 — Hannah 设置状态后设备状态更新正确\n固定: 订阅状态的通配模式\n固定:驻地订阅仅限于配置实例\n固定: 仅转发确认状态( ack= true) 到 Hannah; 命令( ack=false) 被忽略\n新建: 文本命令状态移动到适配器命名空间( 'hanah.<instance>. textCommand')\n新建: 当 ioBroker 房间或功能发生变化时自动重新装入 enum 订阅"
+      },
+      "0.0.1": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "uk": "Початкова версія",
+        "zh-cn": "首次出版"
+      }
     },
-    "native": {
-        "hannahHost": "",
-        "hannahPort": 50051,
-        "selectedRooms": [],
-        "selectedFunctions": [],
-        "extraStatePrefixes": [],
-        "residentsInstance": "0",
-        "textCommandStateId": "0_userdata.0.hannah.set.textCommand"
+    "titleLang": {
+      "en": "Hannah",
+      "de": "Hannah",
+      "ru": "Ханна",
+      "pt": "Ana",
+      "nl": "Hanna",
+      "fr": "Hannah",
+      "it": "Anna",
+      "es": "hanna",
+      "pl": "Hanna",
+      "uk": "Ханна",
+      "zh-cn": "汉娜"
     },
-    "objects": [],
-    "instanceObjects": [
-        {
-            "_id": "info.connection",
-            "type": "state",
-            "common": {
-                "name": "Connected to Hannah Core",
-                "type": "boolean",
-                "role": "indicator.connected",
-                "read": true,
-                "write": false,
-                "def": false
-            },
-            "native": {}
-        }
+    "desc": {
+      "en": "Connects ioBroker to Hannah voice assistant via bidirectional gRPC — streams device states, presence and commands in real time.",
+      "de": "Verbindet ioBroker über bidirektionales gRPC mit dem Hannah-Sprachassistenten – streamt Gerätestatus, Anwesenheit und Befehle in Echtzeit.",
+      "ru": "Подключает ioBroker к голосовому помощнику Ханны через двунаправленный gRPC — передает в режиме реального времени состояние устройства, его присутствие и команды.",
+      "pt": "Conecta o ioBroker ao assistente de voz Hannah via gRPC bidirecional – transmite estados, presença e comandos do dispositivo em tempo real.",
+      "nl": "Verbindt ioBroker met Hannah-stemassistent via bidirectionele gRPC - streamt apparaatstatussen, aanwezigheid en opdrachten in realtime.",
+      "fr": "Connecte ioBroker à l'assistant vocal Hannah via gRPC bidirectionnel – diffuse les états, la présence et les commandes de l'appareil en temps réel.",
+      "it": "Connette ioBroker all'assistente vocale Hannah tramite gRPC bidirezionale: trasmette in streaming gli stati, la presenza e i comandi del dispositivo in tempo reale.",
+      "es": "Conecta ioBroker al asistente de voz de Hannah a través de gRPC bidireccional: transmite los estados, la presencia y los comandos del dispositivo en tiempo real.",
+      "pl": "Łączy ioBroker z asystentem głosowym Hannah za pośrednictwem dwukierunkowego gRPC — przesyła strumieniowo stany urządzeń, obecność i polecenia w czasie rzeczywistym.",
+      "uk": "Підключає ioBroker до голосового помічника Hannah через двонаправлений gRPC — транслює стан пристрою, присутність і команди в реальному часі.",
+      "zh-cn": "通过双向 gRPC 将 ioBroker 连接到 Hannah 语音助手 — 实时传输设备状态、状态和命令。"
+    },
+    "authors": [
+      "M1kad0 <leonie+iobroker@sgessinger.de>"
+    ],
+    "keywords": [
+      "hannah",
+      "gRPC",
+      "voice assistant"
+    ],
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
+    "platform": "Javascript/Node.js",
+    "icon": "hannah.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/NurPech/ioBroker.hannah/main/admin/hannah.png",
+    "readme": "https://github.com/NurPech/ioBroker.hannah/blob/main/README.md",
+    "loglevel": "info",
+    "tier": 3,
+    "mode": "daemon",
+    "type": "protocols",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "poll",
+    "adminUI": {
+      "config": "html"
+    },
+    "eraseOnUpload": true,
+    "dependencies": [
+      {
+        "js-controller": ">=6.0.11"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=7.6.20"
+      }
     ]
+  },
+  "native": {
+    "hannahHost": "",
+    "hannahPort": 50051,
+    "selectedRooms": [],
+    "selectedFunctions": [],
+    "extraStatePrefixes": [],
+    "residentsInstance": "0",
+    "textCommandStateId": "0_userdata.0.hannah.set.textCommand"
+  },
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "name": "Connected to Hannah Core",
+        "type": "boolean",
+        "role": "indicator.connected",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    }
+  ]
 }
