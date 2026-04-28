@@ -7,11 +7,13 @@ class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
     private states: StateWatcher | null = null;
     private residents: ResidentsWatcher | null = null;
+    private enumReloadTimer: ReturnType<typeof setTimeout> | null = null;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({ ...options, name: 'hannah' });
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
+        this.on('objectChange', this.onObjectChange.bind(this));
         this.on('unload', this.onUnload.bind(this));
     }
 
@@ -39,7 +41,12 @@ class Hannah extends utils.Adapter {
             this.grpc?.send(msg);
         };
 
-        this.states = new StateWatcher(this, send, cfg.textCommandStateId || '', cfg.residentsInstance ? `residents.${cfg.residentsInstance}.` : 'residents.');
+        this.states = new StateWatcher(
+            this,
+            send,
+            cfg.textCommandStateId || '',
+            cfg.residentsInstance ? `residents.${cfg.residentsInstance}.` : 'residents.',
+        );
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
 
         this.grpc = new GrpcClient({
@@ -52,6 +59,8 @@ class Hannah extends utils.Adapter {
                     extraStatePrefixes: cfg.extraStatePrefixes || [],
                 });
                 await this.residents?.subscribe();
+                await this.subscribeForeignObjectsAsync('enum.rooms.*');
+                await this.subscribeForeignObjectsAsync('enum.functions.*');
             },
             onDisconnected: async () => {
                 await this.setState('info.connection', false, true);
@@ -78,12 +87,51 @@ class Hannah extends utils.Adapter {
     }
 
     /**
+     * Schedules a debounced enum reload when room or function enums change.
+     *
+     * @param id - Object ID that changed
+     * @param _obj - New object value (unused)
+     */
+    private onObjectChange(id: string, _obj: ioBroker.Object | null | undefined): void {
+        if (!id.startsWith('enum.rooms.') && !id.startsWith('enum.functions.')) {
+            return;
+        }
+        if (this.enumReloadTimer) {
+            clearTimeout(this.enumReloadTimer);
+        }
+        this.enumReloadTimer = setTimeout(() => {
+            this.enumReloadTimer = null;
+            void this._reloadEnums();
+        }, 5_000);
+        this.log.info(`[enums] Change detected on ${id} — reloading in 5s`);
+    }
+
+    /** Reload enum subscriptions after a configuration change. */
+    private async _reloadEnums(): Promise<void> {
+        if (!this.states) {
+            return;
+        }
+        this.log.info('[enums] Reloading enum subscriptions...');
+        const cfg = this.config;
+        await this.states.stop();
+        await this.states.start({
+            selectedRooms: cfg.selectedRooms || [],
+            selectedFunctions: cfg.selectedFunctions || [],
+            extraStatePrefixes: cfg.extraStatePrefixes || [],
+        });
+        this.log.info('[enums] Reload complete.');
+    }
+
+    /**
      * Is called when adapter shuts down — callback has to be called under any circumstances!
      *
      * @param callback - Callback function
      */
     private onUnload(callback: () => void): void {
         try {
+            if (this.enumReloadTimer) {
+                clearTimeout(this.enumReloadTimer);
+            }
             this.grpc?.disconnect();
             callback();
         } catch (e) {
