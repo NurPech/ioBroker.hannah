@@ -51,7 +51,7 @@ class ResidentsWatcher {
     if (!state || state.val === null) {
       return;
     }
-    const match = id.match(/\.(roomie|guest|pet)\.([^.]+)\.presence\.state$/);
+    const match = id.match(/\.(roomie|guest)\.([^.]+)\.presence\.state$/);
     if (!match) {
       return;
     }
@@ -62,7 +62,7 @@ class ResidentsWatcher {
       resident_update: {
         roomie_id: residentId,
         presence_state: presenceState,
-        is_guest: residentType !== "roomie"
+        is_guest: residentType === "guest"
       }
     });
     this.adapter.log.debug(`[residents] ${residentType}/${residentId} \u2192 presence_state=${presenceState}`);
