@@ -75,6 +75,16 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* New: Native AgentTextAnswer via gRPC pushes responses directly to hannah.<instance>.textAnswer
+* New: Dedicated resident_set gRPC command for residents.set_presence() to eliminate the final MQTT dependency
+* New: Satellite state management integrated into adapter via GetSatellites() and gRPC subscriptions (NotifySatelliteRegistered/Gone)
+* New: Automatic satellite state initialization under hannah.<instance>.satellites.* at startup
+* Bug: Removed redundant residentsPrefix from StateWatcher to prevent duplicate state_update transmissions
+* Bug: Consolidated resident tracking into ResidentsWatcher for a single, clean telemetry path
+* Bug: Replaced legacy JavaScript satellite/room logic with native adapter functionality
+* Bug: Full deprecation of the ioBroker-to-Hannah MQTT feedback channel in favor of gRPC streams
+
 ### 0.0.2 (2026-04-28)
 * Fixed: ControlDevice feedback channel — device state updates correctly after Hannah sets a state
 * Fixed: Wildcard pattern matching for subscribed states
