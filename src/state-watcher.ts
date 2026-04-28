@@ -10,7 +10,6 @@ export class StateWatcher {
     private adapter: utils.AdapterInstance;
     private send: AgentMessageSender;
     private subscribedIds = new Set<string>();
-    private textCommandStateId: string;
     private residentsPrefix: string;
     private wildcardPrefixes = new Set<string>();
     private verifiedWildcardCache = new Set<string>();
@@ -18,19 +17,16 @@ export class StateWatcher {
     /**
      * @param adapter - ioBroker adapter instance
      * @param send - Function to send messages to Hannah Core
-     * @param textCommandStateId - State ID used for text command input
      * @param residentsPrefix - State ID prefix for the residents adapter (e.g. "residents.0.")
      */
-    constructor(
-        adapter: utils.AdapterInstance,
-        send: AgentMessageSender,
-        textCommandStateId: string,
-        residentsPrefix: string,
-    ) {
+    constructor(adapter: utils.AdapterInstance, send: AgentMessageSender, residentsPrefix: string) {
         this.adapter = adapter;
         this.send = send;
-        this.textCommandStateId = textCommandStateId;
         this.residentsPrefix = residentsPrefix.endsWith('.') ? residentsPrefix : `${residentsPrefix}.`;
+    }
+
+    private get textCommandStateId(): string {
+        return `${this.adapter.namespace}.textCommand`;
     }
 
     /**
@@ -53,11 +49,10 @@ export class StateWatcher {
         await this._subscribeEnumStates(config.selectedRooms, config.selectedFunctions);
         await this._subscribeExtraPrefixes(config.extraStatePrefixes.map(p => p.prefix));
 
-        if (this.textCommandStateId) {
-            await this.adapter.subscribeForeignStatesAsync(this.textCommandStateId);
-            this.subscribedIds.add(this.textCommandStateId);
-            this.adapter.log.info(`[states] Text-Command-State: ${this.textCommandStateId}`);
-        }
+        await this.adapter.subscribeStatesAsync('textCommand').catch(e => {
+            this.adapter.log.error(`[states] Failed to subscribe to textCommand state: ${(e as Error).message}`);
+        });
+        this.subscribedIds.add(this.textCommandStateId);
 
         this.adapter.log.info(`[states] ${this.subscribedIds.size} Patterns/States subscribed.`);
         await this._sendSnapshot();
@@ -110,14 +105,22 @@ export class StateWatcher {
             return false;
         }
 
-        // Text command state → AgentTextCommand
+        // Text command state → AgentTextCommand (ack:false = user input)
         if (id === this.textCommandStateId && state.ack === false) {
             const text = String(state.val ?? '').trim();
             if (text) {
                 this.send({ text_command: { text } });
                 this.adapter.log.debug(`[states] TextCommand: ${text}`);
+                this.adapter.setState(id, { val: '', ack: true }).catch(e => {
+                    this.adapter.log.error(`[states] Failed to reset text command state: ${(e as Error).message}`);
+                });
             }
             return true;
+        }
+
+        // Only forward confirmed states — ack:false = command pending, ack:true = device confirmed
+        if (!state.ack) {
+            return false;
         }
 
         // Regular state → AgentStateUpdate

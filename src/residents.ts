@@ -10,6 +10,7 @@ export class ResidentsWatcher {
     private adapter: utils.AdapterInstance;
     private send: AgentMessageSender;
     private instance: string;
+    private lastSent = new Map<string, number>();
 
     /**
      * @param adapter - ioBroker adapter instance
@@ -52,6 +53,12 @@ export class ResidentsWatcher {
         const residentId = match[2];
         const presenceState = typeof state.val === 'number' ? state.val : parseInt(String(state.val), 10) || 0;
 
+        const key = `${residentType}/${residentId}`;
+        if (this.lastSent.get(key) === presenceState) {
+            return;
+        }
+        this.lastSent.set(key, presenceState);
+
         this.send({
             resident_update: {
                 roomie_id: residentId,
@@ -60,7 +67,7 @@ export class ResidentsWatcher {
             },
         });
 
-        this.adapter.log.debug(`[residents] ${residentType}/${residentId} → presence_state=${presenceState}`);
+        this.adapter.log.info(`[residents] ${key} → presence_state=${presenceState}`);
     }
 
     /** Unsubscribe from all presence states. */

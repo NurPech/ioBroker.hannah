@@ -18,7 +18,7 @@ This adapter replaces the previous MQTT-based integration and eliminates the mes
 - **Extra state prefixes** — subscribe to any additional state tree (e.g. car tracker, weather adapter)
 - **Snapshot on connect** — current state values are pushed to Hannah immediately after connecting, replacing MQTT retained messages
 - **Resident presence** — forwards presence state changes from the Residents adapter
-- **Text commands** — a configurable ioBroker state can be used to send text queries to Hannah
+- **Text commands** — write to `hannah.<instance>.textCommand` to send text queries to Hannah
 - **SetState** — Hannah can set ioBroker states directly via the same gRPC channel
 
 ## Requirements
@@ -57,7 +57,13 @@ Select which **rooms** and **functions** Hannah should be aware of. Leaving both
 | Field | Description |
 |-------|-------------|
 | Residents Adapter Instance | Instance number of the Residents adapter for presence tracking |
-| Text Command State ID | ioBroker state ID to watch for text queries sent to Hannah |
+
+## Adapter states
+
+| State | Type | Description |
+|-------|------|-------------|
+| `hannah.<instance>.info.connection` | boolean | `true` while connected to Hannah Core |
+| `hannah.<instance>.textCommand` | string | Write a text query here (ack=false) to send it to Hannah |
 
 ## Hannah Core configuration
 
@@ -70,10 +76,12 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
-Fixed: ControlDevice feedback channel issues
-Fixed: Issues with additional states not updating correctly
-Fixed: Restricted state subscription to the configured Residents instance instead of all residents.*
-New: Added automatic reloading of enums (rooms/functions)
+* Fixed: ControlDevice feedback channel — device state updates correctly after Hannah sets a state
+* Fixed: Wildcard pattern matching for subscribed states
+* Fixed: Resident presence subscription restricted to configured instance
+* Fixed: Only forward confirmed states (ack=true) to Hannah; commands (ack=false) are ignored
+* New: Text command state moved into adapter namespace (`hannah.<instance>.textCommand`)
+* New: Automatic reloading of enum subscriptions when rooms or functions change in ioBroker
 
 ### 0.0.1 (2026-04-27)
 * Initial release

@@ -31,6 +31,18 @@ class Hannah extends utils.Adapter {
             },
             native: {},
         });
+        await this.setObjectNotExistsAsync('textCommand', {
+            type: 'state',
+            common: {
+                name: 'textConmand',
+                type: 'string',
+                role: 'state',
+                read: true,
+                write: true,
+                def: '',
+            },
+            native: {},
+        });
         await this.setState('info.connection', false, true);
 
         const cfg = this.config;
@@ -44,7 +56,6 @@ class Hannah extends utils.Adapter {
         this.states = new StateWatcher(
             this,
             send,
-            cfg.textCommandStateId || '',
             cfg.residentsInstance ? `residents.${cfg.residentsInstance}.` : 'residents.',
         );
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;

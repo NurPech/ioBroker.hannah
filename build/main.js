@@ -29,10 +29,12 @@ class Hannah extends utils.Adapter {
   grpc = null;
   states = null;
   residents = null;
+  enumReloadTimer = null;
   constructor(options = {}) {
     super({ ...options, name: "hannah" });
     this.on("ready", this.onReady.bind(this));
     this.on("stateChange", this.onStateChange.bind(this));
+    this.on("objectChange", this.onObjectChange.bind(this));
     this.on("unload", this.onUnload.bind(this));
   }
   /** @inheritdoc */
@@ -49,6 +51,18 @@ class Hannah extends utils.Adapter {
       },
       native: {}
     });
+    await this.setObjectNotExistsAsync("textCommand", {
+      type: "state",
+      common: {
+        name: "textConmand",
+        type: "string",
+        role: "state",
+        read: true,
+        write: true,
+        def: ""
+      },
+      native: {}
+    });
     await this.setState("info.connection", false, true);
     const cfg = this.config;
     const host = cfg.hannahHost || "127.0.0.1";
@@ -57,7 +71,11 @@ class Hannah extends utils.Adapter {
       var _a;
       (_a = this.grpc) == null ? void 0 : _a.send(msg);
     };
-    this.states = new import_state_watcher.StateWatcher(this, send, cfg.textCommandStateId || "", cfg.residentsInstance ? `residents.${cfg.residentsInstance}.` : "residents.");
+    this.states = new import_state_watcher.StateWatcher(
+      this,
+      send,
+      cfg.residentsInstance ? `residents.${cfg.residentsInstance}.` : "residents."
+    );
     this.residents = cfg.residentsInstance ? new import_residents.ResidentsWatcher(this, send, cfg.residentsInstance) : null;
     this.grpc = new import_grpc_client.GrpcClient({
       log: this.log,
@@ -70,6 +88,8 @@ class Hannah extends utils.Adapter {
           extraStatePrefixes: cfg.extraStatePrefixes || []
         });
         await ((_a = this.residents) == null ? void 0 : _a.subscribe());
+        await this.subscribeForeignObjectsAsync("enum.rooms.*");
+        await this.subscribeForeignObjectsAsync("enum.functions.*");
       },
       onDisconnected: async () => {
         var _a, _b;
@@ -96,6 +116,40 @@ class Hannah extends utils.Adapter {
     (_b = this.states) == null ? void 0 : _b.onStateChange(id, state);
   }
   /**
+   * Schedules a debounced enum reload when room or function enums change.
+   *
+   * @param id - Object ID that changed
+   * @param _obj - New object value (unused)
+   */
+  onObjectChange(id, _obj) {
+    if (!id.startsWith("enum.rooms.") && !id.startsWith("enum.functions.")) {
+      return;
+    }
+    if (this.enumReloadTimer) {
+      clearTimeout(this.enumReloadTimer);
+    }
+    this.enumReloadTimer = setTimeout(() => {
+      this.enumReloadTimer = null;
+      void this._reloadEnums();
+    }, 5e3);
+    this.log.info(`[enums] Change detected on ${id} \u2014 reloading in 5s`);
+  }
+  /** Reload enum subscriptions after a configuration change. */
+  async _reloadEnums() {
+    if (!this.states) {
+      return;
+    }
+    this.log.info("[enums] Reloading enum subscriptions...");
+    const cfg = this.config;
+    await this.states.stop();
+    await this.states.start({
+      selectedRooms: cfg.selectedRooms || [],
+      selectedFunctions: cfg.selectedFunctions || [],
+      extraStatePrefixes: cfg.extraStatePrefixes || []
+    });
+    this.log.info("[enums] Reload complete.");
+  }
+  /**
    * Is called when adapter shuts down — callback has to be called under any circumstances!
    *
    * @param callback - Callback function
@@ -103,6 +157,9 @@ class Hannah extends utils.Adapter {
   onUnload(callback) {
     var _a;
     try {
+      if (this.enumReloadTimer) {
+        clearTimeout(this.enumReloadTimer);
+      }
       (_a = this.grpc) == null ? void 0 : _a.disconnect();
       callback();
     } catch (e) {

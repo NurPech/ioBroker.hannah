@@ -25,6 +25,7 @@ class ResidentsWatcher {
   adapter;
   send;
   instance;
+  lastSent = /* @__PURE__ */ new Map();
   /**
    * @param adapter - ioBroker adapter instance
    * @param send - Function to send messages to Hannah Core
@@ -58,6 +59,11 @@ class ResidentsWatcher {
     const residentType = match[1];
     const residentId = match[2];
     const presenceState = typeof state.val === "number" ? state.val : parseInt(String(state.val), 10) || 0;
+    const key = `${residentType}/${residentId}`;
+    if (this.lastSent.get(key) === presenceState) {
+      return;
+    }
+    this.lastSent.set(key, presenceState);
     this.send({
       resident_update: {
         roomie_id: residentId,
@@ -65,7 +71,7 @@ class ResidentsWatcher {
         is_guest: residentType === "guest"
       }
     });
-    this.adapter.log.debug(`[residents] ${residentType}/${residentId} \u2192 presence_state=${presenceState}`);
+    this.adapter.log.info(`[residents] ${key} \u2192 presence_state=${presenceState}`);
   }
   /** Unsubscribe from all presence states. */
   async unsubscribe() {

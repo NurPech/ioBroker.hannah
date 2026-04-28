@@ -10,7 +10,6 @@ declare global {
             selectedFunctions: string[];
             extraStatePrefixes: Array<{ prefix: string }>;
             residentsInstance: string;
-            textCommandStateId: string;
         }
     }
 }

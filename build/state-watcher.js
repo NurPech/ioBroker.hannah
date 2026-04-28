@@ -25,21 +25,21 @@ class StateWatcher {
   adapter;
   send;
   subscribedIds = /* @__PURE__ */ new Set();
-  textCommandStateId;
   residentsPrefix;
   wildcardPrefixes = /* @__PURE__ */ new Set();
   verifiedWildcardCache = /* @__PURE__ */ new Set();
   /**
    * @param adapter - ioBroker adapter instance
    * @param send - Function to send messages to Hannah Core
-   * @param textCommandStateId - State ID used for text command input
    * @param residentsPrefix - State ID prefix for the residents adapter (e.g. "residents.0.")
    */
-  constructor(adapter, send, textCommandStateId, residentsPrefix) {
+  constructor(adapter, send, residentsPrefix) {
     this.adapter = adapter;
     this.send = send;
-    this.textCommandStateId = textCommandStateId;
     this.residentsPrefix = residentsPrefix.endsWith(".") ? residentsPrefix : `${residentsPrefix}.`;
+  }
+  get textCommandStateId() {
+    return `${this.adapter.namespace}.textCommand`;
   }
   /**
    * Discover and subscribe to all relevant states.
@@ -55,11 +55,10 @@ class StateWatcher {
     this.verifiedWildcardCache.clear();
     await this._subscribeEnumStates(config.selectedRooms, config.selectedFunctions);
     await this._subscribeExtraPrefixes(config.extraStatePrefixes.map((p) => p.prefix));
-    if (this.textCommandStateId) {
-      await this.adapter.subscribeForeignStatesAsync(this.textCommandStateId);
-      this.subscribedIds.add(this.textCommandStateId);
-      this.adapter.log.info(`[states] Text-Command-State: ${this.textCommandStateId}`);
-    }
+    await this.adapter.subscribeStatesAsync("textCommand").catch((e) => {
+      this.adapter.log.error(`[states] Failed to subscribe to textCommand state: ${e.message}`);
+    });
+    this.subscribedIds.add(this.textCommandStateId);
     this.adapter.log.info(`[states] ${this.subscribedIds.size} Patterns/States subscribed.`);
     await this._sendSnapshot();
   }
@@ -110,8 +109,14 @@ class StateWatcher {
       if (text) {
         this.send({ text_command: { text } });
         this.adapter.log.debug(`[states] TextCommand: ${text}`);
+        this.adapter.setState(id, { val: "", ack: true }).catch((e) => {
+          this.adapter.log.error(`[states] Failed to reset text command state: ${e.message}`);
+        });
       }
       return true;
+    }
+    if (!state.ack) {
+      return false;
     }
     this.send({
       state_update: {
