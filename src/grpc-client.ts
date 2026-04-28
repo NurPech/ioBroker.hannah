@@ -114,6 +114,27 @@ export class GrpcClient {
     }
 
     /**
+     * Fetch the current list of registered satellites from Hannah Core.
+     * Returns an array of satellite objects or an empty array on error.
+     */
+    getSatellites(): Promise<Array<{ device_id: string; room: string; address: string }>> {
+        return new Promise(resolve => {
+            if (!this.client) {
+                resolve([]);
+                return;
+            }
+            this.client.GetSatellites({}, (err: Error | null, response: any) => {
+                if (err || !response) {
+                    this.log.warn(`[grpc] GetSatellites failed: ${err?.message ?? 'no response'}`);
+                    resolve([]);
+                } else {
+                    resolve(response.satellites ?? []);
+                }
+            });
+        });
+    }
+
+    /**
      * Send a message to Hannah Core.
      *
      * @param msg - Protobuf message object
