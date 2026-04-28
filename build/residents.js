@@ -35,9 +35,9 @@ class ResidentsWatcher {
     this.send = send;
     this.instance = instance;
   }
-  /** Subscribe to all presence states under residents.<instance>.roomie.*.presence.state */
+  /** Subscribe to all presence states under residents.<instance>.*.*.presence.state */
   async subscribe() {
-    const pattern = `residents.${this.instance}.roomie.*.presence.state`;
+    const pattern = `residents.${this.instance}.*.*.presence.state`;
     await this.adapter.subscribeForeignStatesAsync(pattern);
     this.adapter.log.info(`[residents] Subscribed: ${pattern}`);
   }
@@ -51,24 +51,25 @@ class ResidentsWatcher {
     if (!state || state.val === null) {
       return;
     }
-    const match = id.match(/\.roomie\.([^.]+)\.presence\.state$/);
+    const match = id.match(/\.(roomie|guest|pet)\.([^.]+)\.presence\.state$/);
     if (!match) {
       return;
     }
-    const roomieId = match[1];
+    const residentType = match[1];
+    const residentId = match[2];
     const presenceState = typeof state.val === "number" ? state.val : parseInt(String(state.val), 10) || 0;
     this.send({
       resident_update: {
-        roomie_id: roomieId,
+        roomie_id: residentId,
         presence_state: presenceState,
-        is_guest: false
+        is_guest: residentType !== "roomie"
       }
     });
-    this.adapter.log.debug(`[residents] ${roomieId} \u2192 presence_state=${presenceState}`);
+    this.adapter.log.debug(`[residents] ${residentType}/${residentId} \u2192 presence_state=${presenceState}`);
   }
   /** Unsubscribe from all presence states. */
   async unsubscribe() {
-    const pattern = `residents.${this.instance}.roomie.*.presence.state`;
+    const pattern = `residents.${this.instance}.*.*.presence.state`;
     await this.adapter.unsubscribeForeignStatesAsync(pattern);
   }
 }

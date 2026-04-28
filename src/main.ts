@@ -39,7 +39,7 @@ class Hannah extends utils.Adapter {
             this.grpc?.send(msg);
         };
 
-        this.states = new StateWatcher(this, send, cfg.textCommandStateId || '');
+        this.states = new StateWatcher(this, send, cfg.textCommandStateId || '', cfg.residentsInstance ? `residents.${cfg.residentsInstance}.` : 'residents.');
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
 
         this.grpc = new GrpcClient({

@@ -11,16 +11,26 @@ export class StateWatcher {
     private send: AgentMessageSender;
     private subscribedIds = new Set<string>();
     private textCommandStateId: string;
+    private residentsPrefix: string;
+    private wildcardPrefixes = new Set<string>();
+    private verifiedWildcardCache = new Set<string>();
 
     /**
      * @param adapter - ioBroker adapter instance
      * @param send - Function to send messages to Hannah Core
      * @param textCommandStateId - State ID used for text command input
+     * @param residentsPrefix - State ID prefix for the residents adapter (e.g. "residents.0.")
      */
-    constructor(adapter: utils.AdapterInstance, send: AgentMessageSender, textCommandStateId: string) {
+    constructor(
+        adapter: utils.AdapterInstance,
+        send: AgentMessageSender,
+        textCommandStateId: string,
+        residentsPrefix: string,
+    ) {
         this.adapter = adapter;
         this.send = send;
         this.textCommandStateId = textCommandStateId;
+        this.residentsPrefix = residentsPrefix.endsWith('.') ? residentsPrefix : `${residentsPrefix}.`;
     }
 
     /**
@@ -36,6 +46,10 @@ export class StateWatcher {
         selectedFunctions: string[];
         extraStatePrefixes: Array<{ prefix: string }>;
     }): Promise<void> {
+        this.subscribedIds.clear();
+        this.wildcardPrefixes.clear();
+        this.verifiedWildcardCache.clear();
+
         await this._subscribeEnumStates(config.selectedRooms, config.selectedFunctions);
         await this._subscribeExtraPrefixes(config.extraStatePrefixes.map(p => p.prefix));
 
@@ -45,7 +59,7 @@ export class StateWatcher {
             this.adapter.log.info(`[states] Text-Command-State: ${this.textCommandStateId}`);
         }
 
-        this.adapter.log.info(`[states] ${this.subscribedIds.size} States subscribed.`);
+        this.adapter.log.info(`[states] ${this.subscribedIds.size} Patterns/States subscribed.`);
         await this._sendSnapshot();
     }
 
@@ -72,10 +86,27 @@ export class StateWatcher {
      * @param state - New state value, or null/undefined if deleted
      */
     onStateChange(id: string, state: ioBroker.State | null | undefined): boolean {
-        if (!this.subscribedIds.has(id) && !id.startsWith('residents.')) {
+        if (!state) {
             return false;
         }
-        if (!state) {
+
+        let isSubscribed = this.subscribedIds.has(id) || id.startsWith(this.residentsPrefix);
+
+        if (!isSubscribed) {
+            isSubscribed = this.verifiedWildcardCache.has(id);
+        }
+
+        if (!isSubscribed) {
+            for (const prefix of this.wildcardPrefixes) {
+                if (id.startsWith(prefix)) {
+                    this.verifiedWildcardCache.add(id);
+                    isSubscribed = true;
+                    break;
+                }
+            }
+        }
+
+        if (!isSubscribed) {
             return false;
         }
 
@@ -90,15 +121,14 @@ export class StateWatcher {
         }
 
         // Regular state → AgentStateUpdate
-        const msg = {
+        this.send({
             state_update: {
                 state_id: id,
                 value: JSON.stringify(state.val),
                 ack: state.ack ?? false,
                 ts: state.ts ?? Date.now(),
             },
-        };
-        this.send(msg);
+        });
         return true;
     }
 
@@ -156,6 +186,8 @@ export class StateWatcher {
             await this.adapter.unsubscribeForeignStatesAsync(id);
         }
         this.subscribedIds.clear();
+        this.wildcardPrefixes.clear();
+        this.verifiedWildcardCache.clear();
     }
 
     private async _subscribeEnumStates(selectedRooms: string[], selectedFunctions: string[]): Promise<void> {
@@ -186,54 +218,44 @@ export class StateWatcher {
             `[states] Enum-Discovery: ${roomResult.rows.length} room enums (${roomDevices.size} devices), ${funcResult.rows.length} function enums (${funcStates.size} states)`,
         );
 
-        if (selectedRooms.length === 0 && selectedFunctions.length === 0) {
-            // No filter → all function states + pattern-subscribe for all room devices
-            for (const deviceId of roomDevices) {
-                const pattern = `${deviceId}.*`;
-                if (this.subscribedIds.has(pattern)) {
-                    continue;
-                }
+        const addWildcard = async (deviceId: string): Promise<void> => {
+            const prefix = deviceId.endsWith('.') ? deviceId : `${deviceId}.`;
+            const pattern = `${prefix}*`;
+            if (!this.subscribedIds.has(pattern)) {
                 await this.adapter.subscribeForeignStatesAsync(pattern);
                 this.subscribedIds.add(pattern);
+                this.wildcardPrefixes.add(prefix);
             }
-            for (const stateId of funcStates) {
-                if (this.subscribedIds.has(stateId)) {
-                    continue;
-                }
+        };
+
+        const addSingleState = async (stateId: string): Promise<void> => {
+            if (!this.subscribedIds.has(stateId)) {
                 await this.adapter.subscribeForeignStatesAsync(stateId);
                 this.subscribedIds.add(stateId);
+            }
+        };
+
+        if (selectedRooms.length === 0 && selectedFunctions.length === 0) {
+            // No filter → room wildcards cover all sub-states including function states
+            for (const d of roomDevices) {
+                await addWildcard(d);
             }
         } else if (selectedRooms.length === 0) {
             // Functions only → all states from selected function enums
-            for (const stateId of funcStates) {
-                if (this.subscribedIds.has(stateId)) {
-                    continue;
-                }
-                await this.adapter.subscribeForeignStatesAsync(stateId);
-                this.subscribedIds.add(stateId);
+            for (const s of funcStates) {
+                await addSingleState(s);
             }
         } else if (selectedFunctions.length === 0) {
             // Rooms only → pattern-subscribe for all states under room devices
-            for (const deviceId of roomDevices) {
-                const pattern = `${deviceId}.*`;
-                if (this.subscribedIds.has(pattern)) {
-                    continue;
-                }
-                await this.adapter.subscribeForeignStatesAsync(pattern);
-                this.subscribedIds.add(pattern);
+            for (const d of roomDevices) {
+                await addWildcard(d);
             }
         } else {
             // Both → function states whose device prefix is in a selected room
-            for (const stateId of funcStates) {
-                const belongsToRoom = [...roomDevices].some(d => stateId.startsWith(`${d}.`));
-                if (!belongsToRoom) {
-                    continue;
+            for (const s of funcStates) {
+                if ([...roomDevices].some(d => s.startsWith(`${d}.`))) {
+                    await addSingleState(s);
                 }
-                if (this.subscribedIds.has(stateId)) {
-                    continue;
-                }
-                await this.adapter.subscribeForeignStatesAsync(stateId);
-                this.subscribedIds.add(stateId);
             }
         }
 
@@ -264,10 +286,13 @@ export class StateWatcher {
             if (!prefix) {
                 continue;
             }
-            const pattern = prefix.endsWith('.') ? `${prefix}*` : `${prefix}.*`;
+            const normalized = prefix.replace(/\//g, '.');
+            const cleanPrefix = normalized.endsWith('.') ? normalized : `${normalized}.`;
+            const pattern = `${cleanPrefix}*`;
             await this.adapter.subscribeForeignStatesAsync(pattern);
             this.subscribedIds.add(pattern);
-            this.adapter.log.info(`[states] Extra-Prefix: ${pattern}`);
+            this.wildcardPrefixes.add(cleanPrefix);
+            this.adapter.log.info(`[states] Extra-Prefix subscribed: ${pattern}`);
         }
     }
 }

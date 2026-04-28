@@ -57,7 +57,7 @@ class Hannah extends utils.Adapter {
       var _a;
       (_a = this.grpc) == null ? void 0 : _a.send(msg);
     };
-    this.states = new import_state_watcher.StateWatcher(this, send, cfg.textCommandStateId || "");
+    this.states = new import_state_watcher.StateWatcher(this, send, cfg.textCommandStateId || "", cfg.residentsInstance ? `residents.${cfg.residentsInstance}.` : "residents.");
     this.residents = cfg.residentsInstance ? new import_residents.ResidentsWatcher(this, send, cfg.residentsInstance) : null;
     this.grpc = new import_grpc_client.GrpcClient({
       log: this.log,

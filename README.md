@@ -70,8 +70,10 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
-Bug: ControlDevice-Rückkanal defekt
-Bug: Extra States not working
+Fixed: ControlDevice feedback channel issues
+Fixed: Issues with additional states not updating correctly
+Fixed: Restricted state subscription to the configured Residents instance instead of all residents.*
+New: Added automatic reloading of enums (rooms/functions)
 
 ### 0.0.1 (2026-04-27)
 * Initial release

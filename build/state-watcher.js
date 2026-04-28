@@ -26,15 +26,20 @@ class StateWatcher {
   send;
   subscribedIds = /* @__PURE__ */ new Set();
   textCommandStateId;
+  residentsPrefix;
+  wildcardPrefixes = /* @__PURE__ */ new Set();
+  verifiedWildcardCache = /* @__PURE__ */ new Set();
   /**
    * @param adapter - ioBroker adapter instance
    * @param send - Function to send messages to Hannah Core
    * @param textCommandStateId - State ID used for text command input
+   * @param residentsPrefix - State ID prefix for the residents adapter (e.g. "residents.0.")
    */
-  constructor(adapter, send, textCommandStateId) {
+  constructor(adapter, send, textCommandStateId, residentsPrefix) {
     this.adapter = adapter;
     this.send = send;
     this.textCommandStateId = textCommandStateId;
+    this.residentsPrefix = residentsPrefix.endsWith(".") ? residentsPrefix : `${residentsPrefix}.`;
   }
   /**
    * Discover and subscribe to all relevant states.
@@ -45,6 +50,9 @@ class StateWatcher {
    * @param config.extraStatePrefixes - Additional state ID prefixes to subscribe
    */
   async start(config) {
+    this.subscribedIds.clear();
+    this.wildcardPrefixes.clear();
+    this.verifiedWildcardCache.clear();
     await this._subscribeEnumStates(config.selectedRooms, config.selectedFunctions);
     await this._subscribeExtraPrefixes(config.extraStatePrefixes.map((p) => p.prefix));
     if (this.textCommandStateId) {
@@ -52,7 +60,7 @@ class StateWatcher {
       this.subscribedIds.add(this.textCommandStateId);
       this.adapter.log.info(`[states] Text-Command-State: ${this.textCommandStateId}`);
     }
-    this.adapter.log.info(`[states] ${this.subscribedIds.size} States subscribed.`);
+    this.adapter.log.info(`[states] ${this.subscribedIds.size} Patterns/States subscribed.`);
     await this._sendSnapshot();
   }
   /**
@@ -78,10 +86,23 @@ class StateWatcher {
    */
   onStateChange(id, state) {
     var _a, _b, _c;
-    if (!this.subscribedIds.has(id) && !id.startsWith("residents.")) {
+    if (!state) {
       return false;
     }
-    if (!state) {
+    let isSubscribed = this.subscribedIds.has(id) || id.startsWith(this.residentsPrefix);
+    if (!isSubscribed) {
+      isSubscribed = this.verifiedWildcardCache.has(id);
+    }
+    if (!isSubscribed) {
+      for (const prefix of this.wildcardPrefixes) {
+        if (id.startsWith(prefix)) {
+          this.verifiedWildcardCache.add(id);
+          isSubscribed = true;
+          break;
+        }
+      }
+    }
+    if (!isSubscribed) {
       return false;
     }
     if (id === this.textCommandStateId && state.ack === false) {
@@ -92,15 +113,14 @@ class StateWatcher {
       }
       return true;
     }
-    const msg = {
+    this.send({
       state_update: {
         state_id: id,
         value: JSON.stringify(state.val),
         ack: (_b = state.ack) != null ? _b : false,
         ts: (_c = state.ts) != null ? _c : Date.now()
       }
-    };
-    this.send(msg);
+    });
     return true;
   }
   /**
@@ -156,6 +176,8 @@ class StateWatcher {
       await this.adapter.unsubscribeForeignStatesAsync(id);
     }
     this.subscribedIds.clear();
+    this.wildcardPrefixes.clear();
+    this.verifiedWildcardCache.clear();
   }
   async _subscribeEnumStates(selectedRooms, selectedFunctions) {
     this.adapter.log.info("[states] Enum-Discovery: Loading rooms and functions...");
@@ -181,50 +203,38 @@ class StateWatcher {
     this.adapter.log.info(
       `[states] Enum-Discovery: ${roomResult.rows.length} room enums (${roomDevices.size} devices), ${funcResult.rows.length} function enums (${funcStates.size} states)`
     );
-    if (selectedRooms.length === 0 && selectedFunctions.length === 0) {
-      for (const deviceId of roomDevices) {
-        const pattern = `${deviceId}.*`;
-        if (this.subscribedIds.has(pattern)) {
-          continue;
-        }
+    const addWildcard = async (deviceId) => {
+      const prefix = deviceId.endsWith(".") ? deviceId : `${deviceId}.`;
+      const pattern = `${prefix}*`;
+      if (!this.subscribedIds.has(pattern)) {
         await this.adapter.subscribeForeignStatesAsync(pattern);
         this.subscribedIds.add(pattern);
+        this.wildcardPrefixes.add(prefix);
       }
-      for (const stateId of funcStates) {
-        if (this.subscribedIds.has(stateId)) {
-          continue;
-        }
+    };
+    const addSingleState = async (stateId) => {
+      if (!this.subscribedIds.has(stateId)) {
         await this.adapter.subscribeForeignStatesAsync(stateId);
         this.subscribedIds.add(stateId);
+      }
+    };
+    if (selectedRooms.length === 0 && selectedFunctions.length === 0) {
+      for (const d of roomDevices) {
+        await addWildcard(d);
       }
     } else if (selectedRooms.length === 0) {
-      for (const stateId of funcStates) {
-        if (this.subscribedIds.has(stateId)) {
-          continue;
-        }
-        await this.adapter.subscribeForeignStatesAsync(stateId);
-        this.subscribedIds.add(stateId);
+      for (const s of funcStates) {
+        await addSingleState(s);
       }
     } else if (selectedFunctions.length === 0) {
-      for (const deviceId of roomDevices) {
-        const pattern = `${deviceId}.*`;
-        if (this.subscribedIds.has(pattern)) {
-          continue;
-        }
-        await this.adapter.subscribeForeignStatesAsync(pattern);
-        this.subscribedIds.add(pattern);
+      for (const d of roomDevices) {
+        await addWildcard(d);
       }
     } else {
-      for (const stateId of funcStates) {
-        const belongsToRoom = [...roomDevices].some((d) => stateId.startsWith(`${d}.`));
-        if (!belongsToRoom) {
-          continue;
+      for (const s of funcStates) {
+        if ([...roomDevices].some((d) => s.startsWith(`${d}.`))) {
+          await addSingleState(s);
         }
-        if (this.subscribedIds.has(stateId)) {
-          continue;
-        }
-        await this.adapter.subscribeForeignStatesAsync(stateId);
-        this.subscribedIds.add(stateId);
       }
     }
     this.adapter.log.info(`[states] Enum-Discovery: ${this.subscribedIds.size} states subscribed.`);
@@ -250,10 +260,13 @@ class StateWatcher {
       if (!prefix) {
         continue;
       }
-      const pattern = prefix.endsWith(".") ? `${prefix}*` : `${prefix}.*`;
+      const normalized = prefix.replace(/\//g, ".");
+      const cleanPrefix = normalized.endsWith(".") ? normalized : `${normalized}.`;
+      const pattern = `${cleanPrefix}*`;
       await this.adapter.subscribeForeignStatesAsync(pattern);
       this.subscribedIds.add(pattern);
-      this.adapter.log.info(`[states] Extra-Prefix: ${pattern}`);
+      this.wildcardPrefixes.add(cleanPrefix);
+      this.adapter.log.info(`[states] Extra-Prefix subscribed: ${pattern}`);
     }
   }
 }
