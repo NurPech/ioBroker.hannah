@@ -70,6 +70,31 @@ export class ResidentsWatcher {
         this.adapter.log.info(`[residents] ${key} → presence_state=${presenceState}`);
     }
 
+    /**
+     * resident state changes from Hannah Core (via set_resident command) are handled here.
+     *
+     * @param residentId - ID of the resident (e.g. "john_doe")
+     * @param value - JSON-encoded value to set (e.g. {"presence_state": 1, "is_guest": false})
+     */
+    /**
+     * Hannah instructs the adapter to set a resident's presence state.
+     * is_guest determines the path: .roomie. for roomies, .guest. for guests.
+     *
+     * @param residentId - Resident ID (e.g. "leonie", "hannah")
+     * @param presenceState - Presence value from the residents adapter
+     * @param isGuest - True for guests, false for roomies
+     */
+    public async handleSetResident(residentId: string, presenceState: number, isGuest: boolean): Promise<void> {
+        const type = isGuest ? 'guest' : 'roomie';
+        const stateId = `residents.${this.instance}.${type}.${residentId}.presence.state`;
+        try {
+            await this.adapter.setForeignStateAsync(stateId, { val: presenceState, ack: false });
+            this.adapter.log.debug(`[residents] SetResident ${type}/${residentId} → ${presenceState}`);
+        } catch (e) {
+            this.adapter.log.error(`[residents] SetResident failed for ${stateId}: ${(e as Error).message}`);
+        }
+    }
+
     /** Unsubscribe from all presence states. */
     async unsubscribe(): Promise<void> {
         const pattern = `residents.${this.instance}.*.*.presence.state`;

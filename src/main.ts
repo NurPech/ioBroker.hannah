@@ -2,11 +2,13 @@ import * as utils from '@iobroker/adapter-core';
 import { GrpcClient } from './grpc-client';
 import { StateWatcher } from './state-watcher';
 import { ResidentsWatcher } from './residents';
+import { SatelliteWatcher } from './satellites';
 
 class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
     private states: StateWatcher | null = null;
     private residents: ResidentsWatcher | null = null;
+    private satellites: SatelliteWatcher | null = null;
     private enumReloadTimer: ReturnType<typeof setTimeout> | null = null;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
@@ -43,6 +45,32 @@ class Hannah extends utils.Adapter {
             },
             native: {},
         });
+        await this.setObjectNotExistsAsync('textAnswer', {
+            type: 'state',
+            common: {
+                name: 'textAnswer',
+                type: 'string',
+                role: 'state',
+                read: true,
+                write: false,
+                def: '',
+            },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('satellites', {
+            type: 'folder',
+            common: {
+                name: 'satellites',
+            },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('satellites.rooms', {
+            type: 'folder',
+            common: {
+                name: 'rooms',
+            },
+            native: {},
+        });
         await this.setState('info.connection', false, true);
 
         const cfg = this.config;
@@ -53,12 +81,9 @@ class Hannah extends utils.Adapter {
             this.grpc?.send(msg);
         };
 
-        this.states = new StateWatcher(
-            this,
-            send,
-            cfg.residentsInstance ? `residents.${cfg.residentsInstance}.` : 'residents.',
-        );
+        this.states = new StateWatcher(this, send);
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
+        this.satellites = new SatelliteWatcher(this, send);
 
         this.grpc = new GrpcClient({
             log: this.log,
@@ -70,8 +95,14 @@ class Hannah extends utils.Adapter {
                     extraStatePrefixes: cfg.extraStatePrefixes || [],
                 });
                 await this.residents?.subscribe();
+                await this.subscribeStatesAsync('satellites.rooms.*');
                 await this.subscribeForeignObjectsAsync('enum.rooms.*');
                 await this.subscribeForeignObjectsAsync('enum.functions.*');
+                // Fetch existing satellites and create states
+                const sats = await this.grpc!.getSatellites();
+                for (const sat of sats) {
+                    await this.satellites!.handleSatelliteUpdate(sat.device_id, sat.room, sat.address, true);
+                }
             },
             onDisconnected: async () => {
                 await this.setState('info.connection', false, true);
@@ -82,8 +113,16 @@ class Hannah extends utils.Adapter {
                 const which = Object.keys(cmd).find(k => k !== 'command' && cmd[k]);
                 if (which === 'set_state' && cmd.set_state) {
                     void this.states?.handleSetState(cmd.set_state.state_id, cmd.set_state.value);
+                } else if (which === 'set_resident' && cmd.set_resident) {
+                    const r = cmd.set_resident;
+                    void this.residents?.handleSetResident(r.resident_id, r.presence_state, r.is_guest);
+                } else if (which === 'satellite_update' && cmd.satellite_update) {
+                    const s = cmd.satellite_update;
+                    void this.satellites?.handleSatelliteUpdate(s.device_id, s.room, s.address, s.online);
                 } else if (which === 'watch_more' && cmd.watch_more?.state_ids) {
                     void this.states?.watchMore(cmd.watch_more.state_ids);
+                } else if (which === 'text_answer' && cmd.text_answer) {
+                    void this.setStateAsync('textAnswer', { val: cmd.text_answer.text, ack: true });
                 }
             },
         });
@@ -95,6 +134,7 @@ class Hannah extends utils.Adapter {
     private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
         this.residents?.onStateChange(id, state);
         this.states?.onStateChange(id, state);
+        this.satellites?.onStateChange(id, state);
     }
 
     /**

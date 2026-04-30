@@ -64,6 +64,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "prepack": "npm run build",
     "prebuild": "rimraf build admin/build",
     "build": "build-adapter all && node -e \"require('fs').mkdirSync('build/proto',{recursive:true});require('fs').copyFileSync('src/proto/hannah.proto','build/proto/hannah.proto')\"",
     "watch": "build-adapter all --watch",

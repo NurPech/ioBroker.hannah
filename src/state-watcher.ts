@@ -10,19 +10,16 @@ export class StateWatcher {
     private adapter: utils.AdapterInstance;
     private send: AgentMessageSender;
     private subscribedIds = new Set<string>();
-    private residentsPrefix: string;
     private wildcardPrefixes = new Set<string>();
     private verifiedWildcardCache = new Set<string>();
 
     /**
      * @param adapter - ioBroker adapter instance
      * @param send - Function to send messages to Hannah Core
-     * @param residentsPrefix - State ID prefix for the residents adapter (e.g. "residents.0.")
      */
-    constructor(adapter: utils.AdapterInstance, send: AgentMessageSender, residentsPrefix: string) {
+    constructor(adapter: utils.AdapterInstance, send: AgentMessageSender) {
         this.adapter = adapter;
         this.send = send;
-        this.residentsPrefix = residentsPrefix.endsWith('.') ? residentsPrefix : `${residentsPrefix}.`;
     }
 
     private get textCommandStateId(): string {
@@ -85,7 +82,7 @@ export class StateWatcher {
             return false;
         }
 
-        let isSubscribed = this.subscribedIds.has(id) || id.startsWith(this.residentsPrefix);
+        let isSubscribed = this.subscribedIds.has(id);
 
         if (!isSubscribed) {
             isSubscribed = this.verifiedWildcardCache.has(id);
