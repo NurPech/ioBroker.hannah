@@ -20,6 +20,9 @@ This adapter replaces the previous MQTT-based integration and eliminates the mes
 - **Resident presence** — forwards presence state changes from the Residents adapter
 - **Text commands** — write to `hannah.<instance>.textCommand` to send text queries to Hannah
 - **SetState** — Hannah can set ioBroker states directly via the same gRPC channel
+- **Notifications** — forward messages to Hannah via `sendTo` or the native ioBroker Notification Manager; LLM reformulation for system messages, direct TTS for `sendDirect`
+- **Announcements** — play TTS in specific satellite rooms via `sendTo` with a room list, without LLM or Telegram
+- **Blockly support** — custom blocks for direct messages and room announcements
 
 ## Requirements
 
@@ -75,6 +78,16 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+
+* New: Send direct messages to Hannah via `sendTo('hannah.<instance>', 'sendDirect', { text: '...' })` — plays via TTS on all satellites and forwards to Telegram, no LLM involved
+* New: Native ioBroker Notification Manager integration — system notifications are automatically forwarded to Hannah and reformulated by the LLM before being spoken and sent to Telegram
+* New: Announcements via `sendTo('hannah.<instance>', 'announce', { rooms: ['Wohnzimmer', 'Küche'], text: '...' })` — plays TTS in specific rooms only, bypasses LLM and Telegram. Use `rooms: ['all']` to address every satellite
+* New: Blockly block **"Hannah say"** for direct voice messages
+* New: Blockly block **"Hannah announce"** with a list input for target rooms
+* Fixed: Duplicate gRPC connections on reconnect — old stream is now properly closed before opening a new one
+* Fixed: `prepublishOnly` instead of `prepack` — installing the adapter locally no longer triggers a full build
+
 ### 0.1.0 (2026-04-30)
 * New: Native AgentTextAnswer via gRPC pushes responses directly to hannah.<instance>.textAnswer
 * New: Dedicated resident_set gRPC command for residents.set_presence() to eliminate the final MQTT dependency
