@@ -11,6 +11,16 @@ interface NotificationMessage {
     instances?: Record<string, { messages?: Array<{ message?: string }> }>;
 }
 
+interface DirectPayload {
+    text?: string;
+}
+
+interface AnnouncePayload {
+    rooms?: string | string[];
+    room?: string;
+    text?: string;
+}
+
 /** Function that sends a notification to Hannah Core via unary gRPC and returns the acknowledgement. */
 export type NotifyFn = (
     /** Notification text */
@@ -21,6 +31,7 @@ export type NotifyFn = (
     severity: string,
 ) => Promise<{ ok: boolean; message?: string }>;
 
+/** Handles sendDirect, sendNotification, and announce adapter messages. */
 export class MessagesHandler {
     private adapter: utils.AdapterInstance;
     private notify: NotifyFn;
@@ -48,7 +59,7 @@ export class MessagesHandler {
         }
 
         if (obj.command === 'sendDirect') {
-            const { text } = (obj.message ?? {}) as { text?: string };
+            const { text } = (obj.message ?? {}) as DirectPayload;
             if (!text) {
                 if (obj.callback) {
                     this.adapter.sendTo(obj.from, obj.command, { sent: false, error: 'no payload' }, obj.callback);
@@ -67,7 +78,6 @@ export class MessagesHandler {
                         this.adapter.sendTo(obj.from, obj.command, { sent: false, error: err.message }, obj.callback);
                     }
                 });
-
         } else if (obj.command === 'sendNotification') {
             this.adapter.log.debug(`sendNotification: ${JSON.stringify(obj.message)}`);
             const notification = obj.message as NotificationMessage | undefined;
@@ -83,7 +93,6 @@ export class MessagesHandler {
 
             const severity = notification?.category?.severity ?? 'notify';
             void this.notify(text, false, severity)
-
                 .then(resp => {
                     if (obj.callback) {
                         this.adapter.sendTo(obj.from, obj.command, { sent: resp.ok }, obj.callback);
@@ -95,26 +104,15 @@ export class MessagesHandler {
                         this.adapter.sendTo(obj.from, obj.command, { sent: false, error: err.message }, obj.callback);
                     }
                 });
-
         } else if (obj.command === 'announce') {
-            const { rooms, room, text } = (obj.message ?? {}) as {
-                rooms?: string | string[];
-                room?: string;
-                text?: string;
-            };
+            const { rooms, room, text } = (obj.message ?? {}) as AnnouncePayload;
             if (!text) {
                 if (obj.callback) {
                     this.adapter.sendTo(obj.from, obj.command, { sent: false, error: 'no payload' }, obj.callback);
                 }
                 return;
             }
-            const roomList: string[] = Array.isArray(rooms)
-                ? rooms
-                : rooms
-                  ? [rooms]
-                  : room
-                    ? [room]
-                    : ['all'];
+            const roomList: string[] = Array.isArray(rooms) ? rooms : rooms ? [rooms] : room ? [room] : ['all'];
             for (const r of roomList) {
                 this.send({ satellite_control: { room: r, announcement: text } });
             }

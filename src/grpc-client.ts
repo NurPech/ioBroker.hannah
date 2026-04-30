@@ -71,8 +71,16 @@ export class GrpcClient {
             return;
         }
         // Close previous stream/client before reconnecting to avoid duplicate connections
-        try { this.stream?.end(); } catch { /* ignore */ }
-        try { this.client?.close(); } catch { /* ignore */ }
+        try {
+            this.stream?.end();
+        } catch {
+            /* ignore */
+        }
+        try {
+            this.client?.close();
+        } catch {
+            /* ignore */
+        }
         this.stream = null;
         this.client = null;
 
@@ -149,7 +157,12 @@ export class GrpcClient {
      * @param severity - Tone hint: "alert" | "notify" | "info" (only when direct=false)
      * @param timeoutMs - Max wait time in milliseconds (default 5000)
      */
-    notify(text: string, direct: boolean, severity: string, timeoutMs = 5000): Promise<{ ok: boolean; message?: string }> {
+    notify(
+        text: string,
+        direct: boolean,
+        severity: string,
+        timeoutMs = 5000,
+    ): Promise<{ ok: boolean; message?: string }> {
         return new Promise((resolve, reject) => {
             if (!this.client) {
                 reject(new Error('not connected'));
