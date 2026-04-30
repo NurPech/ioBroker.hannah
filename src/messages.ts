@@ -21,24 +21,25 @@ export class MessagesHandler {
         this.send = send;
     }
 
+    /**
+     * Handle an incoming ioBroker message (sendDirect / sendNotification).
+     *
+     * @param obj - The ioBroker message object
+     */
     public onMessage(obj: ioBroker.Message): void {
         if (!obj) {
             return;
         }
 
         if (obj.command === 'sendDirect') {
-            const { text, severity = 'notify' } = (obj.message ?? {}) as {
-                text?: string;
-                severity?: string;
-            };
+            const { text } = (obj.message ?? {}) as { text?: string };
             if (!text) {
                 if (obj.callback) {
                     this.adapter.sendTo(obj.from, obj.command, { sent: false, error: 'no payload' }, obj.callback);
                 }
                 return;
             }
-            const payload = JSON.stringify({ type: 'direct', text, severity });
-            //send to gRPC
+            this.send({ notification: { text, direct: true } });
             return;
         } else if (obj.command === 'sendNotification') {
             this.adapter.log.debug(`sendNotification: ${JSON.stringify(obj.message)}`);
@@ -55,7 +56,12 @@ export class MessagesHandler {
 
             const severity = notification?.category?.severity ?? 'notify';
             const payload = JSON.stringify({ text, severity });
-            //send to gRPC
+            this.send({
+                notification: {
+                    text: payload,
+                    direct: false,
+                },
+            });
         }
     }
 
@@ -90,7 +96,7 @@ export class MessagesHandler {
                 return name.de ?? name.en ?? null;
             }
         } catch (e) {
-            this.log.warn(`Failed to extract text: ${(e as Error).message}`);
+            this.adapter.log.warn(`Failed to extract text: ${(e as Error).message}`);
         }
         return null;
     }
