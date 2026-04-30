@@ -43,6 +43,9 @@ service HannahService {
   rpc SubmitVoice   (SubmitVoiceRequest)   returns (SubmitVoiceResponse);
   // Send a TTS announcement to one satellite or all ("all").
   rpc Announce      (AnnounceRequest)      returns (StatusResponse);
+  // Send a notification from ioBroker to Hannah. Returns ok=true when queued.
+  // direct=true: skip LLM reformulation. severity: "alert"|"notify"|"info".
+  rpc Notify        (AgentNotification)    returns (StatusResponse);
   // List all currently registered UDP satellites.
   rpc GetSatellites (Empty)               returns (GetSatellitesResponse);
 
@@ -387,7 +390,6 @@ message AgentMessage {
     AgentResidentUpdate   resident_update   = 2;  // residents adapter presence changed
     AgentTextCommand      text_command      = 3;  // text command state changed
     AgentSatelliteControl satellite_control = 4;  // satellite control command
-    AgentNotification     notification      = 5;
   }
 }
 

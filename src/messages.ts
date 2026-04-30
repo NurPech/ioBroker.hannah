@@ -1,5 +1,4 @@
 import type * as utils from '@iobroker/adapter-core';
-import type { AgentMessageSender } from './grpc-client';
 
 interface NotificationMessage {
     category?: {
@@ -11,14 +10,27 @@ interface NotificationMessage {
     instances?: Record<string, { messages?: Array<{ message?: string }> }>;
 }
 
+/** Function that sends a notification to Hannah Core via unary gRPC and returns the acknowledgement. */
+export type NotifyFn = (
+    /** Notification text */
+    text: string,
+    /** Skip LLM reformulation if true */
+    direct: boolean,
+    /** Tone hint: "alert" | "notify" | "info" */
+    severity: string,
+) => Promise<{ ok: boolean; message?: string }>;
+
 export class MessagesHandler {
     private adapter: utils.AdapterInstance;
+    private notify: NotifyFn;
 
-    private send: AgentMessageSender;
-
-    constructor(adapter: utils.AdapterInstance, send: AgentMessageSender) {
+    /**
+     * @param adapter - ioBroker adapter instance
+     * @param notify - Unary gRPC call to Hannah Core
+     */
+    constructor(adapter: utils.AdapterInstance, notify: NotifyFn) {
         this.adapter = adapter;
-        this.send = send;
+        this.notify = notify;
     }
 
     /**
@@ -39,8 +51,19 @@ export class MessagesHandler {
                 }
                 return;
             }
-            this.send({ notification: { text, direct: true } });
-            return;
+            void this.notify(text, true, 'notify')
+                .then(resp => {
+                    if (obj.callback) {
+                        this.adapter.sendTo(obj.from, obj.command, { sent: resp.ok }, obj.callback);
+                    }
+                })
+                .catch((err: Error) => {
+                    this.adapter.log.warn(`[messages] sendDirect failed: ${err.message}`);
+                    if (obj.callback) {
+                        this.adapter.sendTo(obj.from, obj.command, { sent: false, error: err.message }, obj.callback);
+                    }
+                });
+
         } else if (obj.command === 'sendNotification') {
             this.adapter.log.debug(`sendNotification: ${JSON.stringify(obj.message)}`);
             const notification = obj.message as NotificationMessage | undefined;
@@ -55,13 +78,19 @@ export class MessagesHandler {
             }
 
             const severity = notification?.category?.severity ?? 'notify';
-            const payload = JSON.stringify({ text, severity });
-            this.send({
-                notification: {
-                    text: payload,
-                    direct: false,
-                },
-            });
+            void this.notify(text, false, severity)
+
+                .then(resp => {
+                    if (obj.callback) {
+                        this.adapter.sendTo(obj.from, obj.command, { sent: resp.ok }, obj.callback);
+                    }
+                })
+                .catch((err: Error) => {
+                    this.adapter.log.warn(`[messages] sendNotification failed: ${err.message}`);
+                    if (obj.callback) {
+                        this.adapter.sendTo(obj.from, obj.command, { sent: false, error: err.message }, obj.callback);
+                    }
+                });
         }
     }
 
