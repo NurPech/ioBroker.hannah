@@ -78,7 +78,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.2.0 (2026-04-30)
 
 * New: Send direct messages to Hannah via `sendTo('hannah.<instance>', 'sendDirect', { text: '...' })` — plays via TTS on all satellites and forwards to Telegram, no LLM involved
 * New: Native ioBroker Notification Manager integration — system notifications are automatically forwarded to Hannah and reformulated by the LLM before being spoken and sent to Telegram
