@@ -10,12 +10,12 @@ import type { AgentMessageSender } from './grpc-client';
 export class SatelliteWatcher {
     private adapter: utils.AdapterInstance;
 
-    /**
-     * @param adapter - ioBroker adapter instance
-     * @param _send - Reserved for future satellite_control gRPC messages (0.0.3)
-     */
     private send: AgentMessageSender;
 
+    /**
+     * @param adapter - ioBroker adapter instance
+     * @param send - Sends AgentMessage frames to Hannah Core via gRPC
+     */
     constructor(adapter: utils.AdapterInstance, send: AgentMessageSender) {
         this.adapter = adapter;
         this.send = send;
