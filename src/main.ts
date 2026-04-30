@@ -3,17 +3,20 @@ import { GrpcClient } from './grpc-client';
 import { StateWatcher } from './state-watcher';
 import { ResidentsWatcher } from './residents';
 import { SatelliteWatcher } from './satellites';
+import { MessagesHandler } from './messages';
 
 class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
     private states: StateWatcher | null = null;
     private residents: ResidentsWatcher | null = null;
     private satellites: SatelliteWatcher | null = null;
+    private messages: MessagesHandler | null = null;
     private enumReloadTimer: ReturnType<typeof setTimeout> | null = null;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({ ...options, name: 'hannah' });
         this.on('ready', this.onReady.bind(this));
+        this.on('message', this.onMessage.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
         this.on('objectChange', this.onObjectChange.bind(this));
         this.on('unload', this.onUnload.bind(this));
@@ -84,6 +87,11 @@ class Hannah extends utils.Adapter {
         this.states = new StateWatcher(this, send);
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
         this.satellites = new SatelliteWatcher(this, send);
+        this.messages = new MessagesHandler(
+            this,
+            (text, direct, severity) => this.grpc!.notify(text, direct, severity),
+            send,
+        );
 
         this.grpc = new GrpcClient({
             log: this.log,
@@ -189,6 +197,10 @@ class Hannah extends utils.Adapter {
             this.log.error(`Error during shutdown: ${(e as Error).message}`);
             callback();
         }
+    }
+
+    public onMessage(obj: ioBroker.Message): void {
+        this.messages?.onMessage(obj);
     }
 }
 

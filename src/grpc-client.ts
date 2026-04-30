@@ -70,6 +70,20 @@ export class GrpcClient {
         if (!this.running) {
             return;
         }
+        // Close previous stream/client before reconnecting to avoid duplicate connections
+        try {
+            this.stream?.end();
+        } catch {
+            /* ignore */
+        }
+        try {
+            this.client?.close();
+        } catch {
+            /* ignore */
+        }
+        this.stream = null;
+        this.client = null;
+
         const addr = `${host}:${port}`;
         this.log.info(`[grpc] Connecting to Hannah Core: ${addr}`);
         this.client = new proto.hannah.HannahService(addr, grpc.credentials.createInsecure());
@@ -129,6 +143,38 @@ export class GrpcClient {
                     resolve([]);
                 } else {
                     resolve(response.satellites ?? []);
+                }
+            });
+        });
+    }
+
+    /**
+     * Send a notification to Hannah Core and wait for acknowledgement.
+     * Resolves with ok=true when queued, ok=false on error, or rejects on timeout.
+     *
+     * @param text - Notification text
+     * @param direct - Skip LLM reformulation if true
+     * @param severity - Tone hint: "alert" | "notify" | "info" (only when direct=false)
+     * @param timeoutMs - Max wait time in milliseconds (default 5000)
+     */
+    notify(
+        text: string,
+        direct: boolean,
+        severity: string,
+        timeoutMs = 5000,
+    ): Promise<{ ok: boolean; message?: string }> {
+        return new Promise((resolve, reject) => {
+            if (!this.client) {
+                reject(new Error('not connected'));
+                return;
+            }
+            const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
+            this.client.Notify({ text, direct, severity }, (err: Error | null, response: any) => {
+                clearTimeout(timer);
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ ok: response.ok, message: response.message });
                 }
             });
         });

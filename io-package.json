@@ -43,6 +43,8 @@
         "zh-cn": "首次出版"
       }
     },
+    "blockly": true,
+    "messagebox": true,
     "titleLang": {
       "en": "Hannah",
       "de": "Hannah",
@@ -106,7 +108,10 @@
       {
         "admin": ">=7.6.20"
       }
-    ]
+    ],
+    "supportedMessages": {
+      "notifications": true
+    }
   },
   "native": {
     "hannahHost": "",

@@ -43,6 +43,9 @@ service HannahService {
   rpc SubmitVoice   (SubmitVoiceRequest)   returns (SubmitVoiceResponse);
   // Send a TTS announcement to one satellite or all ("all").
   rpc Announce      (AnnounceRequest)      returns (StatusResponse);
+  // Send a notification from ioBroker to Hannah. Returns ok=true when queued.
+  // direct=true: skip LLM reformulation. severity: "alert"|"notify"|"info".
+  rpc Notify        (AgentNotification)    returns (StatusResponse);
   // List all currently registered UDP satellites.
   rpc GetSatellites (Empty)               returns (GetSatellitesResponse);
 
@@ -473,4 +476,13 @@ message AgentSatelliteUpdate {
 message AgentTextAnswer {
   string text   = 1;  // plain-text answer
   string intent = 2;  // detected intent name
+}
+
+// A notification from the ioBroker adapter.
+// direct=true: skip LLM, play text unchanged (severity ignored).
+// direct=false: LLM reformulates text; severity controls tone ("alert"|"notify"|"info").
+message AgentNotification {
+  string text     = 1;
+  bool   direct   = 2;
+  string severity = 3;  // "alert" | "notify" | "info" — only used when direct=false
 }
