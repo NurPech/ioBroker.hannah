@@ -1,4 +1,5 @@
 import type * as utils from '@iobroker/adapter-core';
+import type { AgentMessageSender } from './grpc-client';
 
 interface NotificationMessage {
     category?: {
@@ -23,14 +24,17 @@ export type NotifyFn = (
 export class MessagesHandler {
     private adapter: utils.AdapterInstance;
     private notify: NotifyFn;
+    private send: AgentMessageSender;
 
     /**
      * @param adapter - ioBroker adapter instance
-     * @param notify - Unary gRPC call to Hannah Core
+     * @param notify - Unary gRPC call to Hannah Core (for notifications)
+     * @param send - Stream send for satellite control messages
      */
-    constructor(adapter: utils.AdapterInstance, notify: NotifyFn) {
+    constructor(adapter: utils.AdapterInstance, notify: NotifyFn, send: AgentMessageSender) {
         this.adapter = adapter;
         this.notify = notify;
+        this.send = send;
     }
 
     /**
@@ -91,6 +95,33 @@ export class MessagesHandler {
                         this.adapter.sendTo(obj.from, obj.command, { sent: false, error: err.message }, obj.callback);
                     }
                 });
+
+        } else if (obj.command === 'announce') {
+            const { rooms, room, text } = (obj.message ?? {}) as {
+                rooms?: string | string[];
+                room?: string;
+                text?: string;
+            };
+            if (!text) {
+                if (obj.callback) {
+                    this.adapter.sendTo(obj.from, obj.command, { sent: false, error: 'no payload' }, obj.callback);
+                }
+                return;
+            }
+            const roomList: string[] = Array.isArray(rooms)
+                ? rooms
+                : rooms
+                  ? [rooms]
+                  : room
+                    ? [room]
+                    : ['all'];
+            for (const r of roomList) {
+                this.send({ satellite_control: { room: r, announcement: text } });
+            }
+            this.adapter.log.debug(`[messages] announce rooms=${JSON.stringify(roomList)} text=${text}`);
+            if (obj.callback) {
+                this.adapter.sendTo(obj.from, obj.command, { sent: true }, obj.callback);
+            }
         }
     }
 

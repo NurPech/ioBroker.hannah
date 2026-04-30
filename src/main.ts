@@ -87,8 +87,10 @@ class Hannah extends utils.Adapter {
         this.states = new StateWatcher(this, send);
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
         this.satellites = new SatelliteWatcher(this, send);
-        this.messages = new MessagesHandler(this, (text, direct, severity) =>
-            this.grpc!.notify(text, direct, severity),
+        this.messages = new MessagesHandler(
+            this,
+            (text, direct, severity) => this.grpc!.notify(text, direct, severity),
+            send,
         );
 
         this.grpc = new GrpcClient({
