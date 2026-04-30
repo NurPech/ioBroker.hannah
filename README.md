@@ -75,7 +75,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.1.0 (2026-04-30)
 * New: Native AgentTextAnswer via gRPC pushes responses directly to hannah.<instance>.textAnswer
 * New: Dedicated resident_set gRPC command for residents.set_presence() to eliminate the final MQTT dependency
 * New: Satellite state management integrated into adapter via GetSatellites() and gRPC subscriptions (NotifySatelliteRegistered/Gone)
