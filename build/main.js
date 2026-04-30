@@ -25,10 +25,12 @@ var utils = __toESM(require("@iobroker/adapter-core"));
 var import_grpc_client = require("./grpc-client");
 var import_state_watcher = require("./state-watcher");
 var import_residents = require("./residents");
+var import_satellites = require("./satellites");
 class Hannah extends utils.Adapter {
   grpc = null;
   states = null;
   residents = null;
+  satellites = null;
   enumReloadTimer = null;
   constructor(options = {}) {
     super({ ...options, name: "hannah" });
@@ -63,6 +65,32 @@ class Hannah extends utils.Adapter {
       },
       native: {}
     });
+    await this.setObjectNotExistsAsync("textAnswer", {
+      type: "state",
+      common: {
+        name: "textAnswer",
+        type: "string",
+        role: "state",
+        read: true,
+        write: false,
+        def: ""
+      },
+      native: {}
+    });
+    await this.setObjectNotExistsAsync("satellites", {
+      type: "folder",
+      common: {
+        name: "satellites"
+      },
+      native: {}
+    });
+    await this.setObjectNotExistsAsync("satellites.rooms", {
+      type: "folder",
+      common: {
+        name: "rooms"
+      },
+      native: {}
+    });
     await this.setState("info.connection", false, true);
     const cfg = this.config;
     const host = cfg.hannahHost || "127.0.0.1";
@@ -71,12 +99,9 @@ class Hannah extends utils.Adapter {
       var _a;
       (_a = this.grpc) == null ? void 0 : _a.send(msg);
     };
-    this.states = new import_state_watcher.StateWatcher(
-      this,
-      send,
-      cfg.residentsInstance ? `residents.${cfg.residentsInstance}.` : "residents."
-    );
+    this.states = new import_state_watcher.StateWatcher(this, send);
     this.residents = cfg.residentsInstance ? new import_residents.ResidentsWatcher(this, send, cfg.residentsInstance) : null;
+    this.satellites = new import_satellites.SatelliteWatcher(this, send);
     this.grpc = new import_grpc_client.GrpcClient({
       log: this.log,
       onConnected: async () => {
@@ -88,8 +113,13 @@ class Hannah extends utils.Adapter {
           extraStatePrefixes: cfg.extraStatePrefixes || []
         });
         await ((_a = this.residents) == null ? void 0 : _a.subscribe());
+        await this.subscribeStatesAsync("satellites.rooms.*");
         await this.subscribeForeignObjectsAsync("enum.rooms.*");
         await this.subscribeForeignObjectsAsync("enum.functions.*");
+        const sats = await this.grpc.getSatellites();
+        for (const sat of sats) {
+          await this.satellites.handleSatelliteUpdate(sat.device_id, sat.room, sat.address, true);
+        }
       },
       onDisconnected: async () => {
         var _a, _b;
@@ -98,12 +128,20 @@ class Hannah extends utils.Adapter {
         await ((_b = this.residents) == null ? void 0 : _b.unsubscribe());
       },
       onCommand: (cmd) => {
-        var _a, _b, _c;
+        var _a, _b, _c, _d, _e;
         const which = Object.keys(cmd).find((k) => k !== "command" && cmd[k]);
         if (which === "set_state" && cmd.set_state) {
           void ((_a = this.states) == null ? void 0 : _a.handleSetState(cmd.set_state.state_id, cmd.set_state.value));
-        } else if (which === "watch_more" && ((_b = cmd.watch_more) == null ? void 0 : _b.state_ids)) {
-          void ((_c = this.states) == null ? void 0 : _c.watchMore(cmd.watch_more.state_ids));
+        } else if (which === "set_resident" && cmd.set_resident) {
+          const r = cmd.set_resident;
+          void ((_b = this.residents) == null ? void 0 : _b.handleSetResident(r.resident_id, r.presence_state, r.is_guest));
+        } else if (which === "satellite_update" && cmd.satellite_update) {
+          const s = cmd.satellite_update;
+          void ((_c = this.satellites) == null ? void 0 : _c.handleSatelliteUpdate(s.device_id, s.room, s.address, s.online));
+        } else if (which === "watch_more" && ((_d = cmd.watch_more) == null ? void 0 : _d.state_ids)) {
+          void ((_e = this.states) == null ? void 0 : _e.watchMore(cmd.watch_more.state_ids));
+        } else if (which === "text_answer" && cmd.text_answer) {
+          void this.setStateAsync("textAnswer", { val: cmd.text_answer.text, ack: true });
         }
       }
     });
@@ -111,9 +149,10 @@ class Hannah extends utils.Adapter {
   }
   /** @inheritdoc */
   onStateChange(id, state) {
-    var _a, _b;
+    var _a, _b, _c;
     (_a = this.residents) == null ? void 0 : _a.onStateChange(id, state);
     (_b = this.states) == null ? void 0 : _b.onStateChange(id, state);
+    (_c = this.satellites) == null ? void 0 : _c.onStateChange(id, state);
   }
   /**
    * Schedules a debounced enum reload when room or function enums change.

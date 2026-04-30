@@ -25,18 +25,15 @@ class StateWatcher {
   adapter;
   send;
   subscribedIds = /* @__PURE__ */ new Set();
-  residentsPrefix;
   wildcardPrefixes = /* @__PURE__ */ new Set();
   verifiedWildcardCache = /* @__PURE__ */ new Set();
   /**
    * @param adapter - ioBroker adapter instance
    * @param send - Function to send messages to Hannah Core
-   * @param residentsPrefix - State ID prefix for the residents adapter (e.g. "residents.0.")
    */
-  constructor(adapter, send, residentsPrefix) {
+  constructor(adapter, send) {
     this.adapter = adapter;
     this.send = send;
-    this.residentsPrefix = residentsPrefix.endsWith(".") ? residentsPrefix : `${residentsPrefix}.`;
   }
   get textCommandStateId() {
     return `${this.adapter.namespace}.textCommand`;
@@ -88,7 +85,7 @@ class StateWatcher {
     if (!state) {
       return false;
     }
-    let isSubscribed = this.subscribedIds.has(id) || id.startsWith(this.residentsPrefix);
+    let isSubscribed = this.subscribedIds.has(id);
     if (!isSubscribed) {
       isSubscribed = this.verifiedWildcardCache.has(id);
     }

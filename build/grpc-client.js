@@ -79,11 +79,9 @@ class GrpcClient {
     this.log.info(`[grpc] Connecting to Hannah Core: ${addr}`);
     this.client = new proto.hannah.HannahService(addr, grpc.credentials.createInsecure());
     this.stream = this.client.AgentConnect();
-    this.stream.on("metadata", () => {
-      this.log.info("[grpc] Connected to Hannah Core.");
-      this.onConnected().catch((e) => {
-        this.log.error(`[grpc] onConnected error: ${e.message}`);
-      });
+    this.log.info("[grpc] Connected to Hannah Core.");
+    this.onConnected().catch((e) => {
+      this.log.error(`[grpc] onConnected error: ${e.message}`);
     });
     this.stream.on("data", (cmd) => {
       this.onCommand(cmd);
@@ -110,6 +108,27 @@ class GrpcClient {
       this.reconnectTimer = null;
       this._connect(host, port);
     }, 1e4);
+  }
+  /**
+   * Fetch the current list of registered satellites from Hannah Core.
+   * Returns an array of satellite objects or an empty array on error.
+   */
+  getSatellites() {
+    return new Promise((resolve) => {
+      if (!this.client) {
+        resolve([]);
+        return;
+      }
+      this.client.GetSatellites({}, (err, response) => {
+        var _a, _b;
+        if (err || !response) {
+          this.log.warn(`[grpc] GetSatellites failed: ${(_a = err == null ? void 0 : err.message) != null ? _a : "no response"}`);
+          resolve([]);
+        } else {
+          resolve((_b = response.satellites) != null ? _b : []);
+        }
+      });
+    });
   }
   /**
    * Send a message to Hannah Core.

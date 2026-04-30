@@ -383,9 +383,23 @@ message SatelliteRegistration {
 // Sent by the HannahAgent ioBroker adapter over the AgentConnect stream.
 message AgentMessage {
   oneof payload {
-    AgentStateUpdate    state_update    = 1;  // any ioBroker state changed
-    AgentResidentUpdate resident_update = 2;  // residents adapter presence changed
-    AgentTextCommand    text_command    = 3;  // text command state changed
+    AgentStateUpdate      state_update      = 1;  // any ioBroker state changed
+    AgentResidentUpdate   resident_update   = 2;  // residents adapter presence changed
+    AgentTextCommand      text_command      = 3;  // text command state changed
+    AgentSatelliteControl satellite_control = 4;  // satellite control command
+  }
+}
+
+// Adapter instructs Hannah to control all satellites in a room.
+// room: room name as registered, or "all" for all rooms.
+message AgentSatelliteControl {
+  string room = 1;
+  oneof control {
+    bool   dnd               = 2;  // set do-not-disturb
+    bool   mute              = 3;  // mute/unmute microphone
+    int32  volume            = 4;  // set volume (0–100)
+    string announcement      = 5;  // speak plain-text announcement
+    string announcement_ssml = 6;  // speak SSML announcement
   }
 }
 
@@ -414,8 +428,11 @@ message AgentTextCommand {
 // Sent by Hannah Core over the AgentConnect stream.
 message AgentCommand {
   oneof command {
-    AgentSetState  set_state  = 1;  // Hannah wants to control an ioBroker device
-    AgentWatchMore watch_more = 2;  // Hannah needs additional states streamed
+    AgentSetState        set_state        = 1;  // Hannah wants to control an ioBroker device
+    AgentWatchMore       watch_more       = 2;  // Hannah needs additional states streamed
+    AgentSetResident     set_resident     = 3;  // Hannah wants to set a resident's presence state
+    AgentSatelliteUpdate satellite_update = 4;  // a satellite registered or disconnected
+    AgentTextAnswer      text_answer      = 5;  // Hannah's answer to a text command
   }
 }
 
@@ -432,4 +449,28 @@ message AgentSetState {
 // (e.g. unless.state: "0_userdata.0.feeded") that aren't covered by enum discovery.
 message AgentWatchMore {
   repeated string state_ids = 1;
+}
+
+// Hannah instructs the adapter to set a resident's presence state in the residents adapter.
+// is_guest determines whether the target path is .roomie. or .guest.
+message AgentSetResident {
+  string resident_id    = 1;  // e.g. "leonie", "hannah"
+  int32  presence_state = 2;  // residents adapter presence value (0=absent, 1=home, …)
+  bool   is_guest       = 3;  // false → residents.<n>.roomie.<id>, true → residents.<n>.guest.<id>
+}
+
+// Hannah notifies the adapter that a satellite registered or disconnected.
+// The adapter updates hannah.<instance>.satellites.rooms.<room>.* states accordingly.
+message AgentSatelliteUpdate {
+  string device_id = 1;  // satellite device ID
+  string room      = 2;  // room the satellite is assigned to
+  string address   = 3;  // UDP address (empty if not applicable)
+  bool   online    = 4;  // true = registered/online, false = gone/offline
+}
+
+// Hannah sends the answer to a text command back to the adapter.
+// The adapter sets hannah.<instance>.textAnswer accordingly.
+message AgentTextAnswer {
+  string text   = 1;  // plain-text answer
+  string intent = 2;  // detected intent name
 }
