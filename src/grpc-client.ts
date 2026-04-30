@@ -75,12 +75,12 @@ export class GrpcClient {
         this.client = new proto.hannah.HannahService(addr, grpc.credentials.createInsecure());
         this.stream = this.client.AgentConnect();
 
-        // metadata fires when the server accepts the stream — this is the right "connected" signal
-        this.stream.on('metadata', () => {
-            this.log.info('[grpc] Connected to Hannah Core.');
-            (this.onConnected() as unknown as Promise<void>).catch((e: Error) => {
-                this.log.error(`[grpc] onConnected error: ${e.message}`);
-            });
+        // For bidi streams with Python gRPC, the server does not send initial metadata,
+        // so the 'metadata' event never fires. Trigger onConnected immediately — if the
+        // server is unreachable we will get an 'error' event shortly after.
+        this.log.info('[grpc] Connected to Hannah Core.');
+        (this.onConnected() as unknown as Promise<void>).catch((e: Error) => {
+            this.log.error(`[grpc] onConnected error: ${e.message}`);
         });
 
         this.stream.on('data', (cmd: object) => {

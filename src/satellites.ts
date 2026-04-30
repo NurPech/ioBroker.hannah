@@ -14,8 +14,11 @@ export class SatelliteWatcher {
      * @param adapter - ioBroker adapter instance
      * @param _send - Reserved for future satellite_control gRPC messages (0.0.3)
      */
-    constructor(adapter: utils.AdapterInstance, _send: AgentMessageSender) {
+    private send: AgentMessageSender;
+
+    constructor(adapter: utils.AdapterInstance, send: AgentMessageSender) {
         this.adapter = adapter;
+        this.send = send;
     }
 
     /**
@@ -69,10 +72,8 @@ export class SatelliteWatcher {
         if (!writableKeys.includes(key)) {
             return false;
         }
-        // TODO 0.0.3: send satellite_control via gRPC once proto message is defined
-        this.adapter.log.debug(
-            `[satellites] room '${room}' ${key} = ${state.val} (satellite_control not yet in proto)`,
-        );
+        this.send({ satellite_control: { room, [key]: state.val } });
+        this.adapter.log.debug(`[satellites] satellite_control room='${room}' ${key}=${state.val}`);
         return true;
     }
 
@@ -165,7 +166,7 @@ export class SatelliteWatcher {
         if (!room) {
             return;
         }
-        await this.adapter.setStateAsync(`satellites.rooms.${room}.${deviceId}.online`, { val: online, ack: true });
+        await this.adapter.setState(`satellites.rooms.${room}.${deviceId}.online`, { val: online, ack: true });
     }
 
     private async _updateAnyOnline(room: string): Promise<void> {
@@ -173,6 +174,6 @@ export class SatelliteWatcher {
         const pattern = `${this.adapter.namespace}.satellites.rooms.${room}.*.online`;
         const states = await this.adapter.getForeignStatesAsync(pattern);
         const anyOnline = Object.values(states).some(s => s?.val === true);
-        await this.adapter.setStateAsync(`satellites.rooms.${room}.anyOnline`, { val: anyOnline, ack: true });
+        await this.adapter.setState(`satellites.rooms.${room}.anyOnline`, { val: anyOnline, ack: true });
     }
 }

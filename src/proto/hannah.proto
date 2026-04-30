@@ -383,9 +383,23 @@ message SatelliteRegistration {
 // Sent by the HannahAgent ioBroker adapter over the AgentConnect stream.
 message AgentMessage {
   oneof payload {
-    AgentStateUpdate    state_update    = 1;  // any ioBroker state changed
-    AgentResidentUpdate resident_update = 2;  // residents adapter presence changed
-    AgentTextCommand    text_command    = 3;  // text command state changed
+    AgentStateUpdate      state_update      = 1;  // any ioBroker state changed
+    AgentResidentUpdate   resident_update   = 2;  // residents adapter presence changed
+    AgentTextCommand      text_command      = 3;  // text command state changed
+    AgentSatelliteControl satellite_control = 4;  // satellite control command
+  }
+}
+
+// Adapter instructs Hannah to control all satellites in a room.
+// room: room name as registered, or "all" for all rooms.
+message AgentSatelliteControl {
+  string room = 1;
+  oneof control {
+    bool   dnd               = 2;  // set do-not-disturb
+    bool   mute              = 3;  // mute/unmute microphone
+    int32  volume            = 4;  // set volume (0–100)
+    string announcement      = 5;  // speak plain-text announcement
+    string announcement_ssml = 6;  // speak SSML announcement
   }
 }
 
@@ -418,6 +432,7 @@ message AgentCommand {
     AgentWatchMore       watch_more       = 2;  // Hannah needs additional states streamed
     AgentSetResident     set_resident     = 3;  // Hannah wants to set a resident's presence state
     AgentSatelliteUpdate satellite_update = 4;  // a satellite registered or disconnected
+    AgentTextAnswer      text_answer      = 5;  // Hannah's answer to a text command
   }
 }
 
@@ -451,4 +466,11 @@ message AgentSatelliteUpdate {
   string room      = 2;  // room the satellite is assigned to
   string address   = 3;  // UDP address (empty if not applicable)
   bool   online    = 4;  // true = registered/online, false = gone/offline
+}
+
+// Hannah sends the answer to a text command back to the adapter.
+// The adapter sets hannah.<instance>.textAnswer accordingly.
+message AgentTextAnswer {
+  string text   = 1;  // plain-text answer
+  string intent = 2;  // detected intent name
 }

@@ -45,6 +45,18 @@ class Hannah extends utils.Adapter {
             },
             native: {},
         });
+        await this.setObjectNotExistsAsync('textAnswer', {
+            type: 'state',
+            common: {
+                name: 'textAnswer',
+                type: 'string',
+                role: 'state',
+                read: true,
+                write: false,
+                def: '',
+            },
+            native: {},
+        });
         await this.setObjectNotExistsAsync('satellites', {
             type: 'folder',
             common: {
@@ -83,6 +95,7 @@ class Hannah extends utils.Adapter {
                     extraStatePrefixes: cfg.extraStatePrefixes || [],
                 });
                 await this.residents?.subscribe();
+                await this.subscribeStatesAsync('satellites.rooms.*');
                 await this.subscribeForeignObjectsAsync('enum.rooms.*');
                 await this.subscribeForeignObjectsAsync('enum.functions.*');
                 // Fetch existing satellites and create states
@@ -108,6 +121,8 @@ class Hannah extends utils.Adapter {
                     void this.satellites?.handleSatelliteUpdate(s.device_id, s.room, s.address, s.online);
                 } else if (which === 'watch_more' && cmd.watch_more?.state_ids) {
                     void this.states?.watchMore(cmd.watch_more.state_ids);
+                } else if (which === 'text_answer' && cmd.text_answer) {
+                    void this.setStateAsync('textAnswer', { val: cmd.text_answer.text, ack: true });
                 }
             },
         });
