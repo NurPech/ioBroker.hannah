@@ -1,6 +1,19 @@
 import type * as utils from '@iobroker/adapter-core';
 import type { AgentMessageSender } from './grpc-client';
 
+type AgentStateValue = {
+    value: string;
+    ack: boolean;
+};
+
+type AgentDevice = {
+    state_id: string;
+    room: string;
+    device: string;
+    functions: string[];
+    value: AgentStateValue;
+};
+
 /**
  * Discovers ioBroker states via enum (rooms + functions) and extra prefixes,
  * subscribes to them, and forwards changes as AgentStateUpdate messages.
@@ -156,29 +169,87 @@ export class StateWatcher {
      * Replaces MQTT retained messages — called once after all subscriptions are set up.
      */
     private async _sendSnapshot(): Promise<void> {
+        const devices: AgentDevice[] = [];
         let sent = 0;
+
         for (const pattern of this.subscribedIds) {
             try {
                 const states = await this.adapter.getForeignStatesAsync(pattern);
+
                 for (const [id, state] of Object.entries(states)) {
                     if (!state) {
                         continue;
                     }
-                    this.send({
-                        state_update: {
-                            state_id: id,
+
+                    const meta = await this._resolveDeviceMeta(id);
+
+                    devices.push({
+                        state_id: id,
+                        room: meta.room,
+                        device: meta.device,
+                        functions: meta.functions,
+                        value: {
                             value: JSON.stringify(state.val),
                             ack: state.ack ?? false,
-                            ts: state.ts ?? Date.now(),
                         },
                     });
+
                     sent++;
                 }
             } catch (e) {
-                this.adapter.log.warn(`[states] Snapshot failed for ${pattern}: ${(e as Error).message}`);
+                this.adapter.log.warn(`[states] Snapshot failed for ${pattern}: ${(e as Error).message}`,);
             }
         }
-        this.adapter.log.info(`[states] Snapshot: ${sent} current state values sent.`);
+
+        this.send({
+            send_snapshot: {
+                devices,
+            },
+        });
+
+        this.adapter.log.info(`[states] Snapshot: ${sent} current device states sent.`,);
+    }
+
+    private async _resolveDeviceMeta(stateId: string): Promise<{
+        room: string;
+        device: string;
+        functions: string[];
+    }> {
+        const deviceId = stateId.split('.').slice(0, -1).join('');
+
+        const stateObj = await this.adapter.getForeignObjectAsync(stateId);
+        const deviceObj = await this.adapter.getForeignObjectAsync(deviceId);
+
+        const enums = await this.adapter.getForeignObjectsAsync('enum.*');
+
+        const room =
+            Object.values(enums).find(
+                (obj: any) => obj?._id?.startsWith('num.rooms.') && obj.common?.members?.includes(stateId),
+            )?.common?.name ?? '';
+
+        const functions = Object.values(enums)
+            .filter((obj: any) => obj?._id?.startsWith('enum.functions.') && obj.common?.members?.includes(stateId))
+            .map((obj: any) => String(obj.common?.name ?? obj._id));
+
+        return {
+            room:
+                typeof room === 'string'
+                    ? room
+                    : room &&
+                        typeof room === 'object' &&
+                        'toString' in room &&
+                        typeof room.toString === 'function' &&
+                        JSON.stringify(room) !== '{}'
+                      ? JSON.stringify(room)
+                      : '',
+            device:
+                typeof deviceObj?.common?.name === 'string'
+                    ? deviceObj.common.name
+                    : typeof stateObj?.common?.name === 'string'
+                      ? stateObj.common.name
+                      : (deviceId.split('.').at(-1) ?? ''),
+            functions,
+        };
     }
 
     /**
