@@ -12,6 +12,7 @@ export class StateWatcher {
     private subscribedIds = new Set<string>();
     private wildcardPrefixes = new Set<string>();
     private verifiedWildcardCache = new Set<string>();
+    private watchMoreIds = new Set<string>();
 
     /**
      * @param adapter - ioBroker adapter instance
@@ -42,6 +43,7 @@ export class StateWatcher {
         this.subscribedIds.clear();
         this.wildcardPrefixes.clear();
         this.verifiedWildcardCache.clear();
+        this.watchMoreIds.clear();
 
         await this._subscribeEnumStates(config.selectedRooms, config.selectedFunctions);
         await this._subscribeExtraPrefixes(config.extraStatePrefixes.map(p => p.prefix));
@@ -62,11 +64,11 @@ export class StateWatcher {
      */
     async watchMore(stateIds: string[]): Promise<void> {
         for (const id of stateIds) {
-            if (this.subscribedIds.has(id)) {
+            if (this.watchMoreIds.has(id)) {
                 continue;
             }
             await this.adapter.subscribeForeignStatesAsync(id);
-            this.subscribedIds.add(id);
+            this.watchMoreIds.add(id);
             this.adapter.log.debug(`[states] WatchMore: ${id}`);
         }
     }
@@ -82,11 +84,8 @@ export class StateWatcher {
             return false;
         }
 
-        let isSubscribed = this.subscribedIds.has(id);
-
-        if (!isSubscribed) {
-            isSubscribed = this.verifiedWildcardCache.has(id);
-        }
+        let isSubscribed =
+            this.subscribedIds.has(id) || this.watchMoreIds.has(id) || this.verifiedWildcardCache.has(id);
 
         if (!isSubscribed) {
             for (const prefix of this.wildcardPrefixes) {
@@ -139,6 +138,10 @@ export class StateWatcher {
      * @param value - JSON-encoded value to set
      */
     async handleSetState(stateId: string, value: string): Promise<void> {
+        if (!this._isManaged(stateId)) {
+            this.adapter.log.warn(`[states] SetState rejected — not a managed state: ${stateId}`);
+            return;
+        }
         try {
             const parsed = JSON.parse(value);
             await this.adapter.setForeignStateAsync(stateId, { val: parsed, ack: false });
@@ -294,5 +297,20 @@ export class StateWatcher {
             this.wildcardPrefixes.add(cleanPrefix);
             this.adapter.log.info(`[states] Extra-Prefix subscribed: ${pattern}`);
         }
+    }
+
+    private _isManaged(id: string): boolean {
+        if (this.subscribedIds.has(id)) {
+            return true;
+        }
+        if (this.verifiedWildcardCache.has(id)) {
+            return true;
+        }
+        for (const prefix of this.wildcardPrefixes) {
+            if (id.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

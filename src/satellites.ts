@@ -69,10 +69,14 @@ export class SatelliteWatcher {
         const room = match[1];
         const key = match[2];
         const writableKeys = ['dnd', 'mute', 'volume', 'announcement', 'announcementSsml'];
+        const resetKeys = ['announcement', 'announcementSsml'];
         if (!writableKeys.includes(key)) {
             return false;
         }
         this.send({ satellite_control: { room, [key]: state.val } });
+        if (resetKeys.includes(key)) {
+            void this.adapter.setState(id, { val: '', ack: true });
+        }
         this.adapter.log.debug(`[satellites] satellite_control room='${room}' ${key}=${state.val}`);
         return true;
     }

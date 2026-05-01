@@ -130,7 +130,7 @@ class Hannah extends utils.Adapter {
                 } else if (which === 'watch_more' && cmd.watch_more?.state_ids) {
                     void this.states?.watchMore(cmd.watch_more.state_ids);
                 } else if (which === 'text_answer' && cmd.text_answer) {
-                    void this.setStateAsync('textAnswer', { val: cmd.text_answer.text, ack: true });
+                    void this.setState('textAnswer', { val: cmd.text_answer.text, ack: true });
                 }
             },
         });
