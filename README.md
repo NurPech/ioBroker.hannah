@@ -78,7 +78,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.2.1 (2026-05-01)
 * Fixed: Hannah could set any state. That could be a security Issue. Hannah can now only edit the states that the adapter actively manages.
 
 ### 0.2.0 (2026-04-30)

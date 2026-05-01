@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "news": {
+      "0.2.1": {
+        "en": "Fixed: Hannah could set any state. That could be a security Issue. Hannah can now only edit the states that the adapter actively manages.",
+        "de": "Behoben: Hannah könnte einen Staat setzen. Das könnte ein Sicherheitsproblem sein. Hannah kann nun nur die Zustände bearbeiten, die der Adapter aktiv verwaltet.",
+        "ru": "Исправлено: Ханна могла установить любое государство. Это может быть проблемой безопасности. Ханна теперь может редактировать только те состояния, которыми активно управляет адаптер.",
+        "pt": "A Hannah podia definir qualquer estado. Pode ser um problema de segurança. Hannah agora só pode editar os estados que o adaptador gerencia ativamente.",
+        "nl": "Vast: Hannah kan elke staat instellen. Dat kan een beveiligingskwestie zijn. Hannah kan nu alleen de staten bewerken die de adapter actief beheert.",
+        "fr": "Hannah pourrait régler n'importe quel état. Ça pourrait être une question de sécurité. Hannah ne peut maintenant modifier que les états que l'adaptateur gère activement.",
+        "it": "Risolto: Hannah potrebbe impostare qualsiasi stato. Potrebbe essere un problema di sicurezza. Hannah può ora solo modificare gli stati che l'adattatore gestisce attivamente.",
+        "es": "Arreglado: Hannah podría establecer cualquier estado. Eso podría ser un asunto de seguridad. Hannah ahora sólo puede editar los estados que el adaptador gestiona activamente.",
+        "pl": "Hannah może ustawić dowolny stan. To może być sprawa bezpieczeństwa. Hannah może teraz edytować tylko stany, które adapter aktywnie zarządza.",
+        "uk": "Виправлено: Ганна може встановити будь-яку державу. Це може бути питання безпеки. Hannah тепер можна редагувати тільки стани, які адаптер активно керує.",
+        "zh-cn": "固定:汉娜可以设置任何州. 这可能是个安全问题。 Hannah现在只能编辑适配器积极管理的状态."
+      },
       "0.2.0": {
         "en": "New: Send direct messages to Hannah via `sendTo('hannah.<instance>', 'sendDirect', { text: '...' })` — plays via TTS on all satellites and forwards to Telegram, no LLM involved\nNew: Native ioBroker Notification Manager integration — system notifications are automatically forwarded to Hannah and reformulated by the LLM before being spoken and sent to Telegram\nNew: Announcements via `sendTo('hannah.<instance>', 'announce', { rooms: ['Wohnzimmer', 'Küche'], text: '...' })` — plays TTS in specific rooms only, bypasses LLM and Telegram. Use `rooms: ['all']` to address every satellite\nNew: Blockly block **\"Hannah say\"** for direct voice messages\nNew: Blockly block **\"Hannah announce\"** with a list input for target rooms\nFixed: Duplicate gRPC connections on reconnect — old stream is now properly closed before opening a new one\nFixed: `prepublishOnly` instead of `prepack` — installing the adapter locally no longer triggers a full build",
         "de": "Neu: Senden Sie direkte Nachrichten an Hannah über `sendTo('hannah.<instance>', 'sendDirect', { text: '...' }) ` — spielt via TTS auf allen Satelliten und leitet an Telegram, kein LLM beteiligt\nNeu: Native ioBroker Notification Manager Integration — System-Benachrichtigungen werden automatisch an Hannah weitergeleitet und von der LLM reformiert, bevor sie gesprochen und an Telegram gesendet werden\nNeu: Ankündigungen über `sendTo('hannah.<instance>', 'announce', { rooms: ['Wohnzimmer', 'Küche'], text: '...' })` — spielt TTS nur in bestimmten Räumen, umgeht LLM und Telegram. Verwenden Sie `rooms: ['all']`, um jeden Satelliten anzusprechen\nNeu: Blockly Block **\"Hannah say\"** für direkte Sprachnachrichten\nNeu: Blockly Block **\"Hannah verkünden\"** mit Listeneingang für Zielräume\nBehoben: Duplicate gRPC-Verbindungen auf Reconnect – der alte Stream ist jetzt ordnungsgemäß geschlossen, bevor ein neues geöffnet wird\nFixed: `prepublishOnly` anstelle von `prepack` — Installation des Adapters lokal nicht mehr löst einen kompletten Build",
