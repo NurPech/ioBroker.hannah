@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "news": {
+      "0.3.1": {
+        "en": "Fixed: The adapter sends too much data to Hannah",
+        "de": "Fixed: Der Adapter sendet zu viele Daten an Hannah",
+        "ru": "Адаптер отправляет слишком много данных Ханне",
+        "pt": "Fixo: O adaptador envia muitos dados para Hannah",
+        "nl": "Vast: De adapter stuurt te veel gegevens naar Hannah",
+        "fr": "Correction : L'adaptateur envoie trop de données à Hannah",
+        "it": "Risolto: l'adattatore invia troppi dati a Hannah",
+        "es": "Fijo: El adaptador envía demasiados datos a Hannah",
+        "pl": "Naprawiono: Adapter wysyła zbyt wiele danych do Hannah",
+        "uk": "Виправлено: Адаптер надсилає занадто багато даних до Hannah",
+        "zh-cn": "固定:适配器向汉娜发送过多的数据"
+      },
       "0.3.0": {
         "en": "New: Device snapshot on connect — the adapter now sends room, device name, function and current value for every subscribed state immediately after connecting, so Hannah Core no longer needs to query the ioBroker REST API for device discovery\nNew: Resident snapshot on connect — all known residents are forwarded to Hannah Core once after connecting, replacing the previous API-based resident lookup\nNew: `AgentDevice` proto message carries full metadata (room, device, functions, current value) per state; `AgentDeviceSnapshot` wraps the complete list\nImproved: Enum lookups during snapshot are now fetched once and reused across all states instead of once per state, significantly reducing startup time for large installations",
         "de": "Neu: Device Snapshot on connect – der Adapter sendet jetzt Raum, Gerätename, Funktion und aktuellen Wert für jeden abonnierten Zustand sofort nach dem Verbinden, so dass Hannah Core nicht mehr die ioBroker REST API für Geräteentdeckung abfragen muss\nNeu: Resident Snapshot on connect – alle bekannten Bewohner werden einmal nach dem Verbinden an Hannah Core weitergeleitet und ersetzen die vorherige API-basierte wohnhafte Lookup\nNeu: `AgentDevice` proto message trägt volle Metadaten (Raum, Gerät, Funktionen, aktueller Wert) pro Staat; `AgentDeviceSnapshot` wickelt die komplette Liste\nVerbessert: Die Enum-Lookups während der Snapshots werden nun einmal abgeholt und in allen Staaten statt einmal pro Staat wiederverwendet, was die Startzeit für große Installationen deutlich reduziert",
