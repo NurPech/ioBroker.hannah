@@ -152,17 +152,18 @@ class Hannah extends utils.Adapter {
      * @param _obj - New object value (unused)
      */
     private onObjectChange(id: string, _obj: ioBroker.Object | null | undefined): void {
-        if (!id.startsWith('enum.rooms.') && !id.startsWith('enum.functions.')) {
-            return;
+        if (id.startsWith('enum.rooms.') || id.startsWith('enum.functions.')) {
+            this.log.info(`[enums] Change detected on ${id} — reloading in 5s`);
+            if (this.enumReloadTimer) {
+                clearTimeout(this.enumReloadTimer);
+            }
+            this.enumReloadTimer = setTimeout(() => {
+                this.enumReloadTimer = null;
+                void this._reloadEnums();
+            }, 5_000);
+        } else if (id.startsWith('residents.')) {
+            this.residents?.onObjectChange(id);
         }
-        if (this.enumReloadTimer) {
-            clearTimeout(this.enumReloadTimer);
-        }
-        this.enumReloadTimer = setTimeout(() => {
-            this.enumReloadTimer = null;
-            void this._reloadEnums();
-        }, 5_000);
-        this.log.info(`[enums] Change detected on ${id} — reloading in 5s`);
     }
 
     /** Reload enum subscriptions after a configuration change. */

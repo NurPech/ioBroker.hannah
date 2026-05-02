@@ -114,6 +114,8 @@ export class StateWatcher {
             return false;
         }
 
+        this.adapter.log.debug(`[states] StateChange: ${id} = ${JSON.stringify(state.val)} (ack=${state.ack})`);
+
         // Text command state → AgentTextCommand (ack:false = user input)
         if (id === this.textCommandStateId && state.ack === false) {
             const text = String(state.val ?? '').trim();
@@ -172,6 +174,11 @@ export class StateWatcher {
         const devices: AgentDevice[] = [];
         let sent = 0;
 
+        const [allRooms, allFunctions] = await Promise.all([
+            this.adapter.getEnumAsync('rooms'),
+            this.adapter.getEnumAsync('functions'),
+        ]);
+
         for (const pattern of this.subscribedIds) {
             try {
                 const states = await this.adapter.getForeignStatesAsync(pattern);
@@ -181,7 +188,7 @@ export class StateWatcher {
                         continue;
                     }
 
-                    const meta = await this._resolveDeviceMeta(id);
+                    const meta = await this._resolveDeviceMeta(id, allRooms, allFunctions);
 
                     devices.push({
                         state_id: id,
@@ -197,51 +204,46 @@ export class StateWatcher {
                     sent++;
                 }
             } catch (e) {
-                this.adapter.log.warn(`[states] Snapshot failed for ${pattern}: ${(e as Error).message}`,);
+                this.adapter.log.warn(`[states] Snapshot failed for ${pattern}: ${(e as Error).message}`);
             }
         }
 
-        this.send({
-            send_snapshot: {
-                devices,
-            },
-        });
+        this.send({ send_snapshot: { devices } });
 
-        this.adapter.log.info(`[states] Snapshot: ${sent} current device states sent.`,);
+        this.adapter.log.info(`[states] Snapshot: ${sent} current device states sent.`);
     }
 
-    private async _resolveDeviceMeta(stateId: string): Promise<{
-        room: string;
-        device: string;
-        functions: string[];
-    }> {
-        const deviceId = stateId.split('.').slice(0, -1).join('');
+    private async _resolveDeviceMeta(
+        stateId: string,
+        allRooms: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
+        allFunctions: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
+    ): Promise<{ room: string; device: string; functions: string[] }> {
+        const deviceId = stateId.split('.').slice(0, -1).join('.');
 
-        const stateObj = await this.adapter.getForeignObjectAsync(stateId);
-        const deviceObj = await this.adapter.getForeignObjectAsync(deviceId);
+        const [stateObj, deviceObj] = await Promise.all([
+            this.adapter.getForeignObjectAsync(stateId),
+            this.adapter.getForeignObjectAsync(deviceId),
+        ]);
 
-        const enums = await this.adapter.getForeignObjectsAsync('enum.*');
+        let roomObj = Object.values(allRooms.result).find(
+            (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(deviceId),
+        );
 
-        const room =
-            Object.values(enums).find(
-                (obj: any) => obj?._id?.startsWith('num.rooms.') && obj.common?.members?.includes(stateId),
-            )?.common?.name ?? '';
+        if (roomObj == null) {
+            const parentId = deviceId.split('.').slice(0, -1).join('.');
+            roomObj = Object.values(allRooms.result).find(
+                (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(parentId),
+            );
+        }
 
-        const functions = Object.values(enums)
+        const room = roomObj ? String(roomObj.common?.name?.de ?? roomObj.common?.name ?? roomObj._id) : undefined;
+
+        const functions = Object.values(allFunctions.result)
             .filter((obj: any) => obj?._id?.startsWith('enum.functions.') && obj.common?.members?.includes(stateId))
-            .map((obj: any) => String(obj.common?.name ?? obj._id));
+            .map((obj: any) => String(obj.common?.name?.de ?? obj.common?.name ?? obj._id));
 
         return {
-            room:
-                typeof room === 'string'
-                    ? room
-                    : room &&
-                        typeof room === 'object' &&
-                        'toString' in room &&
-                        typeof room.toString === 'function' &&
-                        JSON.stringify(room) !== '{}'
-                      ? JSON.stringify(room)
-                      : '',
+            room: room ?? '',
             device:
                 typeof deviceObj?.common?.name === 'string'
                     ? deviceObj.common.name
