@@ -390,6 +390,8 @@ message AgentMessage {
     AgentResidentUpdate   resident_update   = 2;  // residents adapter presence changed
     AgentTextCommand      text_command      = 3;  // text command state changed
     AgentSatelliteControl satellite_control = 4;  // satellite control command
+    AgentDeviceSnapshot   send_snapshot     = 5;  // initial snapshot with all states
+    AgentResidentSnapshot send_residents    = 6;  // initial snapshot with all residents
   }
 }
 
@@ -485,4 +487,35 @@ message AgentNotification {
   string text     = 1;
   bool   direct   = 2;
   string severity = 3;  // "alert" | "notify" | "info" — only used when direct=false
+}
+
+message AgentStateValue {
+    string value = 1;
+    bool ack      = 2;
+}
+
+// A device from the ioBroker adapter
+message AgentDevice {
+    string state_id  = 1;
+    string room      = 2;
+    string device    = 3;
+    repeated string functions = 4;
+    AgentStateValue value     = 5;
+}
+
+// a list with all known devices from the ioBroker adapter
+message AgentDeviceSnapshot {
+    repeated AgentDevice devices = 1;
+}
+
+// A resident from the ioBroker adapter
+message AgentResident {
+  string roomie_id   = 1;
+  string name        = 2;
+  bool   is_guest    = 3;
+}
+
+// a list with all known residents
+message AgentResidentSnapshot {
+  repeated AgentResident residents = 1;
 }

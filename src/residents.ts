@@ -1,6 +1,12 @@
 import type * as utils from '@iobroker/adapter-core';
 import type { AgentMessageSender } from './grpc-client';
 
+type AgentResident = {
+    roomie_id: string;
+    name: string;
+    is_guest: boolean;
+};
+
 /**
  * Watches the residents adapter presence states and forwards changes
  * as AgentResidentUpdate messages to Hannah Core.
@@ -27,7 +33,10 @@ export class ResidentsWatcher {
     async subscribe(): Promise<void> {
         const pattern = `residents.${this.instance}.*.*.presence.state`;
         await this.adapter.subscribeForeignStatesAsync(pattern);
+        await this.adapter.subscribeForeignObjectsAsync(`residents.${this.instance}.*.*`);
         this.adapter.log.info(`[residents] Subscribed: ${pattern}`);
+        await this._sendSnapshot();
+        this.adapter.log.info(`[residents] sent snapshot`);
     }
 
     /**
@@ -71,6 +80,33 @@ export class ResidentsWatcher {
     }
 
     /**
+     * Call from onForeignObjectChange when a residents object changes.
+     *
+     * @param id - State ID that changed
+     */
+    onObjectChange(id: string): void {
+        // When a resident device is renamed, send an updated snapshot to update the name in Hannah Core.
+        if (id.startsWith(`residents.${this.instance}.roomie.`) || id.startsWith(`residents.${this.instance}.guest.`)) {
+            this.adapter.log.info(`[residents] Detected object change on ${id} — sending updated snapshot`);
+            void this._sendSnapshot();
+        }
+    }
+
+    private _getObjectName(obj: ioBroker.Object, fallback: string): string {
+        const name = obj.common?.name;
+
+        if (typeof name === 'string') {
+            return name;
+        }
+
+        if (name && typeof name === 'object') {
+            return name.de ?? name.en ?? Object.values(name)[0] ?? fallback;
+        }
+
+        return fallback;
+    }
+
+    /**
      * resident state changes from Hannah Core (via set_resident command) are handled here.
      *
      * @param residentId - ID of the resident (e.g. "john_doe")
@@ -93,6 +129,40 @@ export class ResidentsWatcher {
         } catch (e) {
             this.adapter.log.error(`[residents] SetResident failed for ${stateId}: ${(e as Error).message}`);
         }
+    }
+
+    private async _sendSnapshot(): Promise<void> {
+        const patterns = ['residents.0.roomie.*', 'residents.0.guest.*'];
+
+        const residents: AgentResident[] = [];
+        let sent = 0;
+
+        for (const pattern of patterns) {
+            const objects = await this.adapter.getForeignObjectsAsync(pattern, 'device');
+
+            for (const [id, obj] of Object.entries(objects)) {
+                const parts = id.split('.');
+
+                if (parts.length !== 4) {
+                    continue;
+                }
+
+                residents.push({
+                    name: this._getObjectName(obj, parts[3]),
+                    roomie_id: parts[3],
+                    is_guest: parts[2] == 'roomie' ? false : true,
+                });
+                sent++;
+            }
+        }
+
+        this.send({
+            send_residents: {
+                residents,
+            },
+        });
+
+        this.adapter.log.info(`[residents] Snapshot: ${sent} current device states sent.`);
     }
 
     /** Unsubscribe from all presence states. */

@@ -1,6 +1,19 @@
 import type * as utils from '@iobroker/adapter-core';
 import type { AgentMessageSender } from './grpc-client';
 
+type AgentStateValue = {
+    value: string;
+    ack: boolean;
+};
+
+type AgentDevice = {
+    state_id: string;
+    room: string;
+    device: string;
+    functions: string[];
+    value: AgentStateValue;
+};
+
 /**
  * Discovers ioBroker states via enum (rooms + functions) and extra prefixes,
  * subscribes to them, and forwards changes as AgentStateUpdate messages.
@@ -101,6 +114,8 @@ export class StateWatcher {
             return false;
         }
 
+        this.adapter.log.debug(`[states] StateChange: ${id} = ${JSON.stringify(state.val)} (ack=${state.ack})`);
+
         // Text command state → AgentTextCommand (ack:false = user input)
         if (id === this.textCommandStateId && state.ack === false) {
             const text = String(state.val ?? '').trim();
@@ -156,29 +171,87 @@ export class StateWatcher {
      * Replaces MQTT retained messages — called once after all subscriptions are set up.
      */
     private async _sendSnapshot(): Promise<void> {
+        const devices: AgentDevice[] = [];
         let sent = 0;
+
+        const [allRooms, allFunctions] = await Promise.all([
+            this.adapter.getEnumAsync('rooms'),
+            this.adapter.getEnumAsync('functions'),
+        ]);
+
         for (const pattern of this.subscribedIds) {
             try {
                 const states = await this.adapter.getForeignStatesAsync(pattern);
+
                 for (const [id, state] of Object.entries(states)) {
                     if (!state) {
                         continue;
                     }
-                    this.send({
-                        state_update: {
-                            state_id: id,
+
+                    const meta = await this._resolveDeviceMeta(id, allRooms, allFunctions);
+
+                    devices.push({
+                        state_id: id,
+                        room: meta.room,
+                        device: meta.device,
+                        functions: meta.functions,
+                        value: {
                             value: JSON.stringify(state.val),
                             ack: state.ack ?? false,
-                            ts: state.ts ?? Date.now(),
                         },
                     });
+
                     sent++;
                 }
             } catch (e) {
                 this.adapter.log.warn(`[states] Snapshot failed for ${pattern}: ${(e as Error).message}`);
             }
         }
-        this.adapter.log.info(`[states] Snapshot: ${sent} current state values sent.`);
+
+        this.send({ send_snapshot: { devices } });
+
+        this.adapter.log.info(`[states] Snapshot: ${sent} current device states sent.`);
+    }
+
+    private async _resolveDeviceMeta(
+        stateId: string,
+        allRooms: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
+        allFunctions: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
+    ): Promise<{ room: string; device: string; functions: string[] }> {
+        const deviceId = stateId.split('.').slice(0, -1).join('.');
+
+        const [stateObj, deviceObj] = await Promise.all([
+            this.adapter.getForeignObjectAsync(stateId),
+            this.adapter.getForeignObjectAsync(deviceId),
+        ]);
+
+        let roomObj = Object.values(allRooms.result).find(
+            (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(deviceId),
+        );
+
+        if (roomObj == null) {
+            const parentId = deviceId.split('.').slice(0, -1).join('.');
+            roomObj = Object.values(allRooms.result).find(
+                (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(parentId),
+            );
+        }
+
+        const room = roomObj ? String(roomObj.common?.name?.de ?? roomObj.common?.name ?? roomObj._id) : undefined;
+
+        const functions = Object.values(allFunctions.result)
+            .filter((obj: any) => obj?._id?.startsWith('enum.functions.') && obj.common?.members?.includes(stateId))
+            .map((obj: any) => String(obj.common?.name?.de ?? obj.common?.name ?? obj._id));
+
+        return {
+            room: room ?? '',
+            device:
+                typeof deviceObj?.common?.name === 'string'
+                    ? deviceObj.common.name
+                    : typeof stateObj?.common?.name === 'string'
+                      ? stateObj.common.name
+                      : (deviceId.split('.').at(-1) ?? ''),
+            functions,
+        };
     }
 
     /**
