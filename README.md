@@ -78,7 +78,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.3.0 (2026-05-02)
 
 * New: Device snapshot on connect — the adapter now sends room, device name, function and current value for every subscribed state immediately after connecting, so Hannah Core no longer needs to query the ioBroker REST API for device discovery
 * New: Resident snapshot on connect — all known residents are forwarded to Hannah Core once after connecting, replacing the previous API-based resident lookup
