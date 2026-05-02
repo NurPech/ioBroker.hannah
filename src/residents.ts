@@ -85,9 +85,14 @@ export class ResidentsWatcher {
      * @param id - State ID that changed
      */
     onObjectChange(id: string): void {
-        // When a resident device is renamed, send an updated snapshot to update the name in Hannah Core.
+        // Only react to the resident device object itself (depth 4: residents.0.roomie.leonie),
+        // not to sub-objects like residents.0.roomie.leonie.activity.focus.
+        const parts = id.split('.');
+        if (parts.length !== 4) {
+            return;
+        }
         if (id.startsWith(`residents.${this.instance}.roomie.`) || id.startsWith(`residents.${this.instance}.guest.`)) {
-            this.adapter.log.info(`[residents] Detected object change on ${id} — sending updated snapshot`);
+            this.adapter.log.info(`[residents] Resident added/removed: ${id} — sending updated snapshot`);
             void this._sendSnapshot();
         }
     }
@@ -132,7 +137,7 @@ export class ResidentsWatcher {
     }
 
     private async _sendSnapshot(): Promise<void> {
-        const patterns = ['residents.0.roomie.*', 'residents.0.guest.*'];
+        const patterns = [`residents.${this.instance}.roomie.*`, `residents.${this.instance}.guest.*`];
 
         const residents: AgentResident[] = [];
         let sent = 0;
