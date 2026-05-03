@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "news": {
+      "0.3.2": {
+        "en": "Fixed: Device names in Telegram and Hannah were showing the full state ID instead of the readable name",
+        "de": "Behoben: Gerätenamen in Telegram und Hannah zeigten statt des lesbaren Namens die vollständige Zustands-ID",
+        "ru": "Имена устройств в Telegram и Hannah показывали полный идентификатор состояния вместо читаемого имени",
+        "pt": "Corrigido: Os nomes dos dispositivos no Telegram e Hannah estavam mostrando o ID completo do estado em vez do nome legível",
+        "nl": "Fixed: Apparaatnamen in Telegram en Hannah tonen het volledige status ID in plaats van de leesbare naam",
+        "fr": "Correction : Les noms d'appareils dans Telegram et Hannah montraient l'identifiant d'état complet au lieu du nom lisible",
+        "it": "Fisso: I nomi dei dispositivi in Telegram e Hannah mostravano l'ID completo dello stato invece del nome leggibile",
+        "es": "Fijo: Los nombres de los dispositivos en Telegram y Hannah mostraban el ID de estado completo en lugar del nombre legible",
+        "pl": "Naprawiono: Nazwy urządzeń w Telegramie i Hannah pokazywały pełny identyfikator stanu zamiast czytelnej nazwy",
+        "uk": "Виправлено: Ім'я пристроїв в Телеграмі та Ганні відображали повну державну ідентифікатор замість читуваного імені",
+        "zh-cn": "固定: Telegram和Hannah中的设备名称显示的是完整的状态ID而不是可读名称"
+      },
       "0.3.1": {
         "en": "Fixed: The adapter sends too much data to Hannah",
         "de": "Fixed: Der Adapter sendet zu viele Daten an Hannah",
@@ -80,19 +93,6 @@
         "pl": "Naprawiono: Kanał zwrotny ControlDevice - aktualizacja stanu urządzenia poprawnie po ustawieniu stanu Hannah\nNaprawiono: wzór Wildcard pasujący do subskrybowanych stanów\nNaprawiono: Subskrypcja obecności rezydenta ograniczona do skonfigurowanej instancji\nNaprawiono: tylko stany potwierdzone do przodu (ack = true) do Hannah; polecenia (ack = false) są ignorowane\nNew: Text command state przeniesione do adaptera namespace ('hannah. < instance > .textCommand')\nNowy: Automatyczne przeładowanie subskrypcji enum, gdy pokoje lub funkcje zmieniają się w jOBroker",
         "uk": "Виправлено: controlDevice зворотний зв'язок каналу — пристрій стану оновлення правильно після Hannah встановлює стан\nВиправлено: шаблон Wildcard, що відповідає підписам\nВиправлено: Заява про наявність резидента обмежена для налаштування екземпляра\nВиправлено: ігноруються тільки перевірені штати (ack=true) до Ганна; команди (ack=false)\nНовий: Текстовий стан, переведений в простір назв адаптерів (`hannah.<instance>.textCommand`)\nНовий: Автоматичне перевантаження підписок на енму при зміні номерів або функцій в ioBroker",
         "zh-cn": "固定: ControlDevice 反馈通道 — Hannah 设置状态后设备状态更新正确\n固定: 订阅状态的通配模式\n固定:驻地订阅仅限于配置实例\n固定: 仅转发确认状态( ack= true) 到 Hannah; 命令( ack=false) 被忽略\n新建: 文本命令状态移动到适配器命名空间( 'hanah.<instance>. textCommand')\n新建: 当 ioBroker 房间或功能发生变化时自动重新装入 enum 订阅"
-      },
-      "0.0.1": {
-        "en": "initial release",
-        "de": "Erstveröffentlichung",
-        "ru": "Начальная версия",
-        "pt": "lançamento inicial",
-        "nl": "Eerste uitgave",
-        "fr": "Première version",
-        "it": "Versione iniziale",
-        "es": "Versión inicial",
-        "pl": "Pierwsze wydanie",
-        "uk": "Початкова версія",
-        "zh-cn": "首次出版"
       }
     },
     "blockly": true,
