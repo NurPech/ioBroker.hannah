@@ -242,14 +242,20 @@ export class StateWatcher {
             .filter((obj: any) => obj?._id?.startsWith('enum.functions.') && obj.common?.members?.includes(stateId))
             .map((obj: any) => String(obj.common?.name?.de ?? obj.common?.name ?? obj._id));
 
+        const readableName = (n: unknown): string | null => {
+            if (typeof n !== 'string' || !n || n.includes('.')) {
+                return null;
+            }
+            return n;
+        };
+
         return {
             room: room ?? '',
             device:
-                typeof deviceObj?.common?.name === 'string'
-                    ? deviceObj.common.name
-                    : typeof stateObj?.common?.name === 'string'
-                      ? stateObj.common.name
-                      : (deviceId.split('.').at(-1) ?? ''),
+                readableName(deviceObj?.common?.name) ??
+                readableName(stateObj?.common?.name) ??
+                deviceId.split('.').at(-1) ??
+                '',
             functions,
         };
     }
