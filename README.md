@@ -79,7 +79,8 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
-* States may only be set if the state is describable.
+* Fixed: States may only be set if the state is writable (`common.write === true`).
+* New: `AgentDevice` now includes a `floor` field — resolved from `common.floor` on the device object, with a fallback that scans the state ID path for known floor abbreviations (EG, OG, UG, DG, KG, ZG).
 
 ### 0.3.2 (2026-05-03)
 * Fixed: Device names in Telegram and Hannah were showing the full state ID instead of the readable name
