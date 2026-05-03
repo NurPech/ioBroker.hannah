@@ -15,6 +15,11 @@
     "Additional state ID prefixes to stream to Hannah (e.g. 0_userdata.0)": "Additional state ID prefixes to stream to Hannah (e.g. 0_userdata.0)",
     "Prefix": "Prefix",
     "Add prefix": "Add prefix",
+    "Floor Mappings": "Floor Mappings",
+    "Map floor labels or abbreviations found in state IDs to a canonical abbreviation (e.g. \"Erdgeschoss\" → \"EG\"). Leave empty to use built-in defaults (EG, OG, UG, DG, KG, ZG).": "Map floor labels or abbreviations found in state IDs to a canonical abbreviation (e.g. \"Erdgeschoss\" → \"EG\"). Leave empty to use built-in defaults (EG, OG, UG, DG, KG, ZG).",
+    "Label in ID path": "Label in ID path",
+    "Abbreviation": "Abbreviation",
+    "Add floor mapping": "Add floor mapping",
     "Residents Adapter Instance": "Residents Adapter Instance",
     "No residents adapter found": "No residents adapter found"
 }

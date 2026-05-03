@@ -101,6 +101,7 @@ class Hannah extends utils.Adapter {
                     selectedRooms: cfg.selectedRooms || [],
                     selectedFunctions: cfg.selectedFunctions || [],
                     extraStatePrefixes: cfg.extraStatePrefixes || [],
+                    floorMappings: cfg.floorMappings || [],
                 });
                 await this.residents?.subscribe();
                 await this.subscribeStatesAsync('satellites.rooms.*');
@@ -178,6 +179,7 @@ class Hannah extends utils.Adapter {
             selectedRooms: cfg.selectedRooms || [],
             selectedFunctions: cfg.selectedFunctions || [],
             extraStatePrefixes: cfg.extraStatePrefixes || [],
+            floorMappings: cfg.floorMappings || [],
         });
         this.log.info('[enums] Reload complete.');
     }

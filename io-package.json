@@ -172,6 +172,7 @@
     "selectedRooms": [],
     "selectedFunctions": [],
     "extraStatePrefixes": [],
+    "floorMappings": [],
     "residentsInstance": "0",
     "textCommandStateId": "0_userdata.0.hannah.set.textCommand"
   },
