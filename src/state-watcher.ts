@@ -157,6 +157,10 @@ export class StateWatcher {
             this.adapter.log.warn(`[states] SetState rejected — not a managed state: ${stateId}`);
             return;
         }
+        const state = await this.adapter.getForeignObjectAsync(stateId);
+        if (!state?.common.write) {
+            return;
+        }
         try {
             const parsed = JSON.parse(value);
             await this.adapter.setForeignStateAsync(stateId, { val: parsed, ack: false });

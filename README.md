@@ -78,6 +78,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* States may only be set if the state is describable.
+
 ### 0.3.2 (2026-05-03)
 * Fixed: Device names in Telegram and Hannah were showing the full state ID instead of the readable name
 
