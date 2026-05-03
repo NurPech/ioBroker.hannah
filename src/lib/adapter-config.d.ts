@@ -9,6 +9,7 @@ declare global {
             selectedRooms: string[];
             selectedFunctions: string[];
             extraStatePrefixes: Array<{ prefix: string }>;
+            floorMappings: Array<{ label: string; abbreviation: string }>;
             residentsInstance: string;
         }
     }

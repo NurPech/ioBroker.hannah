@@ -65,6 +65,28 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
         );
     }
 
+    private getFloorMappings(): Array<{ label: string; abbreviation: string }> {
+        return this.props.native.floorMappings || [];
+    }
+
+    private addFloorMapping(): void {
+        this.props.onChange('floorMappings', [...this.getFloorMappings(), { label: '', abbreviation: '' }]);
+    }
+
+    private removeFloorMapping(index: number): void {
+        this.props.onChange(
+            'floorMappings',
+            this.getFloorMappings().filter((_, i) => i !== index),
+        );
+    }
+
+    private updateFloorMapping(index: number, field: 'label' | 'abbreviation', value: string): void {
+        this.props.onChange(
+            'floorMappings',
+            this.getFloorMappings().map((m, i) => (i === index ? { ...m, [field]: value } : m)),
+        );
+    }
+
     private renderConnectionTab(): React.JSX.Element {
         const { native, onChange } = this.props;
         return (
@@ -238,6 +260,74 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                             onClick={() => this.addPrefix()}
                         >
                             + {I18n.t('Add prefix')}
+                        </Button>
+                    </Box>
+                </Box>
+                <Box>
+                    <Typography
+                        variant="subtitle2"
+                        color="text.primary"
+                        sx={{ mb: 0.5 }}
+                    >
+                        {I18n.t('Floor Mappings')}
+                    </Typography>
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mb: 1 }}
+                    >
+                        {I18n.t(
+                            'Map floor labels or abbreviations found in state IDs to a canonical abbreviation (e.g. "Erdgeschoss" → "EG"). Leave empty to use built-in defaults (EG, OG, UG, DG, KG, ZG).',
+                        )}
+                    </Typography>
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>{I18n.t('Label in ID path')}</TableCell>
+                                <TableCell>{I18n.t('Abbreviation')}</TableCell>
+                                <TableCell sx={{ width: 48 }} />
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {this.getFloorMappings().map((item, i) => (
+                                <TableRow key={i}>
+                                    <TableCell sx={{ py: 0.5 }}>
+                                        <TextField
+                                            value={item.label}
+                                            onChange={e => this.updateFloorMapping(i, 'label', e.target.value)}
+                                            placeholder="Erdgeschoss"
+                                            size="small"
+                                            fullWidth
+                                        />
+                                    </TableCell>
+                                    <TableCell sx={{ py: 0.5 }}>
+                                        <TextField
+                                            value={item.abbreviation}
+                                            onChange={e => this.updateFloorMapping(i, 'abbreviation', e.target.value)}
+                                            placeholder="EG"
+                                            size="small"
+                                            sx={{ width: 100 }}
+                                        />
+                                    </TableCell>
+                                    <TableCell sx={{ py: 0.5 }}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => this.removeFloorMapping(i)}
+                                        >
+                                            ✕
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                    <Box sx={{ mt: 1 }}>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => this.addFloorMapping()}
+                        >
+                            + {I18n.t('Add floor mapping')}
                         </Button>
                     </Box>
                 </Box>

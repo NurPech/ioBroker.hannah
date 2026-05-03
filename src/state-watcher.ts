@@ -8,6 +8,7 @@ type AgentStateValue = {
 
 type AgentDevice = {
     state_id: string;
+    floor: string;
     room: string;
     device: string;
     functions: string[];
@@ -26,6 +27,7 @@ export class StateWatcher {
     private wildcardPrefixes = new Set<string>();
     private verifiedWildcardCache = new Set<string>();
     private watchMoreIds = new Set<string>();
+    private floorMappings: Array<{ label: string; abbreviation: string }> = [];
 
     /**
      * @param adapter - ioBroker adapter instance
@@ -47,16 +49,19 @@ export class StateWatcher {
      * @param config.selectedRooms - Room enum IDs to include (empty = all)
      * @param config.selectedFunctions - Function enum IDs to include (empty = all)
      * @param config.extraStatePrefixes - Additional state ID prefixes to subscribe
+     * @param config.floorMappings - Label→abbreviation pairs for floor detection (empty = hardcoded defaults)
      */
     async start(config: {
         selectedRooms: string[];
         selectedFunctions: string[];
         extraStatePrefixes: Array<{ prefix: string }>;
+        floorMappings: Array<{ label: string; abbreviation: string }>;
     }): Promise<void> {
         this.subscribedIds.clear();
         this.wildcardPrefixes.clear();
         this.verifiedWildcardCache.clear();
         this.watchMoreIds.clear();
+        this.floorMappings = config.floorMappings;
 
         await this._subscribeEnumStates(config.selectedRooms, config.selectedFunctions);
         await this._subscribeExtraPrefixes(config.extraStatePrefixes.map(p => p.prefix));
@@ -157,6 +162,10 @@ export class StateWatcher {
             this.adapter.log.warn(`[states] SetState rejected — not a managed state: ${stateId}`);
             return;
         }
+        const state = await this.adapter.getForeignObjectAsync(stateId);
+        if (!state?.common.write) {
+            return;
+        }
         try {
             const parsed = JSON.parse(value);
             await this.adapter.setForeignStateAsync(stateId, { val: parsed, ack: false });
@@ -192,6 +201,7 @@ export class StateWatcher {
 
                     devices.push({
                         state_id: id,
+                        floor: meta.floor,
                         room: meta.room,
                         device: meta.device,
                         functions: meta.functions,
@@ -217,13 +227,45 @@ export class StateWatcher {
         stateId: string,
         allRooms: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
         allFunctions: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
-    ): Promise<{ room: string; device: string; functions: string[] }> {
+    ): Promise<{ room: string; device: string; floor: string; functions: string[] }> {
         const deviceId = stateId.split('.').slice(0, -1).join('.');
 
         const [stateObj, deviceObj] = await Promise.all([
             this.adapter.getForeignObjectAsync(stateId),
             this.adapter.getForeignObjectAsync(deviceId),
         ]);
+
+        const rawFloorFromObj =
+            typeof deviceObj?.common?.floor === 'string' && deviceObj.common.floor ? deviceObj.common.floor : null;
+
+        const knownFloors = new Set(['EG', 'OG', 'UG', 'DG', 'KG', 'ZG']);
+
+        const resolveFloor = (value: string): string | null => {
+            const upper = value.toUpperCase();
+            const match = this.floorMappings.find(
+                m => m.label.toUpperCase() === upper || m.abbreviation.toUpperCase() === upper,
+            );
+            if (match) {
+                return match.abbreviation;
+            }
+            if (knownFloors.has(upper)) {
+                return upper;
+            }
+            return null;
+        };
+
+        const floorFromObj = rawFloorFromObj !== null ? (resolveFloor(rawFloorFromObj) ?? rawFloorFromObj) : null;
+
+        let floorFromId = '';
+        for (const part of deviceId.split('.')) {
+            const resolved = resolveFloor(part);
+            if (resolved !== null) {
+                floorFromId = resolved;
+                break;
+            }
+        }
+
+        const floor = floorFromObj ?? floorFromId;
 
         let roomObj = Object.values(allRooms.result).find(
             (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(deviceId),
@@ -256,6 +298,7 @@ export class StateWatcher {
                 readableName(stateObj?.common?.name) ??
                 deviceId.split('.').at(-1) ??
                 '',
+            floor,
             functions,
         };
     }
