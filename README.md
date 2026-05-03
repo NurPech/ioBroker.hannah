@@ -78,7 +78,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.4.0 (2026-05-03)
 * Fixed: States may only be set if the state is writable (`common.write === true`).
 * New: `AgentDevice` now includes a `floor` field — resolved from `common.floor` on the device object, with a fallback that scans the state ID path for known floor abbreviations (EG, OG, UG, DG, KG, ZG).
 * New: Configurable floor mappings — define custom label→abbreviation pairs in the Device Discovery tab (e.g. "Erdgeschoss" → "EG"); mappings normalize both `common.floor` values and ID path segments, and extend (not replace) the built-in abbreviation set.
