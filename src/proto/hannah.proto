@@ -497,10 +497,11 @@ message AgentStateValue {
 // A device from the ioBroker adapter
 message AgentDevice {
     string state_id  = 1;
-    string room      = 2;
-    string device    = 3;
-    repeated string functions = 4;
-    AgentStateValue value     = 5;
+    string floor     = 2;
+    string room      = 3;
+    string device    = 4;
+    repeated string functions = 5;
+    AgentStateValue value     = 6;
 }
 
 // a list with all known devices from the ioBroker adapter

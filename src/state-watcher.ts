@@ -8,6 +8,7 @@ type AgentStateValue = {
 
 type AgentDevice = {
     state_id: string;
+    floor: string;
     room: string;
     device: string;
     functions: string[];
@@ -196,6 +197,7 @@ export class StateWatcher {
 
                     devices.push({
                         state_id: id,
+                        floor: meta.floor,
                         room: meta.room,
                         device: meta.device,
                         functions: meta.functions,
@@ -221,13 +223,19 @@ export class StateWatcher {
         stateId: string,
         allRooms: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
         allFunctions: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
-    ): Promise<{ room: string; device: string; functions: string[] }> {
+    ): Promise<{ room: string; device: string; floor: string; functions: string[] }> {
         const deviceId = stateId.split('.').slice(0, -1).join('.');
 
         const [stateObj, deviceObj] = await Promise.all([
             this.adapter.getForeignObjectAsync(stateId),
             this.adapter.getForeignObjectAsync(deviceId),
         ]);
+
+        const floorFromObj =
+            typeof deviceObj?.common?.floor === 'string' && deviceObj.common.floor ? deviceObj.common.floor : null;
+        const knownFloors = new Set(['EG', 'OG', 'UG', 'DG', 'KG', 'ZG']);
+        const floorFromId = deviceId.split('.').find(p => knownFloors.has(p.toUpperCase())) ?? '';
+        const floor = floorFromObj ?? floorFromId;
 
         let roomObj = Object.values(allRooms.result).find(
             (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(deviceId),
@@ -260,6 +268,7 @@ export class StateWatcher {
                 readableName(stateObj?.common?.name) ??
                 deviceId.split('.').at(-1) ??
                 '',
+            floor,
             functions,
         };
     }
