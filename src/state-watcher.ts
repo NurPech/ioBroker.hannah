@@ -316,7 +316,8 @@ export class StateWatcher {
                 role === 'level.blind' ||
                 role === 'level.curtain' ||
                 role === 'value.blind' ||
-                role === 'value.curtain') {
+                role === 'value.curtain'
+            ) {
                 return 'blind';
             }
 
