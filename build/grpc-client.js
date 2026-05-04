@@ -1,0 +1,209 @@
+"use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var grpc_client_exports = {};
+__export(grpc_client_exports, {
+  GrpcClient: () => GrpcClient
+});
+module.exports = __toCommonJS(grpc_client_exports);
+var path = __toESM(require("node:path"));
+var grpc = __toESM(require("@grpc/grpc-js"));
+var protoLoader = __toESM(require("@grpc/proto-loader"));
+const PROTO_PATH = path.join(__dirname, "proto", "hannah.proto");
+const packageDef = protoLoader.loadSync(PROTO_PATH, {
+  keepCase: true,
+  longs: String,
+  enums: String,
+  defaults: true,
+  oneofs: true
+});
+const proto = grpc.loadPackageDefinition(packageDef);
+class GrpcClient {
+  client = null;
+  stream = null;
+  reconnectTimer = null;
+  running = false;
+  onCommand;
+  onConnected;
+  onDisconnected;
+  log;
+  /**
+   * @param opts - Configuration options including callbacks and logger
+   */
+  constructor(opts) {
+    this.onCommand = opts.onCommand;
+    this.onConnected = opts.onConnected;
+    this.onDisconnected = opts.onDisconnected;
+    this.log = opts.log;
+  }
+  /**
+   * Start the connection to Hannah Core. Reconnects automatically on failure.
+   *
+   * @param host - gRPC server host
+   * @param port - gRPC server port
+   */
+  connect(host, port) {
+    this.running = true;
+    this._connect(host, port);
+  }
+  _connect(host, port) {
+    var _a, _b;
+    if (!this.running) {
+      return;
+    }
+    try {
+      (_a = this.stream) == null ? void 0 : _a.end();
+    } catch {
+    }
+    try {
+      (_b = this.client) == null ? void 0 : _b.close();
+    } catch {
+    }
+    this.stream = null;
+    this.client = null;
+    const addr = `${host}:${port}`;
+    this.log.info(`[grpc] Connecting to Hannah Core: ${addr}`);
+    this.client = new proto.hannah.HannahService(addr, grpc.credentials.createInsecure());
+    this.stream = this.client.AgentConnect();
+    this.log.info("[grpc] Connected to Hannah Core.");
+    this.onConnected().catch((e) => {
+      this.log.error(`[grpc] onConnected error: ${e.message}`);
+    });
+    this.stream.on("data", (cmd) => {
+      this.onCommand(cmd);
+    });
+    this.stream.on("error", (err) => {
+      this.log.warn(`[grpc] Stream error: ${err.message}`);
+      this._scheduleReconnect(host, port);
+    });
+    this.stream.on("end", () => {
+      this.log.info("[grpc] Stream ended.");
+      this.onDisconnected();
+      this._scheduleReconnect(host, port);
+    });
+  }
+  _scheduleReconnect(host, port) {
+    if (!this.running) {
+      return;
+    }
+    if (this.reconnectTimer) {
+      return;
+    }
+    this.log.info("[grpc] Reconnecting in 10s...");
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this._connect(host, port);
+    }, 1e4);
+  }
+  /**
+   * Fetch the current list of registered satellites from Hannah Core.
+   * Returns an array of satellite objects or an empty array on error.
+   */
+  getSatellites() {
+    return new Promise((resolve) => {
+      if (!this.client) {
+        resolve([]);
+        return;
+      }
+      this.client.GetSatellites({}, (err, response) => {
+        var _a, _b;
+        if (err || !response) {
+          this.log.warn(`[grpc] GetSatellites failed: ${(_a = err == null ? void 0 : err.message) != null ? _a : "no response"}`);
+          resolve([]);
+        } else {
+          resolve((_b = response.satellites) != null ? _b : []);
+        }
+      });
+    });
+  }
+  /**
+   * Send a notification to Hannah Core and wait for acknowledgement.
+   * Resolves with ok=true when queued, ok=false on error, or rejects on timeout.
+   *
+   * @param text - Notification text
+   * @param direct - Skip LLM reformulation if true
+   * @param severity - Tone hint: "alert" | "notify" | "info" (only when direct=false)
+   * @param timeoutMs - Max wait time in milliseconds (default 5000)
+   */
+  notify(text, direct, severity, timeoutMs = 5e3) {
+    return new Promise((resolve, reject) => {
+      if (!this.client) {
+        reject(new Error("not connected"));
+        return;
+      }
+      const timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
+      this.client.Notify({ text, direct, severity }, (err, response) => {
+        clearTimeout(timer);
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ ok: response.ok, message: response.message });
+        }
+      });
+    });
+  }
+  /**
+   * Send a message to Hannah Core.
+   *
+   * @param msg - Protobuf message object
+   */
+  send(msg) {
+    if (!this.stream) {
+      return;
+    }
+    try {
+      this.stream.write(msg);
+    } catch (e) {
+      this.log.warn(`[grpc] Send failed: ${e.message}`);
+    }
+  }
+  /**
+   * Stop the connection and cancel any pending reconnect.
+   */
+  disconnect() {
+    var _a, _b;
+    this.running = false;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    try {
+      (_a = this.stream) == null ? void 0 : _a.end();
+    } catch {
+    }
+    try {
+      (_b = this.client) == null ? void 0 : _b.close();
+    } catch {
+    }
+  }
+}
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  GrpcClient
+});
+//# sourceMappingURL=grpc-client.js.map
