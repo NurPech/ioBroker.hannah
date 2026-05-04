@@ -26,7 +26,7 @@
     "Rooms Enum": "Zimmeraufzählung",
     "Select which rooms and functions Hannah should know about. Leave all off to include everything.": "Wählen Sie aus, welche Räume und Funktionen Hannah kennen sollte. Lassen Sie „Alles“ weg, um alles einzubeziehen.",
     "Sub-key for presence value under each resident (default: mood.state)": "Unterschlüssel für den Präsenzwert unter jedem Bewohner (Standard: mood.state)",
-    "Text Command State ID": "Status-ID des Textbefehls",
+    "Text Command State ID": "State-ID des Textbefehls",
     "gRPC Port": "gRPC-Port",
     "hannah adapter settings": "Hannah-Adaptereinstellungen",
     "ioBroker enum for device functions (e.g. lights, heating)": "ioBroker-Enum für Gerätefunktionen (z. B. Licht, Heizung)",
