@@ -79,7 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
-* Fixed: disallow installation from git
+* Fixed: automated TypeScript build via GitHub Actions
 
 ### 0.4.1 (2026-05-04)
 * Fixed: Deployment Issues. Not all required files where inside the package
