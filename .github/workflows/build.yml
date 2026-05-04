@@ -32,3 +32,4 @@ jobs:
         with:
           commit_message: 'chore: rebuild [skip ci]'
           file_pattern: 'build/** admin/build/**'
+          add_options: '-f'
