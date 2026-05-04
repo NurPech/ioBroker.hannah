@@ -11,6 +11,7 @@ type AgentDevice = {
     floor: string;
     room: string;
     device: string;
+    device_type: string;
     functions: string[];
     value: AgentStateValue;
 };
@@ -204,6 +205,7 @@ export class StateWatcher {
                         floor: meta.floor,
                         room: meta.room,
                         device: meta.device,
+                        device_type: meta.type,
                         functions: meta.functions,
                         value: {
                             value: JSON.stringify(state.val),
@@ -227,7 +229,7 @@ export class StateWatcher {
         stateId: string,
         allRooms: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
         allFunctions: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
-    ): Promise<{ room: string; device: string; floor: string; functions: string[] }> {
+    ): Promise<{ room: string; device: string; type: string; floor: string; functions: string[] }> {
         const deviceId = stateId.split('.').slice(0, -1).join('.');
 
         const [stateObj, deviceObj] = await Promise.all([
@@ -280,9 +282,66 @@ export class StateWatcher {
 
         const room = roomObj ? String(roomObj.common?.name?.de ?? roomObj.common?.name ?? roomObj._id) : undefined;
 
-        const functions = Object.values(allFunctions.result)
-            .filter((obj: any) => obj?._id?.startsWith('enum.functions.') && obj.common?.members?.includes(stateId))
-            .map((obj: any) => String(obj.common?.name?.de ?? obj.common?.name ?? obj._id));
+        const matchingFunctionObjs = Object.values(allFunctions.result).filter(
+            (obj: any) => obj?._id?.startsWith('enum.functions.') && obj.common?.members?.includes(stateId),
+        );
+
+        const functions = matchingFunctionObjs.map((obj: any) =>
+            String(obj.common?.name?.de ?? obj.common?.name ?? obj._id),
+        );
+
+        const resolveType = (): string => {
+            const override = (stateObj?.common as any)?.hannah?.type ?? (deviceObj?.common as any)?.hannah?.type;
+            if (override) {
+                return String(override);
+            }
+
+            const role = stateObj?.common?.role ?? '';
+            if (role.startsWith('level.color') || role === 'level.dimmer' || role === 'switch.light') {
+                return 'light';
+            }
+            if (role === 'level.temperature') {
+                return 'thermostat';
+            }
+            if (role === 'value.temperature') {
+                return 'temperature_sensor';
+            }
+            if (role === 'sensor.door' || role === 'indicator.open') {
+                return 'door';
+            }
+            if (role === 'sensor.window') {
+                return 'window';
+            }
+            if (role === 'level.blind' || role === 'level.curtain') {
+                return 'blind';
+            }
+
+            const funcIds = matchingFunctionObjs.map((obj: any) => (obj._id as string).toLowerCase());
+            if (funcIds.some(id => id.includes('light') || id.includes('licht'))) {
+                return 'light';
+            }
+            if (funcIds.some(id => id.includes('socket') || id.includes('stecker') || id.includes('plug'))) {
+                return 'socket';
+            }
+            if (funcIds.some(id => id.includes('heat') || id.includes('heiz') || id.includes('therm'))) {
+                return 'thermostat';
+            }
+            if (funcIds.some(id => id.includes('window') || id.includes('fenster'))) {
+                return 'window';
+            }
+            if (funcIds.some(id => id.includes('door') || id.includes('tuer') || id.includes('türen'))) {
+                return 'door';
+            }
+            if (funcIds.some(id => id.includes('temp'))) {
+                return 'temperature_sensor';
+            }
+
+            if ((role === 'switch' || role === 'switch.power') && stateObj?.common?.write) {
+                return 'socket';
+            }
+
+            return '';
+        };
 
         const readableName = (n: unknown): string | null => {
             if (typeof n !== 'string' || !n || n.includes('.')) {
@@ -298,6 +357,7 @@ export class StateWatcher {
                 readableName(stateObj?.common?.name) ??
                 deviceId.split('.').at(-1) ??
                 '',
+            type: resolveType(),
             floor,
             functions,
         };

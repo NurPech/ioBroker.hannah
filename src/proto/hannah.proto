@@ -500,8 +500,9 @@ message AgentDevice {
     string floor     = 2;
     string room      = 3;
     string device    = 4;
-    repeated string functions = 5;
-    AgentStateValue value     = 6;
+    string device_type        = 5;
+    repeated string functions = 6;
+    AgentStateValue value     = 7;
 }
 
 // a list with all known devices from the ioBroker adapter
