@@ -78,7 +78,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.4.1 (2026-05-04)
 * Fixed: Deployment Issues. Not all required files where inside the package
 
 ### 0.4.0 (2026-05-03)
