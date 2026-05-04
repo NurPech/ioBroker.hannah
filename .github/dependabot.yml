@@ -1,24 +1,36 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: "/"
+    directory: '/'
     schedule:
-      interval: monthly
-      day: 20
-      time: "00:05"
-      timezone: Europe/Berlin
-    open-pull-requests-limit: 5
+      interval: 'cron'
+      timezone: 'Europe/Berlin'
+      cronjob: '6 1 9 * *'
+    open-pull-requests-limit: 15
     assignees:
-      - NurPech
-    versioning-strategy: increase
+      - 'NurPech'
+    versioning-strategy: 'increase'
+    cooldown:
+      default-days: 7
+    ignore:
+      - dependency-name: "@mui/material"
+        versions: [ ">=7.0.0" ]
+      - dependency-name: "@mui/icons-material"
+        versions: [ ">=7.0.0" ]
+      - dependency-name: "react-dom"
+        versions: [ ">=19.0.0" ]
+      - dependency-name: "@types/react-dom"
+        versions: [ ">=19.0.0" ]
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
 
-  - package-ecosystem: github-actions
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: monthly
-      day: 20
-      time: "00:05"
-      timezone: Europe/Berlin
-    open-pull-requests-limit: 5
+      interval: 'cron'
+      timezone: 'Europe/Berlin'
+      cronjob: '6 1 9 * *'
+    open-pull-requests-limit: 15
     assignees:
-      - NurPech
+      - 'NurPech'
