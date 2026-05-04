@@ -2,6 +2,7 @@
   "common": {
     "name": "hannah",
     "version": "0.4.1",
+    "nogit ": true,
     "news": {
       "0.4.1": {
         "en": "Fixed: Deployment Issues. Not all required files where inside the package",
