@@ -78,6 +78,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* Fixed: Deployment Issues. Not all required files where inside the package
+
 ### 0.4.0 (2026-05-03)
 * Fixed: States may only be set if the state is writable (`common.write === true`).
 * New: `AgentDevice` now includes a `floor` field — resolved from `common.floor` on the device object, with a fallback that scans the state ID path for known floor abbreviations (EG, OG, UG, DG, KG, ZG).
