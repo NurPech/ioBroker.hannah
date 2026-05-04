@@ -14,7 +14,7 @@
     "Integrations": "Integrationen",
     "Label in ID path": "Beschriftung im ID-Pfad",
     "Loading...": "Laden...",
-    "Map floor labels or abbreviations found in state IDs to a canonical abbreviation (e.g. \"Erdgeschoss\" → \"EG\"). Leave empty to use built-in defaults (EG, OG, UG, DG, KG, ZG).": "Ordnen Sie Bodenbezeichnungen oder Abkürzungen in Bundesstaats-IDs einer kanonischen Abkürzung zu (z. B. „Erdgeschoss“ → „EG“). Lassen Sie das Feld leer, um integrierte Standardeinstellungen zu verwenden (EG, OG, UG, DG, KG, ZG).",
+    "Map floor labels or abbreviations found in state IDs to a canonical abbreviation (e.g. \"Erdgeschoss\" → \"EG\"). Leave empty to use built-in defaults (EG, OG, UG, DG, KG, ZG).": "Ordnen Sie Etagenbezeichnungen oder Abkürzungen in State-IDs einer kanonischen Abkürzung zu (z. B. „Erdgeschoss“ → „EG“). Lassen Sie das Feld leer, um integrierte Standardeinstellungen zu verwenden (EG, OG, UG, DG, KG, ZG).",
     "No entries found": "Keine Einträge gefunden",
     "No residents adapter found": "Kein Resident-Adapter gefunden",
     "Prefix": "Präfix",
