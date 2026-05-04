@@ -176,6 +176,7 @@ class StateWatcher {
             floor: meta.floor,
             room: meta.room,
             device: meta.device,
+            device_type: meta.type,
             functions: meta.functions,
             value: {
               value: JSON.stringify(state.val),
@@ -239,13 +240,67 @@ class StateWatcher {
       );
     }
     const room = roomObj ? String((_g = (_f = (_d = (_c = roomObj.common) == null ? void 0 : _c.name) == null ? void 0 : _d.de) != null ? _f : (_e = roomObj.common) == null ? void 0 : _e.name) != null ? _g : roomObj._id) : void 0;
-    const functions = Object.values(allFunctions.result).filter((obj) => {
-      var _a2, _b2, _c2;
-      return ((_a2 = obj == null ? void 0 : obj._id) == null ? void 0 : _a2.startsWith("enum.functions.")) && ((_c2 = (_b2 = obj.common) == null ? void 0 : _b2.members) == null ? void 0 : _c2.includes(stateId));
-    }).map((obj) => {
-      var _a2, _b2, _c2, _d2, _e2;
-      return String((_e2 = (_d2 = (_b2 = (_a2 = obj.common) == null ? void 0 : _a2.name) == null ? void 0 : _b2.de) != null ? _d2 : (_c2 = obj.common) == null ? void 0 : _c2.name) != null ? _e2 : obj._id);
-    });
+    const matchingFunctionObjs = Object.values(allFunctions.result).filter(
+      (obj) => {
+        var _a2, _b2, _c2;
+        return ((_a2 = obj == null ? void 0 : obj._id) == null ? void 0 : _a2.startsWith("enum.functions.")) && ((_c2 = (_b2 = obj.common) == null ? void 0 : _b2.members) == null ? void 0 : _c2.includes(stateId));
+      }
+    );
+    const functions = matchingFunctionObjs.map(
+      (obj) => {
+        var _a2, _b2, _c2, _d2, _e2;
+        return String((_e2 = (_d2 = (_b2 = (_a2 = obj.common) == null ? void 0 : _a2.name) == null ? void 0 : _b2.de) != null ? _d2 : (_c2 = obj.common) == null ? void 0 : _c2.name) != null ? _e2 : obj._id);
+      }
+    );
+    const resolveType = () => {
+      var _a2, _b2, _c2, _d2, _e2, _f2, _g2, _h2;
+      const override = (_e2 = (_b2 = (_a2 = stateObj == null ? void 0 : stateObj.common) == null ? void 0 : _a2.hannah) == null ? void 0 : _b2.type) != null ? _e2 : (_d2 = (_c2 = deviceObj == null ? void 0 : deviceObj.common) == null ? void 0 : _c2.hannah) == null ? void 0 : _d2.type;
+      if (override) {
+        return String(override);
+      }
+      const role = (_g2 = (_f2 = stateObj == null ? void 0 : stateObj.common) == null ? void 0 : _f2.role) != null ? _g2 : "";
+      if (role.startsWith("level.color") || role === "level.dimmer" || role === "switch.light") {
+        return "light";
+      }
+      if (role === "level.temperature") {
+        return "thermostat";
+      }
+      if (role === "value.temperature") {
+        return "temperature_sensor";
+      }
+      if (role === "sensor.door" || role === "indicator.open") {
+        return "door";
+      }
+      if (role === "sensor.window") {
+        return "window";
+      }
+      if (role === "level.blind" || role === "level.curtain") {
+        return "blind";
+      }
+      const funcIds = matchingFunctionObjs.map((obj) => obj._id.toLowerCase());
+      if (funcIds.some((id) => id.includes("light") || id.includes("licht"))) {
+        return "light";
+      }
+      if (funcIds.some((id) => id.includes("socket") || id.includes("stecker") || id.includes("plug"))) {
+        return "socket";
+      }
+      if (funcIds.some((id) => id.includes("heat") || id.includes("heiz") || id.includes("therm"))) {
+        return "thermostat";
+      }
+      if (funcIds.some((id) => id.includes("window") || id.includes("fenster"))) {
+        return "window";
+      }
+      if (funcIds.some((id) => id.includes("door") || id.includes("tuer") || id.includes("t\xFCren"))) {
+        return "door";
+      }
+      if (funcIds.some((id) => id.includes("temp"))) {
+        return "temperature_sensor";
+      }
+      if ((role === "switch" || role === "switch.power") && ((_h2 = stateObj == null ? void 0 : stateObj.common) == null ? void 0 : _h2.write)) {
+        return "socket";
+      }
+      return "";
+    };
     const readableName = (n) => {
       if (typeof n !== "string" || !n || n.includes(".")) {
         return null;
@@ -255,6 +310,7 @@ class StateWatcher {
     return {
       room: room != null ? room : "",
       device: (_l = (_k = (_j = readableName((_h = deviceObj == null ? void 0 : deviceObj.common) == null ? void 0 : _h.name)) != null ? _j : readableName((_i = stateObj == null ? void 0 : stateObj.common) == null ? void 0 : _i.name)) != null ? _k : deviceId.split(".").at(-1)) != null ? _l : "",
+      type: resolveType(),
       floor,
       functions
     };
