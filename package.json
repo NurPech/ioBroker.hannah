@@ -56,7 +56,7 @@
   "files": [
     "admin{,/!(src)/**}/!(tsconfig|tsconfig.*|.eslintrc).{json,json5}",
     "admin{,/!(src)/**}/*.{html,css,png,svg,jpg,js}",
-    "admin/build/",
+    "admin/build/**",
     "build/",
     "build/proto/",
     "www/",
@@ -64,7 +64,6 @@
     "LICENSE"
   ],
   "scripts": {
-    "prepublishOnly": "npm run build",
     "prebuild": "rimraf build admin/build",
     "build": "build-adapter all && node -e \"require('fs').mkdirSync('build/proto',{recursive:true});require('fs').copyFileSync('src/proto/hannah.proto','build/proto/hannah.proto')\"",
     "watch": "build-adapter all --watch",
@@ -80,6 +79,8 @@
     "test": "npm run test:ts && npm run test:package",
     "check": "tsc --noEmit && tsc --noEmit -p admin/tsconfig.json",
     "lint": "eslint -c eslint.config.mjs .",
+    "prepack": "npm run build",
+    "verify:package": "node scripts/verify-package-contents.mjs",
     "translate": "translate-adapter",
     "release": "release-script",
     "dev-server": "dev-server"
