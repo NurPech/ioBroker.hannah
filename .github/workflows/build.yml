@@ -27,6 +27,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm run lint
+
       - run: npm run build
 
       - uses: stefanzweifel/git-auto-commit-action@v5
