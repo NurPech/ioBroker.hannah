@@ -41,6 +41,8 @@
     "exclude": [
         "build/**",
         "node_modules/**",
-        "widgets/**"
+        "widgets/**",
+        "src/**/*.test.ts",
+        "test/**"
     ]
 }
