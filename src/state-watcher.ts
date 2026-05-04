@@ -312,7 +312,11 @@ export class StateWatcher {
             if (role === 'sensor.window') {
                 return 'window';
             }
-            if (role === 'level.blind' || role === 'level.curtain') {
+            if (
+                role === 'level.blind' ||
+                role === 'level.curtain' ||
+                role === 'value.blind' ||
+                role === 'value.curtain') {
                 return 'blind';
             }
 
