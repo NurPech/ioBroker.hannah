@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.4.2",
+    "version": "0.5.0",
     "news": {
+      "0.5.0": {
+        "en": "New: `AgentDevice` proto carries a `device_type` field (field 5) — resolved from `common.hannah.type` override, ioBroker role (e.g. `level.temperature` → `thermostat`, `sensor.window` → `window`), or function enum IDs; supported types: `light`, `socket`, `thermostat`, `temperature_sensor`, `window`, `door`, `blind`",
+        "de": "Neu: `AgentDevice` proto trägt ein `device type` Feld (Feld 5) — aufgelöst von `common.hannah.type` Override, ioBroker Rolle (z.B. `level.temperature` → `thermostat`, `sensor.window` → `window`) oder Funktion enum IDs; unterstützte Typen: `light``, `, ```````````, ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````",
+        "ru": "Новое: прото-устройство несет поле \"device type\" (поле 5) - решено из переопределения \"common.hannah.type\", роли ioBroker (например, \"level.temperature\" → \"thermostat\", \"sensor.window\" → \"window\") или идентификаторов функции enum; поддерживаемые типы: \"light\", \"socket\", \"thermostat\", \"temperature sensor\", \"window\", \"door\", \"blind\"",
+        "pt": "Novo: `AgentDevice` proto carrega um campo `disvice type` (campo 5) — resolvido a partir de `common.hannah.type` sobreposição, papel de ioBroker (por exemplo, `level.temperatura` → `thermostat`, `sensor.window` → `window`), ou função enum IDs; tipos suportados: `light`, `socket`, `thermostat`, `temperatura sensor`, `window`, `door`, `blind`",
+        "nl": "Nieuw: ",
+        "fr": "Nouveau: `AgentDevice` proto porte un champ `device type` (champ 5) - résolu à partir de `common.hannah.type`, le rôle ioBroker (par exemple `level.temperature` → `thermostat`, `sensor.window` → `window`), ou les identifiants de fonction; types supportés: `light`, `socket`, `thermostat`, `temperature sensor`, `window`, `door`, `aveugle`",
+        "it": "Nuovo: `AgentDevice` proto trasporta un campo `device type` (campo 5) — risolto da `common.hannah.type` override, ioBroker ruolo (ad esempio `level.temperature` → `thermostat`, `sensor.window` → `window`), o funzione enum IDs; tipi supportati: `light`, `socket`, `therdoor",
+        "es": "New: `AgentDevice` proto carries a `device type` field (field 5) — resolved from `common.hannah.type` override, ioBroker role (e.g. `level.temperature` → `thermostat`, `sensor.window` → `statow`), or function enum IDs; supported types: `light`, `socket`, `ther",
+        "pl": "Nowy: 'AgentDevice' proto nosi pole 'device _ type' (pole 5) - usunięte z 'commun.hannah.type', joBroker role (np. 'level.temperature' → 'termostat', 'sensor.window' → 'window') lub funkcji enum ID; obsługiwane typy: 'light', 'socket', 'termostat', 'temperature _ sensor', 'window', 'door', 'zaślepienie'",
+        "uk": "Новий: `AgentDevice` proto несе поле `device type` (field 5) — вирішена з `common.hannah.type` override, роль ioBroker (наприклад, рівень `thermostat`, `thermostat`, `sensor.window` → `window`, `window`, `socket`, `socket`, `thermostat`, `the Infrastructure sensor`, `window`, `door`, `blin`",
+        "zh-cn": "新的:`AgentDevice'原型带有`device type'字段(第5场)——从`common.hannah.type.cover,ioBroker作用(例如`level.temperat'-`thermostat',`sensor.window'-`window')或函数电源ID中解决;支持类型:`光'、`socket'、`thermostat'、`temat sensor'、`window'、`门'、`blind'"
+      },
       "0.4.2": {
         "en": "Fixed: automated TypeScript build via GitHub Actions",
         "de": "Behoben: automatisierte TypeScript-Erstellung über GitHub-Aktionen",
@@ -80,19 +93,6 @@
         "pl": "Nowy: Migawka urządzenia przy podłączeniu - adapter wysyła teraz pokój, nazwę urządzenia, funkcję i bieżącą wartość dla każdego subskrybowanego stanu natychmiast po podłączeniu, więc Hannah Core nie musi już pytać jOBroker REST API do wyszukiwania urządzenia\nNowy: Migawka rezydenta przy podłączeniu - wszyscy znani rezydenci są przesyłani do Hannah Core raz po podłączeniu, zastępując poprzednią obserwację rezydenta opartą na API\nNowy: komunikat 'AgentDevice' zawiera pełne metadane (pokój, urządzenie, funkcje, bieżąca wartość) na państwo; 'AgentDeviceSnapshot' zawiera pełną listę\nUlepszone: Poszukiwania enum podczas migawki są teraz pobierane raz i ponownie wykorzystywane we wszystkich stanach zamiast raz na stan, znacznie skracając czas uruchamiania dużych instalacji",
         "uk": "Новий: Пристрій знімок на з'єднанні — перехідник тепер передає номер, назву пристрою, функцію та поточне значення для кожного зареєстрованого стану відразу після підключення, тому Hannah Core більше не потребує запиту API ioBroker REST для виявлення пристрою\nНовий: Життєвий знімок на з'єднанні — всі відомі мешканці пересилаються на Hannah Core один раз після підключення, заміщуючи попередній перегляд API-резидента\nНовий: `AgentDevice` прото повідомлення несе повну метадані (кімната, пристрій, функції, значення струму) за державу; `AgentDeviceSnapshot` обгортає повний список\nУдосконалено: Увімкніть пошуки при знімку, тепер випромінюють один раз, а не один раз на стан, значно скорочуючи час запуску для великих установок",
         "zh-cn": "新建: 连接上的设备快照——适配器在连接后立即为每个订阅状态发送房间,设备名称,功能和当前值,因此Hannah Core不再需要查询ioBroker REST API以进行设备发现\nNew: 居民连接快照——所有已知居民在连接后都会传送到Hannah Core,取代之前基于API的居民查询\n新建:`AgentDevices'原型信息每个状态都包含完整的元数据(室,设备,函数,当前值);`AgentDevicesSnapshot'将完整列表包起来\n改进:快照时的Enum检查现已采集一次,并在所有州重复使用,而不是每个州一次,大大减少大型设施的启动时间"
-      },
-      "0.2.1": {
-        "en": "Fixed: Hannah could set any state. That could be a security Issue. Hannah can now only edit the states that the adapter actively manages.",
-        "de": "Behoben: Hannah könnte einen Staat setzen. Das könnte ein Sicherheitsproblem sein. Hannah kann nun nur die Zustände bearbeiten, die der Adapter aktiv verwaltet.",
-        "ru": "Исправлено: Ханна могла установить любое государство. Это может быть проблемой безопасности. Ханна теперь может редактировать только те состояния, которыми активно управляет адаптер.",
-        "pt": "A Hannah podia definir qualquer estado. Pode ser um problema de segurança. Hannah agora só pode editar os estados que o adaptador gerencia ativamente.",
-        "nl": "Vast: Hannah kan elke staat instellen. Dat kan een beveiligingskwestie zijn. Hannah kan nu alleen de staten bewerken die de adapter actief beheert.",
-        "fr": "Hannah pourrait régler n'importe quel état. Ça pourrait être une question de sécurité. Hannah ne peut maintenant modifier que les états que l'adaptateur gère activement.",
-        "it": "Risolto: Hannah potrebbe impostare qualsiasi stato. Potrebbe essere un problema di sicurezza. Hannah può ora solo modificare gli stati che l'adattatore gestisce attivamente.",
-        "es": "Arreglado: Hannah podría establecer cualquier estado. Eso podría ser un asunto de seguridad. Hannah ahora sólo puede editar los estados que el adaptador gestiona activamente.",
-        "pl": "Hannah może ustawić dowolny stan. To może być sprawa bezpieczeństwa. Hannah może teraz edytować tylko stany, które adapter aktywnie zarządza.",
-        "uk": "Виправлено: Ганна може встановити будь-яку державу. Це може бути питання безпеки. Hannah тепер можна редагувати тільки стани, які адаптер активно керує.",
-        "zh-cn": "固定:汉娜可以设置任何州. 这可能是个安全问题。 Hannah现在只能编辑适配器积极管理的状态."
       }
     },
     "blockly": true,
