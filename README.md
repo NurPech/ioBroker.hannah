@@ -78,6 +78,10 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* New: ioBroker DeviceManager support — satellites are shown as devices with mute toggle and volume slider controls
+* New: Satellite objects are now created as `type: device` (previously `channel`) for DeviceManager compatibility
+
 ### 0.5.0 (2026-05-06)
 * New: `AgentDevice` proto carries a `device_type` field (field 5) — resolved from `common.hannah.type` override, ioBroker role (e.g. `level.temperature` → `thermostat`, `sensor.window` → `window`), or function enum IDs; supported types: `light`, `socket`, `thermostat`, `temperature_sensor`, `window`, `door`, `blind`
 

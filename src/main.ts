@@ -4,6 +4,7 @@ import { StateWatcher } from './state-watcher';
 import { ResidentsWatcher } from './residents';
 import { SatelliteWatcher } from './satellites';
 import { MessagesHandler } from './messages';
+import HannahDeviceManagement from './deviceManager';
 
 class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
@@ -11,6 +12,7 @@ class Hannah extends utils.Adapter {
     private residents: ResidentsWatcher | null = null;
     private satellites: SatelliteWatcher | null = null;
     private messages: MessagesHandler | null = null;
+    private dm: HannahDeviceManagement | null = null;
     private enumReloadTimer: ReturnType<typeof setTimeout> | null = null;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
@@ -87,6 +89,7 @@ class Hannah extends utils.Adapter {
         this.states = new StateWatcher(this, send);
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
         this.satellites = new SatelliteWatcher(this, send);
+        this.dm = new HannahDeviceManagement(this);
         this.messages = new MessagesHandler(
             this,
             (text, direct, severity) => this.grpc!.notify(text, direct, severity),

@@ -27,12 +27,14 @@ var import_state_watcher = require("./state-watcher");
 var import_residents = require("./residents");
 var import_satellites = require("./satellites");
 var import_messages = require("./messages");
+var import_deviceManager = __toESM(require("./deviceManager"));
 class Hannah extends utils.Adapter {
   grpc = null;
   states = null;
   residents = null;
   satellites = null;
   messages = null;
+  dm = null;
   enumReloadTimer = null;
   constructor(options = {}) {
     super({ ...options, name: "hannah" });
@@ -105,6 +107,7 @@ class Hannah extends utils.Adapter {
     this.states = new import_state_watcher.StateWatcher(this, send);
     this.residents = cfg.residentsInstance ? new import_residents.ResidentsWatcher(this, send, cfg.residentsInstance) : null;
     this.satellites = new import_satellites.SatelliteWatcher(this, send);
+    this.dm = new import_deviceManager.default(this);
     this.messages = new import_messages.MessagesHandler(
       this,
       (text, direct, severity) => this.grpc.notify(text, direct, severity),

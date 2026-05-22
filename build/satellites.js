@@ -154,7 +154,7 @@ class SatelliteWatcher {
   async _ensureSatelliteStates(deviceId, room) {
     const base = `satellites.rooms.${room}.${deviceId}`;
     await this.adapter.setObjectNotExistsAsync(base, {
-      type: "channel",
+      type: "device",
       common: { name: `Satellite ${deviceId}` },
       native: {}
     });

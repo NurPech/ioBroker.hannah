@@ -148,7 +148,7 @@ export class SatelliteWatcher {
     private async _ensureSatelliteStates(deviceId: string, room: string): Promise<void> {
         const base = `satellites.rooms.${room}.${deviceId}`;
         await this.adapter.setObjectNotExistsAsync(base, {
-            type: 'channel',
+            type: 'device',
             common: { name: `Satellite ${deviceId}` },
             native: {},
         });
