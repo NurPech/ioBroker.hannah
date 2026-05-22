@@ -78,7 +78,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.6.0 (2026-05-22)
 * New: ioBroker DeviceManager support — satellites are shown as devices with mute toggle and volume slider controls
 * New: Satellite objects are now created as `type: device` (previously `channel`) for DeviceManager compatibility
 
