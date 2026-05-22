@@ -12,6 +12,7 @@ import type { AdapterInstance } from '@iobroker/adapter-core';
 /** Pattern: satellites.rooms.<room>.<deviceId> */
 const SATELLITE_RE = /^satellites\.rooms\.([^.]+)\.([^.]+)$/;
 
+/** DeviceManagement implementation that exposes Hannah satellites in the ioBroker DeviceManager. */
 export default class HannahDeviceManagement extends DeviceManagement<AdapterInstance> {
     /** @inheritdoc */
     public constructor(adapter: AdapterInstance) {
@@ -82,7 +83,7 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
 
             const info: DeviceInfo<string> = {
                 id: device._id,
-                name: (device.common.name as string) || deviceId,
+                name: device.common.name || deviceId,
                 identifier: room,
                 status: { connection: isOnline ? 'connected' : 'disconnected' },
                 hasDetails: true,
