@@ -13,10 +13,12 @@ import type { AdapterInstance } from '@iobroker/adapter-core';
 const SATELLITE_RE = /^satellites\.rooms\.([^.]+)\.([^.]+)$/;
 
 export default class HannahDeviceManagement extends DeviceManagement<AdapterInstance> {
-    constructor(adapter: AdapterInstance) {
+    /** @inheritdoc */
+    public constructor(adapter: AdapterInstance) {
         super(adapter);
     }
 
+    /** @inheritdoc */
     protected getInstanceInfo(): InstanceDetails {
         return {
             apiVersion: 'v3',
@@ -24,13 +26,16 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
         };
     }
 
+    /** @inheritdoc */
     protected async loadDevices(context: DeviceLoadContext<string>): Promise<void> {
         const devices = await this.adapter.getDevicesAsync();
 
         for (const device of devices) {
             const shortId = device._id.substring(this.adapter.namespace.length + 1);
             const match = shortId.match(SATELLITE_RE);
-            if (!match) continue;
+            if (!match) {
+                continue;
+            }
 
             const [, room, deviceId] = match;
             const ns = this.adapter.namespace;
@@ -38,7 +43,7 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
             const onlineState = await this.adapter.getForeignStateAsync(`${device._id}.online`);
             const isOnline = onlineState?.val === true;
 
-            const muteState   = await this.adapter.getForeignStateAsync(`${ns}.satellites.rooms.${room}.mute`);
+            const muteState = await this.adapter.getForeignStateAsync(`${ns}.satellites.rooms.${room}.mute`);
             const volumeState = await this.adapter.getForeignStateAsync(`${ns}.satellites.rooms.${room}.volume`);
 
             const controls: DeviceControl<string>[] = [
@@ -49,7 +54,10 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
                     label: { en: 'Mute', de: 'Stumm' },
                     state: muteState ?? ({ val: false, ts: Date.now(), ack: true } as ioBroker.State),
                     handler: async (_deviceId, _actionId, state: ControlState): Promise<ioBroker.State> => {
-                        await this.adapter.setStateAsync(`satellites.rooms.${room}.mute`, { val: state as boolean, ack: false });
+                        await this.adapter.setStateAsync(`satellites.rooms.${room}.mute`, {
+                            val: state as boolean,
+                            ack: false,
+                        });
                         return { val: state, ts: Date.now(), ack: true } as ioBroker.State;
                     },
                 },
@@ -63,7 +71,10 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
                     unit: '%',
                     state: volumeState ?? ({ val: 80, ts: Date.now(), ack: true } as ioBroker.State),
                     handler: async (_deviceId, _actionId, state: ControlState): Promise<ioBroker.State> => {
-                        await this.adapter.setStateAsync(`satellites.rooms.${room}.volume`, { val: state as number, ack: false });
+                        await this.adapter.setStateAsync(`satellites.rooms.${room}.volume`, {
+                            val: state as number,
+                            ack: false,
+                        });
                         return { val: state, ts: Date.now(), ack: true } as ioBroker.State;
                     },
                 },
@@ -83,10 +94,13 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
         }
     }
 
+    /** @inheritdoc */
     protected getDeviceDetails(id: string): DeviceDetails<string> | null {
         const shortId = id.substring(this.adapter.namespace.length + 1);
         const match = shortId.match(SATELLITE_RE);
-        if (!match) return null;
+        if (!match) {
+            return null;
+        }
 
         const [, room, deviceId] = match;
 
