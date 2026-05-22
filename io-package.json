@@ -163,7 +163,8 @@
       }
     ],
     "supportedMessages": {
-      "notifications": true
+      "notifications": true,
+      "deviceManager": true
     }
   },
   "native": {
