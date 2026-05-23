@@ -78,6 +78,13 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* New: Per-satellite state `satellites.rooms.<room>.<device>.firmware_version` — updated whenever the satellite reports its running firmware version at boot
+* New: Per-satellite state `satellites.rooms.<room>.<device>.update_available` (`indicator.update`) — set to `true` when the satellite reports a pending OTA update, reset to `false` on the next boot version report
+* New: Per-satellite button `satellites.rooms.<room>.<device>.update_now` — triggers an immediate firmware update (bypasses residents/away check) via `TriggerFirmwareUpdate` gRPC RPC
+* Changed: Build artifacts (`build/`, `admin/build/`) removed from git; `prepack` hook builds automatically on `npm pack`/`npm publish`; Auto-Build GitHub Action removed
+* Changed: `nogit: true` set in `io-package.json` — adapter is distributed via npm only
+
 ### 0.6.0 (2026-05-22)
 * New: ioBroker DeviceManager support — satellites are shown as devices with mute toggle and volume slider controls
 * New: Satellite objects are now created as `type: device` (previously `channel`) for DeviceManager compatibility
