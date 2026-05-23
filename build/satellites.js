@@ -24,13 +24,17 @@ module.exports = __toCommonJS(satellites_exports);
 class SatelliteWatcher {
   adapter;
   send;
+  getGrpc;
+  deviceRooms = /* @__PURE__ */ new Map();
   /**
    * @param adapter - ioBroker adapter instance
    * @param send - Sends AgentMessage frames to Hannah Core via gRPC
+   * @param getGrpc - Lazy getter for the gRPC client (resolves after construction)
    */
-  constructor(adapter, send) {
+  constructor(adapter, send, getGrpc) {
     this.adapter = adapter;
     this.send = send;
+    this.getGrpc = getGrpc;
   }
   /**
    * Called when Hannah pushes a satellite registered/gone event, or on
@@ -46,6 +50,11 @@ class SatelliteWatcher {
       this.adapter.log.info(`[satellites] Satellite gone: ${deviceId}`);
       await this._setSatelliteOnline(deviceId, "", false);
       return;
+    }
+    if (online) {
+      this.deviceRooms.set(deviceId.toLowerCase(), room);
+    } else {
+      this.deviceRooms.delete(deviceId.toLowerCase());
     }
     await this._ensureRoomStates(room);
     await this._ensureSatelliteStates(deviceId, room);
@@ -64,9 +73,41 @@ class SatelliteWatcher {
    * @param id - State ID that changed
    * @param state - New state value, or null/undefined if deleted
    */
+  /**
+   * Called when Hannah pushes a satellite.firmware event.
+   */
+  async handleFirmwareEvent(deviceId, version) {
+    const room = this.deviceRooms.get(deviceId.toLowerCase());
+    if (!room) {
+      this.adapter.log.debug(`[satellites] firmware event for unknown device ${deviceId} \u2014 ignored`);
+      return;
+    }
+    const id = `satellites.rooms.${room}.${deviceId}.firmware_version`;
+    await this.adapter.setState(id, { val: version, ack: true });
+    this.adapter.log.info(`[satellites] Firmware version: ${deviceId} = ${version}`);
+  }
   onStateChange(id, state) {
+    var _a;
     if (!state || state.val === null || state.ack) {
       return false;
+    }
+    const perSatMatch = id.match(
+      new RegExp(
+        `^${this.adapter.namespace.replace(".", "\\.")}\\.satellites\\.rooms\\.([^.]+)\\.([^.]+)\\.([^.]+)$`
+      )
+    );
+    if (perSatMatch) {
+      const [, , deviceId, key2] = perSatMatch;
+      if (key2 === "update_now" && state.val === true) {
+        void this.adapter.setState(id, { val: false, ack: true });
+        void ((_a = this.getGrpc()) == null ? void 0 : _a.triggerFirmwareUpdate(deviceId).then((res) => {
+          var _a2;
+          this.adapter.log.info(`[satellites] TriggerFirmwareUpdate ${deviceId}: ${(_a2 = res.message) != null ? _a2 : "ok"}`);
+        }).catch((err) => {
+          this.adapter.log.warn(`[satellites] TriggerFirmwareUpdate ${deviceId} failed: ${err.message}`);
+        }));
+      }
+      return true;
     }
     const match = id.match(
       new RegExp(`^${this.adapter.namespace.replace(".", "\\.")}\\.satellites\\.rooms\\.([^.]+)\\.([^.]+)$`)
@@ -166,6 +207,30 @@ class SatelliteWatcher {
         role: "indicator.connected",
         read: true,
         write: false,
+        def: false
+      },
+      native: {}
+    });
+    await this.adapter.setObjectNotExistsAsync(`${base}.firmware_version`, {
+      type: "state",
+      common: {
+        name: "Firmware version",
+        type: "string",
+        role: "text",
+        read: true,
+        write: false,
+        def: ""
+      },
+      native: {}
+    });
+    await this.adapter.setObjectNotExistsAsync(`${base}.update_now`, {
+      type: "state",
+      common: {
+        name: "Update firmware now",
+        type: "boolean",
+        role: "button",
+        read: false,
+        write: true,
         def: false
       },
       native: {}

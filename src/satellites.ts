@@ -41,9 +41,9 @@ export class SatelliteWatcher {
             return;
         }
         if (online) {
-            this.deviceRooms.set(deviceId, room);
+            this.deviceRooms.set(deviceId.toLowerCase(), room);
         } else {
-            this.deviceRooms.delete(deviceId);
+            this.deviceRooms.delete(deviceId.toLowerCase());
         }
         await this._ensureRoomStates(room);
         await this._ensureSatelliteStates(deviceId, room);
@@ -67,7 +67,7 @@ export class SatelliteWatcher {
      * Called when Hannah pushes a satellite.firmware event.
      */
     async handleFirmwareEvent(deviceId: string, version: string): Promise<void> {
-        const room = this.deviceRooms.get(deviceId);
+        const room = this.deviceRooms.get(deviceId.toLowerCase());
         if (!room) {
             this.adapter.log.debug(`[satellites] firmware event for unknown device ${deviceId} — ignored`);
             return;
