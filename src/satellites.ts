@@ -57,14 +57,11 @@ export class SatelliteWatcher {
     }
 
     /**
-     * Called from onStateChange when a satellite-related state changes in ioBroker.
-     * Forwards writable room states (dnd, mute, volume, announcement) to Hannah Core.
-     *
-     * @param id - State ID that changed
-     * @param state - New state value, or null/undefined if deleted
-     */
-    /**
      * Called when Hannah pushes a satellite.firmware event.
+     *
+     * @param deviceId - Satellite device ID
+     * @param version - Firmware version string
+     * @param updateAvailable - true = newer version pending, false = current version report
      */
     async handleFirmwareEvent(deviceId: string, version: string, updateAvailable?: boolean): Promise<void> {
         const room = this.deviceRooms.get(deviceId.toLowerCase());
@@ -77,9 +74,18 @@ export class SatelliteWatcher {
         if (updateAvailable !== undefined) {
             await this.adapter.setState(`${base}.update_available`, { val: updateAvailable, ack: true });
         }
-        this.adapter.log.info(`[satellites] Firmware: ${deviceId} = ${version}${updateAvailable ? ' (update available)' : ''}`);
+        this.adapter.log.info(
+            `[satellites] Firmware: ${deviceId} = ${version}${updateAvailable ? ' (update available)' : ''}`,
+        );
     }
 
+    /**
+     * Called from onStateChange when a satellite-related state changes in ioBroker.
+     * Forwards writable room states (dnd, mute, volume, announcement) to Hannah Core.
+     *
+     * @param id - State ID that changed
+     * @param state - New state value, or null/undefined if deleted
+     */
     onStateChange(id: string, state: ioBroker.State | null | undefined): boolean {
         if (!state || state.val === null || state.ack) {
             return false;
@@ -94,11 +100,14 @@ export class SatelliteWatcher {
             const [, , deviceId, key] = perSatMatch;
             if (key === 'update_now' && state.val === true) {
                 void this.adapter.setState(id, { val: false, ack: true });
-                void this.getGrpc()?.triggerFirmwareUpdate(deviceId).then(res => {
-                    this.adapter.log.info(`[satellites] TriggerFirmwareUpdate ${deviceId}: ${res.message ?? 'ok'}`);
-                }).catch(err => {
-                    this.adapter.log.warn(`[satellites] TriggerFirmwareUpdate ${deviceId} failed: ${err.message}`);
-                });
+                void this.getGrpc()
+                    ?.triggerFirmwareUpdate(deviceId)
+                    .then(res => {
+                        this.adapter.log.info(`[satellites] TriggerFirmwareUpdate ${deviceId}: ${res.message ?? 'ok'}`);
+                    })
+                    .catch(err => {
+                        this.adapter.log.warn(`[satellites] TriggerFirmwareUpdate ${deviceId} failed: ${err.message}`);
+                    });
             }
             return true;
         }
