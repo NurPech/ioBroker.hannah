@@ -66,15 +66,18 @@ export class SatelliteWatcher {
     /**
      * Called when Hannah pushes a satellite.firmware event.
      */
-    async handleFirmwareEvent(deviceId: string, version: string): Promise<void> {
+    async handleFirmwareEvent(deviceId: string, version: string, updateAvailable?: boolean): Promise<void> {
         const room = this.deviceRooms.get(deviceId.toLowerCase());
         if (!room) {
             this.adapter.log.debug(`[satellites] firmware event for unknown device ${deviceId} — ignored`);
             return;
         }
-        const id = `satellites.rooms.${room}.${deviceId}.firmware_version`;
-        await this.adapter.setState(id, { val: version, ack: true });
-        this.adapter.log.info(`[satellites] Firmware version: ${deviceId} = ${version}`);
+        const base = `satellites.rooms.${room}.${deviceId}`;
+        await this.adapter.setState(`${base}.firmware_version`, { val: version, ack: true });
+        if (updateAvailable !== undefined) {
+            await this.adapter.setState(`${base}.update_available`, { val: updateAvailable, ack: true });
+        }
+        this.adapter.log.info(`[satellites] Firmware: ${deviceId} = ${version}${updateAvailable ? ' (update available)' : ''}`);
     }
 
     onStateChange(id: string, state: ioBroker.State | null | undefined): boolean {
@@ -214,6 +217,18 @@ export class SatelliteWatcher {
                 read: true,
                 write: false,
                 def: '',
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.update_available`, {
+            type: 'state',
+            common: {
+                name: 'Firmware update available',
+                type: 'boolean',
+                role: 'indicator.update',
+                read: true,
+                write: false,
+                def: false,
             },
             native: {},
         });

@@ -138,7 +138,7 @@ class Hannah extends utils.Adapter {
                 } else if (which === 'firmware_event' && cmd.firmware_event) {
                     const fe = cmd.firmware_event;
                     if (fe.device && fe.version) {
-                        void this.satellites?.handleFirmwareEvent(fe.device, fe.version);
+                        void this.satellites?.handleFirmwareEvent(fe.device, fe.version, fe.update_available);
                     }
                 }
             },

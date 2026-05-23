@@ -457,8 +457,9 @@ message AgentCommand {
 }
 
 message AgentFirmwareEvent {
-  string device  = 1;
-  string version = 2;
+  string device           = 1;
+  string version          = 2;
+  bool   update_available = 3;  // true = newer version pending, false = current version report
 }
 
 // Hannah instructs the adapter to set an ioBroker state.
