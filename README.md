@@ -78,7 +78,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.7.0 (2026-05-23)
 * New: Per-satellite state `satellites.rooms.<room>.<device>.firmware_version` — updated whenever the satellite reports its running firmware version at boot
 * New: Per-satellite state `satellites.rooms.<room>.<device>.update_available` (`indicator.update`) — set to `true` when the satellite reports a pending OTA update, reset to `false` on the next boot version report
 * New: Per-satellite button `satellites.rooms.<room>.<device>.update_now` — triggers an immediate firmware update (bypasses residents/away check) via `TriggerFirmwareUpdate` gRPC RPC
