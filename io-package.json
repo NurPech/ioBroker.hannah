@@ -142,6 +142,7 @@
     "readme": "https://github.com/NurPech/ioBroker.hannah/blob/main/README.md",
     "loglevel": "info",
     "tier": 3,
+    "nogit": true,
     "mode": "daemon",
     "type": "protocols",
     "compact": true,
