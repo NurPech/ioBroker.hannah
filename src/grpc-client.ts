@@ -181,6 +181,29 @@ export class GrpcClient {
     }
 
     /**
+     * Trigger an immediate OTA firmware update for a satellite.
+     *
+     * @param device - Satellite device ID
+     */
+    triggerFirmwareUpdate(device: string): Promise<{ ok: boolean; message?: string }> {
+        return new Promise((resolve, reject) => {
+            if (!this.client) {
+                reject(new Error('not connected'));
+                return;
+            }
+            const timer = setTimeout(() => reject(new Error('timeout')), 5000);
+            this.client.TriggerFirmwareUpdate({ device }, (err: Error | null, response: any) => {
+                clearTimeout(timer);
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ ok: response.ok, message: response.message });
+                }
+            });
+        });
+    }
+
+    /**
      * Send a message to Hannah Core.
      *
      * @param msg - Protobuf message object

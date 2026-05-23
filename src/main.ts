@@ -88,7 +88,7 @@ class Hannah extends utils.Adapter {
 
         this.states = new StateWatcher(this, send);
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
-        this.satellites = new SatelliteWatcher(this, send);
+        this.satellites = new SatelliteWatcher(this, send, () => this.grpc);
         this.dm = new HannahDeviceManagement(this);
         this.messages = new MessagesHandler(
             this,
@@ -135,6 +135,11 @@ class Hannah extends utils.Adapter {
                     void this.states?.watchMore(cmd.watch_more.state_ids);
                 } else if (which === 'text_answer' && cmd.text_answer) {
                     void this.setState('textAnswer', { val: cmd.text_answer.text, ack: true });
+                } else if (which === 'firmware_event' && cmd.firmware_event) {
+                    const fe = cmd.firmware_event;
+                    if (fe.device && fe.version) {
+                        void this.satellites?.handleFirmwareEvent(fe.device, fe.version);
+                    }
                 }
             },
         });

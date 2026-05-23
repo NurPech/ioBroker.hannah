@@ -58,8 +58,12 @@ service HannahService {
   // --- Event stream ---
   // Opens a server-side stream; Hannah pushes events as they occur.
   // Pass event_types to filter (empty = all events).
-  // Known event types: "car.parked", "resident.arrived", "resident.departed"
+  // Known event types: "car.parked", "resident.arrived", "resident.departed", "satellite.firmware"
   rpc SubscribeEvents (EventFilter)       returns (stream HannahEvent);
+
+  // --- Firmware Manager ---
+  // Trigger an immediate OTA update for a satellite (bypasses residents check).
+  rpc TriggerFirmwareUpdate (TriggerFirmwareUpdateRequest) returns (StatusResponse);
 
   // --- Satellite Proxy (Go gRPC proxy) ---
   // Bidirectional keepalive stream. Proxy sends heartbeats; Hannah sends TTS
@@ -257,18 +261,28 @@ message EventFilter {
 }
 
 message HannahEvent {
-  string event_type = 1;   // "car.parked" | "resident.arrived" | "resident.departed" | "system.notification"
+  string event_type = 1;   // "car.parked" | "resident.arrived" | "resident.departed" | "system.notification" | "satellite.firmware"
   string timestamp  = 2;   // ISO 8601 UTC
 
   oneof payload {
     CarStateProto            car_state            = 10;
     ResidentEventProto       resident_event       = 11;
     SystemNotificationEvent  system_notification  = 12;
+    FirmwareEventProto       firmware_event       = 13;
   }
 }
 
 message SystemNotificationEvent {
   string text = 1;  // LLM-reformulierter Benachrichtigungstext
+}
+
+message FirmwareEventProto {
+  string device  = 1;
+  string version = 2;
+}
+
+message TriggerFirmwareUpdateRequest {
+  string device = 1;
 }
 
 message ResidentEventProto {
@@ -438,7 +452,13 @@ message AgentCommand {
     AgentSetResident     set_resident     = 3;  // Hannah wants to set a resident's presence state
     AgentSatelliteUpdate satellite_update = 4;  // a satellite registered or disconnected
     AgentTextAnswer      text_answer      = 5;  // Hannah's answer to a text command
+    AgentFirmwareEvent   firmware_event   = 6;  // satellite firmware version update
   }
+}
+
+message AgentFirmwareEvent {
+  string device  = 1;
+  string version = 2;
 }
 
 // Hannah instructs the adapter to set an ioBroker state.

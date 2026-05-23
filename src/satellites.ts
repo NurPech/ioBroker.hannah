@@ -1,5 +1,5 @@
 import type * as utils from '@iobroker/adapter-core';
-import type { AgentMessageSender } from './grpc-client';
+import type { AgentMessageSender, GrpcClient } from './grpc-client';
 
 /**
  * Manages satellite states under hannah.<instance>.satellites.rooms.<room>.
@@ -9,16 +9,19 @@ import type { AgentMessageSender } from './grpc-client';
  */
 export class SatelliteWatcher {
     private adapter: utils.AdapterInstance;
-
     private send: AgentMessageSender;
+    private getGrpc: () => GrpcClient | null;
+    private deviceRooms: Map<string, string> = new Map();
 
     /**
      * @param adapter - ioBroker adapter instance
      * @param send - Sends AgentMessage frames to Hannah Core via gRPC
+     * @param getGrpc - Lazy getter for the gRPC client (resolves after construction)
      */
-    constructor(adapter: utils.AdapterInstance, send: AgentMessageSender) {
+    constructor(adapter: utils.AdapterInstance, send: AgentMessageSender, getGrpc: () => GrpcClient | null) {
         this.adapter = adapter;
         this.send = send;
+        this.getGrpc = getGrpc;
     }
 
     /**
@@ -36,6 +39,11 @@ export class SatelliteWatcher {
             this.adapter.log.info(`[satellites] Satellite gone: ${deviceId}`);
             await this._setSatelliteOnline(deviceId, '', false);
             return;
+        }
+        if (online) {
+            this.deviceRooms.set(deviceId, room);
+        } else {
+            this.deviceRooms.delete(deviceId);
         }
         await this._ensureRoomStates(room);
         await this._ensureSatelliteStates(deviceId, room);
@@ -55,11 +63,44 @@ export class SatelliteWatcher {
      * @param id - State ID that changed
      * @param state - New state value, or null/undefined if deleted
      */
+    /**
+     * Called when Hannah pushes a satellite.firmware event.
+     */
+    async handleFirmwareEvent(deviceId: string, version: string): Promise<void> {
+        const room = this.deviceRooms.get(deviceId);
+        if (!room) {
+            this.adapter.log.debug(`[satellites] firmware event for unknown device ${deviceId} — ignored`);
+            return;
+        }
+        const id = `satellites.rooms.${room}.${deviceId}.firmware_version`;
+        await this.adapter.setState(id, { val: version, ack: true });
+        this.adapter.log.info(`[satellites] Firmware version: ${deviceId} = ${version}`);
+    }
+
     onStateChange(id: string, state: ioBroker.State | null | undefined): boolean {
         if (!state || state.val === null || state.ack) {
             return false;
         }
-        // Match: hannah.<instance>.satellites.rooms.<room>.<key>
+        // Match: hannah.<instance>.satellites.rooms.<room>.<deviceId>.<key>  (per-satellite)
+        const perSatMatch = id.match(
+            new RegExp(
+                `^${this.adapter.namespace.replace('.', '\\.')}\\.satellites\\.rooms\\.([^.]+)\\.([^.]+)\\.([^.]+)$`,
+            ),
+        );
+        if (perSatMatch) {
+            const [, , deviceId, key] = perSatMatch;
+            if (key === 'update_now' && state.val === true) {
+                void this.adapter.setState(id, { val: false, ack: true });
+                void this.getGrpc()?.triggerFirmwareUpdate(deviceId).then(res => {
+                    this.adapter.log.info(`[satellites] TriggerFirmwareUpdate ${deviceId}: ${res.message ?? 'ok'}`);
+                }).catch(err => {
+                    this.adapter.log.warn(`[satellites] TriggerFirmwareUpdate ${deviceId} failed: ${err.message}`);
+                });
+            }
+            return true;
+        }
+
+        // Match: hannah.<instance>.satellites.rooms.<room>.<key>  (room-level)
         const match = id.match(
             new RegExp(`^${this.adapter.namespace.replace('.', '\\.')}\\.satellites\\.rooms\\.([^.]+)\\.([^.]+)$`),
         );
@@ -160,6 +201,30 @@ export class SatelliteWatcher {
                 role: 'indicator.connected',
                 read: true,
                 write: false,
+                def: false,
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.firmware_version`, {
+            type: 'state',
+            common: {
+                name: 'Firmware version',
+                type: 'string',
+                role: 'text',
+                read: true,
+                write: false,
+                def: '',
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.update_now`, {
+            type: 'state',
+            common: {
+                name: 'Update firmware now',
+                type: 'boolean',
+                role: 'button',
+                read: false,
+                write: true,
                 def: false,
             },
             native: {},
