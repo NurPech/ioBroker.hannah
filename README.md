@@ -78,6 +78,10 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* New: `SensorWatcher` — handles `AgentSensorUpdate` commands; creates `hannah.<instance>.satellites.sensors.<device>.{temperature,pressure,humidity,gas_resistance}` states on first update
+* Fixed: `satellites.sensors` folder object is created before the per-device channel to avoid state creation failure
+
 ### 0.8.0 (2026-05-24)
 * New: `BleWatcher` — handles `AgentBleUpdate` commands from Hannah Core; creates `hannah.<instance>.ble.<label>.room`, `.satellite`, and `.rssi` states on first update and keeps them current on every location change
 
