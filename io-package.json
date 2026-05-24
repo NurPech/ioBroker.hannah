@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "news": {
+      "0.8.0": {
+        "en": "New: `BleWatcher` — handles `AgentBleUpdate` commands from Hannah Core; creates `hannah.<instance>.ble.<label>.room`, `.satellite`, and `.rssi` states on first update and keeps them current on every location change",
+        "de": "Neu: `BleWatcher` — handles `AgentBleUpdate` Befehle von Hannah Core; erstellt `hannah.<instance>.ble.<label>.room`, `.satellite` und `.rssi` Zustände beim ersten Update und hält sie auf jedem Standortwechsel aktuell",
+        "ru": "Новый: «BleWatcher» — обрабатывает команды «AgentBleUpdate» от Hannah Core; создает состояния «hannah.<instance>.ble.<label>.room», «.satellite» и «.rssi» при первом обновлении и поддерживает их актуальность при каждом изменении местоположения",
+        "pt": "Novo: `BleWatcher` — lida com os comandos `AgentBleUpdate` de Hannah Core; cria `hannah.<instance>.ble.<label>.room`, `.satellite` e `.rssi` na primeira atualização e os mantém atuais em cada mudança de local",
+        "nl": "Nieuw: ",
+        "fr": "Nouveau: `BleWatcher` — gère les commandes `AgentBleUpdate` de Hannah Core; crée `hannah.<instance>.ble.<label>.room`, `.satellite` et `.rssi` états à la première mise à jour et les maintient à jour sur chaque changement d`emplacement",
+        "it": "Novità: `BleWatcher` — gestisce i comandi `AgentBleUpdate` di Hannah Core; crea `hannah",
+        "es": "New: `BleWatcher` — handles `AgentBleUpdate` commands from Hannah Core; creates `hannah. interpretadoinstance titulada.ble. Haga cliclabel icono.room`, `.satellite`, and `.rssi` states on first update and keep them current on every location change",
+        "pl": "Nowy: 'BleWatcher' - obsługuje polecenia 'AgentBleUpdate' z Hannah Core; tworzy 'hannah. < instance > .ble. < label > .room', '.satellite' i '.rssi' w pierwszej aktualizacji i utrzymuje je aktualne na każdej zmianie lokalizacji",
+        "uk": "Новий: `BleWatcher` — ручки `AgentBleUpdate`` команди від Hannah Core; створює `hannah.<instance>.ble.<label>.room`, `.satellite`, `.rssi` стани на першому оновленні та зберігають їх на будь-якому місці",
+        "zh-cn": "新的:`BleWatcher ' ——处理Hannah Core发出的`AgentBleUpdate ' 命令;创建`hanah.<instance>.ble.<label>.room`、`.satellite ' 和`.rssi ' 表示第一次更新,并随时更新每个地点的变化"
+      },
       "0.7.0": {
         "en": "New: Per-satellite state `satellites.rooms.<room>.<device>.firmware_version` — updated whenever the satellite reports its running firmware version at boot\nNew: Per-satellite state `satellites.rooms.<room>.<device>.update_available` (`indicator.update`) — set to `true` when the satellite reports a pending OTA update, reset to `false` on the next boot version report\nNew: Per-satellite button `satellites.rooms.<room>.<device>.update_now` — triggers an immediate firmware update (bypasses residents/away check) via `TriggerFirmwareUpdate` gRPC RPC\nChanged: Build artifacts (`build/`, `admin/build/`) removed from git; `prepack` hook builds automatically on `npm pack`/`npm publish`; Auto-Build GitHub Action removed\nChanged: `nogit: true` set in `io-package.json` — adapter is distributed via npm only",
         "de": "Neu: Per-satellite state `satellites.rooms.<room>.<device>.firmware version ` — aktualisiert, wenn der Satellit seine laufende Firmware-Version bei Boot meldet\nNeu: Per-satellite state `satellites.rooms.>room>.<device>.update available` (`indicator.update`) — eingestellt auf `true`, wenn der Satellit ein anstehendes OTA-Update meldet, auf `false` im nächsten Boot-Versionsbericht zurückgesetzt\nNeu: Per-satellite Taste `satellites.rooms.>room>.<device>.update now` — löst über `TriggerFirmwareUpdate` gRPC RPC ein sofortiges Firmware-Update (Bypasses residents/away check) aus\nGeändert: Artefakte (`build/`, `admin/build/`) aus git entfernen; `prepack` Haken baut automatisch auf `npm pack`/`npm pub`; Auto-Build GitHub Action entfernt\nGeändert: `nogit: true` set in `io-package.json` — Adapter wird nur über npm verteilt",
@@ -80,19 +93,6 @@
         "pl": "Stałe: stany mogą być ustawione tylko wtedy, gdy stan jest zapisywalny ('common.write = = = true').\nNowość: 'AgentDevice' obejmuje teraz pole 'floor' - rozwiązane z 'common.floor' na obiekcie urządzenia, z awaryjnym skanowaniem ścieżki identyfikacji stanu znanych skrótów podłogowych (EG, OG, UG, DG, KG, ZG).\nNowy: Konfigurowalne mappings podłogowe - zdefiniować niestandardowe etykiety → pary skrótów w zakładce Urządzenia Discovery (np. \"Erdgeschoss\" → \"EG\"); mappings normalizują zarówno wartości \"common.floor\", jak i segmenty ścieżki ID oraz rozszerzają (nie zastępują) zestaw skrótów built- in.",
         "uk": "Виправлено: США можуть бути встановлені, якщо держава є недійсним (`common.write == true`).\nНовий: `AgentDevice` тепер включає в себе поле `floor` — вирішене з `common.floor` на об'єкті пристрою, з недоліком, який відсканує шлях до ID для відомих підлогових скорочень (EG, OG, UG, DG, KG, ZG).\nНовий: Настроювання картографування підлоги — визначення на замовлення етикетки→abbreviation pairs in the Device Discovery tab (наприклад, \"Erdgeschos\" → \"EG\"); мапінги нормалізують як `common.floor` значення і сегменти шляху ID, а також продовжують (не замінити) вбудований комплект аббревіатури.",
         "zh-cn": "固定:只有当国家可以写字(`common.write QQ true')时,才能确定国家.\n新的:`AgentDevice ' 现在包括一个`地板 ' 字段——由设备对象上的`common.地板 ' 解决,并有一个倒置路径,扫描已知的地板缩写(EG、OG、UG、DG、KG、ZG).\n新:可配置地板映射 – 定义自定义标签 – 缩略语对在设备发现标签(如\"Erdgeschoss\" –\"EG\")中;映射既规范了‘common.desload'值,又规范了ID路径段,并扩展(不是替换)内置缩略语集."
-      },
-      "0.3.2": {
-        "en": "Fixed: Device names in Telegram and Hannah were showing the full state ID instead of the readable name",
-        "de": "Behoben: Gerätenamen in Telegram und Hannah zeigten statt des lesbaren Namens die vollständige Zustands-ID",
-        "ru": "Имена устройств в Telegram и Hannah показывали полный идентификатор состояния вместо читаемого имени",
-        "pt": "Corrigido: Os nomes dos dispositivos no Telegram e Hannah estavam mostrando o ID completo do estado em vez do nome legível",
-        "nl": "Fixed: Apparaatnamen in Telegram en Hannah tonen het volledige status ID in plaats van de leesbare naam",
-        "fr": "Correction : Les noms d'appareils dans Telegram et Hannah montraient l'identifiant d'état complet au lieu du nom lisible",
-        "it": "Fisso: I nomi dei dispositivi in Telegram e Hannah mostravano l'ID completo dello stato invece del nome leggibile",
-        "es": "Fijo: Los nombres de los dispositivos en Telegram y Hannah mostraban el ID de estado completo en lugar del nombre legible",
-        "pl": "Naprawiono: Nazwy urządzeń w Telegramie i Hannah pokazywały pełny identyfikator stanu zamiast czytelnej nazwy",
-        "uk": "Виправлено: Ім'я пристроїв в Телеграмі та Ганні відображали повну державну ідентифікатор замість читуваного імені",
-        "zh-cn": "固定: Telegram和Hannah中的设备名称显示的是完整的状态ID而不是可读名称"
       }
     },
     "blockly": true,
