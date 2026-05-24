@@ -78,6 +78,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* New: `BleWatcher` — handles `AgentBleUpdate` commands from Hannah Core; creates `hannah.<instance>.ble.<label>.room`, `.satellite`, and `.rssi` states on first update and keeps them current on every location change
+
 ### 0.7.0 (2026-05-23)
 * New: Per-satellite state `satellites.rooms.<room>.<device>.firmware_version` — updated whenever the satellite reports its running firmware version at boot
 * New: Per-satellite state `satellites.rooms.<room>.<device>.update_available` (`indicator.update`) — set to `true` when the satellite reports a pending OTA update, reset to `false` on the next boot version report
