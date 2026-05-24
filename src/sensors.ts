@@ -19,6 +19,7 @@ export class SensorWatcher {
         humidity: number,
         gasResistance: number,
     ): Promise<void> {
+        try {
         await this._ensureStates(device, gasResistance > 0);
         const ns = `satellites.sensors.${device}`;
         const updates: Promise<unknown>[] = [
@@ -32,7 +33,10 @@ export class SensorWatcher {
             updates.push(this.adapter.setState(`${ns}.gas_resistance`, { val: Math.round(gasResistance), ack: true }));
         }
         await Promise.all(updates);
-        this.adapter.log.debug(`[sensors] ${device}: T=${temperature.toFixed(1)}°C P=${pressure.toFixed(1)}hPa H=${humidity.toFixed(1)}% Gas=${gasResistance.toFixed(0)}Ω`);
+        this.adapter.log.debug(`[sensors] ${device}: T=${temperature.toFixed(1)}°C P=${pressure.toFixed(1)}hPa H=${humidity.toFixed(1)}% Gas=${gasResistance.toFixed(0)}`);
+        } catch (e) {
+            this.adapter.log.error(`[sensors] handleSensorUpdate failed: ${(e as Error).message}`);
+        }
     }
 
     private async _ensureStates(device: string, hasGas: boolean): Promise<void> {
@@ -40,6 +44,11 @@ export class SensorWatcher {
         this.ensuredDevices.add(device);
 
         const ns = `satellites.sensors.${device}`;
+        await this.adapter.setObjectNotExistsAsync('satellites.sensors', {
+            type: 'folder',
+            common: { name: 'Sensor Readings' },
+            native: {},
+        });
         await this.adapter.setObjectNotExistsAsync(`satellites.sensors.${device}`, {
             type: 'channel',
             common: { name: `${device} Sensors` },
