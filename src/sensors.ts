@@ -21,7 +21,7 @@ export class SensorWatcher {
     ): Promise<void> {
         await this._ensureStates(device, gasResistance > 0);
         const ns = `satellites.sensors.${device}`;
-        const updates: Promise<void>[] = [
+        const updates: Promise<unknown>[] = [
             this.adapter.setState(`${ns}.temperature`, { val: Math.round(temperature * 10) / 10, ack: true }),
             this.adapter.setState(`${ns}.pressure`, { val: Math.round(pressure * 10) / 10, ack: true }),
         ];
