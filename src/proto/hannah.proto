@@ -453,6 +453,7 @@ message AgentCommand {
     AgentSatelliteUpdate satellite_update = 4;  // a satellite registered or disconnected
     AgentTextAnswer      text_answer      = 5;  // Hannah's answer to a text command
     AgentFirmwareEvent   firmware_event   = 6;  // satellite firmware version update
+    AgentBleUpdate       ble_update       = 7;  // BLE tag location changed
   }
 }
 
@@ -541,4 +542,15 @@ message AgentResident {
 // a list with all known residents
 message AgentResidentSnapshot {
   repeated AgentResident residents = 1;
+}
+
+// Hannah notifies the adapter that a BLE tag's location has changed.
+// The adapter creates/updates states under hannah.<instance>.ble.<label>.*.
+// room and satellite are empty when the tag is no longer visible.
+message AgentBleUpdate {
+  string label     = 1;  // human-readable tag name (from config, used as state path)
+  string mac       = 2;  // MAC address (lowercase, colon-separated)
+  string room      = 3;  // room name (empty = tag not visible / stale)
+  string satellite = 4;  // satellite device ID that last detected the tag
+  int32  rssi      = 5;  // last known RSSI in dBm (0 when room is empty)
 }

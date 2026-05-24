@@ -5,6 +5,7 @@ import { ResidentsWatcher } from './residents';
 import { SatelliteWatcher } from './satellites';
 import { MessagesHandler } from './messages';
 import HannahDeviceManagement from './deviceManager';
+import { BleWatcher } from './ble';
 
 class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
@@ -13,6 +14,7 @@ class Hannah extends utils.Adapter {
     private satellites: SatelliteWatcher | null = null;
     private messages: MessagesHandler | null = null;
     private dm: HannahDeviceManagement | null = null;
+    private ble: BleWatcher | null = null;
     private enumReloadTimer: ReturnType<typeof setTimeout> | null = null;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
@@ -89,6 +91,7 @@ class Hannah extends utils.Adapter {
         this.states = new StateWatcher(this, send);
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
         this.satellites = new SatelliteWatcher(this, send, () => this.grpc);
+        this.ble = new BleWatcher(this);
         this.dm = new HannahDeviceManagement(this);
         this.messages = new MessagesHandler(
             this,
@@ -140,6 +143,9 @@ class Hannah extends utils.Adapter {
                     if (fe.device && fe.version) {
                         void this.satellites?.handleFirmwareEvent(fe.device, fe.version, fe.update_available);
                     }
+                } else if (which === 'ble_update' && cmd.ble_update) {
+                    const b = cmd.ble_update;
+                    void this.ble?.handleBleUpdate(b.label, b.mac, b.room, b.satellite, b.rssi);
                 }
             },
         });
