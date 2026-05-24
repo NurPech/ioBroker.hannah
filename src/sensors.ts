@@ -20,27 +20,35 @@ export class SensorWatcher {
         gasResistance: number,
     ): Promise<void> {
         try {
-        await this._ensureStates(device, gasResistance > 0);
-        const ns = `satellites.sensors.${device}`;
-        const updates: Promise<unknown>[] = [
-            this.adapter.setState(`${ns}.temperature`, { val: Math.round(temperature * 10) / 10, ack: true }),
-            this.adapter.setState(`${ns}.pressure`, { val: Math.round(pressure * 10) / 10, ack: true }),
-        ];
-        if (humidity > 0) {
-            updates.push(this.adapter.setState(`${ns}.humidity`, { val: Math.round(humidity * 10) / 10, ack: true }));
-        }
-        if (gasResistance > 0) {
-            updates.push(this.adapter.setState(`${ns}.gas_resistance`, { val: Math.round(gasResistance), ack: true }));
-        }
-        await Promise.all(updates);
-        this.adapter.log.debug(`[sensors] ${device}: T=${temperature.toFixed(1)}°C P=${pressure.toFixed(1)}hPa H=${humidity.toFixed(1)}% Gas=${gasResistance.toFixed(0)}`);
+            await this._ensureStates(device, gasResistance > 0);
+            const ns = `satellites.sensors.${device}`;
+            const updates: Promise<unknown>[] = [
+                this.adapter.setState(`${ns}.temperature`, { val: Math.round(temperature * 10) / 10, ack: true }),
+                this.adapter.setState(`${ns}.pressure`, { val: Math.round(pressure * 10) / 10, ack: true }),
+            ];
+            if (humidity > 0) {
+                updates.push(
+                    this.adapter.setState(`${ns}.humidity`, { val: Math.round(humidity * 10) / 10, ack: true }),
+                );
+            }
+            if (gasResistance > 0) {
+                updates.push(
+                    this.adapter.setState(`${ns}.gas_resistance`, { val: Math.round(gasResistance), ack: true }),
+                );
+            }
+            await Promise.all(updates);
+            this.adapter.log.debug(
+                `[sensors] ${device}: T=${temperature.toFixed(1)}°C P=${pressure.toFixed(1)}hPa H=${humidity.toFixed(1)}% Gas=${gasResistance.toFixed(0)}`,
+            );
         } catch (e) {
             this.adapter.log.error(`[sensors] handleSensorUpdate failed: ${(e as Error).message}`);
         }
     }
 
     private async _ensureStates(device: string, hasGas: boolean): Promise<void> {
-        if (this.ensuredDevices.has(device)) return;
+        if (this.ensuredDevices.has(device)) {
+            return;
+        }
         this.ensuredDevices.add(device);
 
         const ns = `satellites.sensors.${device}`;
@@ -56,7 +64,14 @@ export class SensorWatcher {
         });
         await this.adapter.setObjectNotExistsAsync(`${ns}.temperature`, {
             type: 'state',
-            common: { name: 'Temperature', type: 'number', role: 'value.temperature', unit: '°C', read: true, write: false },
+            common: {
+                name: 'Temperature',
+                type: 'number',
+                role: 'value.temperature',
+                unit: '°C',
+                read: true,
+                write: false,
+            },
             native: {},
         });
         await this.adapter.setObjectNotExistsAsync(`${ns}.pressure`, {
@@ -72,7 +87,14 @@ export class SensorWatcher {
         if (hasGas) {
             await this.adapter.setObjectNotExistsAsync(`${ns}.gas_resistance`, {
                 type: 'state',
-                common: { name: 'Gas Resistance (VOC)', type: 'number', role: 'value', unit: 'Ω', read: true, write: false },
+                common: {
+                    name: 'Gas Resistance (VOC)',
+                    type: 'number',
+                    role: 'value',
+                    unit: 'Ω',
+                    read: true,
+                    write: false,
+                },
                 native: {},
             });
         }

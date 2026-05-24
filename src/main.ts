@@ -151,7 +151,13 @@ class Hannah extends utils.Adapter {
                     void this.ble?.handleBleUpdate(b.label, b.mac, b.room, b.satellite, b.rssi);
                 } else if (which === 'sensor_update' && cmd.sensor_update) {
                     const s = cmd.sensor_update;
-                    void this.sensorWatcher?.handleSensorUpdate(s.device, s.temperature, s.pressure, s.humidity, s.gas_resistance);
+                    void this.sensorWatcher?.handleSensorUpdate(
+                        s.device,
+                        s.temperature,
+                        s.pressure,
+                        s.humidity,
+                        s.gas_resistance,
+                    );
                 }
             },
         });
