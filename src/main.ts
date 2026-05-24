@@ -6,6 +6,7 @@ import { SatelliteWatcher } from './satellites';
 import { MessagesHandler } from './messages';
 import HannahDeviceManagement from './deviceManager';
 import { BleWatcher } from './ble';
+import { SensorWatcher } from './sensors';
 
 class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
@@ -15,6 +16,7 @@ class Hannah extends utils.Adapter {
     private messages: MessagesHandler | null = null;
     private dm: HannahDeviceManagement | null = null;
     private ble: BleWatcher | null = null;
+    private sensorWatcher: SensorWatcher | null = null;
     private enumReloadTimer: ReturnType<typeof setTimeout> | null = null;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
@@ -92,6 +94,7 @@ class Hannah extends utils.Adapter {
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
         this.satellites = new SatelliteWatcher(this, send, () => this.grpc);
         this.ble = new BleWatcher(this);
+        this.sensorWatcher = new SensorWatcher(this);
         this.dm = new HannahDeviceManagement(this);
         this.messages = new MessagesHandler(
             this,
@@ -146,6 +149,15 @@ class Hannah extends utils.Adapter {
                 } else if (which === 'ble_update' && cmd.ble_update) {
                     const b = cmd.ble_update;
                     void this.ble?.handleBleUpdate(b.label, b.mac, b.room, b.satellite, b.rssi);
+                } else if (which === 'sensor_update' && cmd.sensor_update) {
+                    const s = cmd.sensor_update;
+                    void this.sensorWatcher?.handleSensorUpdate(
+                        s.device,
+                        s.temperature,
+                        s.pressure,
+                        s.humidity,
+                        s.gas_resistance,
+                    );
                 }
             },
         });

@@ -454,6 +454,7 @@ message AgentCommand {
     AgentTextAnswer      text_answer      = 5;  // Hannah's answer to a text command
     AgentFirmwareEvent   firmware_event   = 6;  // satellite firmware version update
     AgentBleUpdate       ble_update       = 7;  // BLE tag location changed
+    AgentSensorUpdate    sensor_update    = 8;  // satellite sensor reading
   }
 }
 
@@ -553,4 +554,14 @@ message AgentBleUpdate {
   string room      = 3;  // room name (empty = tag not visible / stale)
   string satellite = 4;  // satellite device ID that last detected the tag
   int32  rssi      = 5;  // last known RSSI in dBm (0 when room is empty)
+}
+// Hannah notifies the adapter of a satellite's sensor reading.
+// The adapter creates/updates states under hannah.<instance>.satellites.<device>.sensors.*.
+// gas_resistance is omitted (0.0) when not available (BMP280+AHT20 hardware).
+message AgentSensorUpdate {
+  string device          = 1;  // satellite device ID
+  float  temperature     = 2;  // °C
+  float  pressure        = 3;  // hPa
+  float  humidity        = 4;  // % relative humidity (0 when not available)
+  float  gas_resistance  = 5;  // Ω VOC raw resistance (0 when not available)
 }
