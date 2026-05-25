@@ -340,6 +340,9 @@ export class StateWatcher {
             if (funcIds.some(id => id.includes('temp'))) {
                 return 'temperature_sensor';
             }
+            if (funcIds.some(id => id.includes('klima') || id.includes('aircon') || id.includes('climate'))) {
+                return 'climate';
+            }
 
             if ((role === 'switch' || role === 'switch.power') && stateObj?.common?.write) {
                 return 'socket';
