@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.9.0",
+    "version": "0.10.0",
     "news": {
+      "0.10.0": {
+        "en": "New: `climate` device type — detected via funcId keywords (`klima`, `aircon`, `climate`); supports `mode`, `fanSpeed`, `current`, and `expected` states",
+        "de": "Neu: `climate` Gerätetyp — über funcId Schlüsselwörter (`klima`, `aircon`, `climate`); unterstützt `mode`, `fanSpeed`, `current` und `expected` Zustände",
+        "ru": "Новый: тип устройства «климат» — обнаруживается по ключевым словам funcId («клима», «воздух», «климат»); поддерживает «режим», «фан-скорость», «текущее» и «ожидаемое» состояния",
+        "pt": "Novo tipo de dispositivo: `climate` — detectado através de palavras-chave funcId (`klima`, `aircon`, `climate`); suporta `mode`, `fanSpeed`, `current', e `expected` states",
+        "nl": "Nieuw: het type apparaat van de klimate... gedetecteerd via funcId trefwoorden... (Klima..., Aircon..., Climate...).. ondersteunt de toestanden van de fans..",
+        "fr": "Nouveau: type de dispositif `climat` - détecté par des mots clés funcId (`klima`, `aircon`, `climat`); prend en charge `mode`, `fanSpeed`, `current` et `attendu` états",
+        "it": "Nuovo: tipo di dispositivo `climate` — rilevato tramite parole chiave funcId (`klima`, `aircon`, `climate`); supporta `mode`, `fanSpeed`, `current` e `aspettato` stati",
+        "es": "New: `climate` device type — identified via funcId keywords (`klima`, `aircon`, `climate`); supports `mode`, `fanSpeed`, `current`, and `expected` states",
+        "pl": "Nowy: \"climate\" device type - detected via functivid keyword ('klima', 'aircon', 'climate'); obsługuje 'mode', 'fanSpeed', 'current' i 'expected' stany",
+        "uk": "Новий тип пристрою `climate`` — виявлений за допомогою FuncId ключові слова (`klima```, `aircon`, `climate`); підтримує `mode`, `fanSpeed`, `current` та `expected` стани",
+        "zh-cn": "新的:`气候 ' 设备类型——通过真菌关键词检测到(`klima'、`aircon'、`气候 ' );支持`mode'、`fanSpeed'、`current'和`预期'状态)"
+      },
       "0.9.0": {
         "en": "New: `SensorWatcher` — handles `AgentSensorUpdate` commands; creates `hannah.<instance>.satellites.sensors.<device>.{temperature,pressure,humidity,gas_resistance}` states on first update\nFixed: `satellites.sensors` folder object is created before the per-device channel to avoid state creation failure",
         "de": "Neu: `SensorWatcher` — handles `AgentSensorUpdate` Befehle; erstellt `hannah.<instance>.satellites.sensors.<device>.{temperatur, Pressure,humidity,gas resistance} ` Zustände beim ersten Update\nFixed: `satellites.sensors` Ordnerobjekt wird vor dem Per-Device-Kanal erstellt, um einen Ausfall der Zustandserstellung zu vermeiden",
@@ -80,19 +93,6 @@
         "pl": "Naprawiono: zautomatyzowana budowa TypeScript poprzez działania GitHub",
         "uk": "Виправлено: автоматизований блок TypeScript",
         "zh-cn": "固定: 通过 GitHub 动作自动构建类型脚本"
-      },
-      "0.4.1": {
-        "en": "Fixed: Deployment Issues. Not all required files where inside the package",
-        "de": "Behoben: Probleme bei der Bereitstellung. Nicht alle erforderlichen Dateien, in denen innerhalb des Pakets",
-        "ru": "Фиксированный: проблемы развертывания. Не все нужные файлы внутри пакета",
-        "pt": "Fixação: Questões de implantação. Nem todos os arquivos necessários onde dentro do pacote",
-        "nl": "Vast: implementatieproblemen. Niet alle benodigde bestanden waar in het pakket",
-        "fr": "Correction : Problèmes de déploiement. Pas tous les fichiers requis dans le paquet",
-        "it": "Risolto: Problemi di distribuzione. Non tutti i file richiesti dove all'interno del pacchetto",
-        "es": "Corregido: Problemas de Despliegue. No todos los archivos necesarios en el interior del paquete",
-        "pl": "Naprawiono: problemy z wdrożeniem. Nie wszystkie wymagane pliki wewnątrz pakietu",
-        "uk": "Виправлено: проблеми розгортання. Не всі необхідні файли, де всередині пакета",
-        "zh-cn": "固定:部署问题。 软件包内部并非全部需要的文件"
       }
     },
     "blockly": true,
