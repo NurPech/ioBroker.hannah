@@ -79,7 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
-* New: Add support for air conditioner
+* New: `climate` device type — detected via funcId keywords (`klima`, `aircon`, `climate`); supports `mode`, `fanSpeed`, `current`, and `expected` states
 
 ### 0.9.0 (2026-05-24)
 * New: `SensorWatcher` — handles `AgentSensorUpdate` commands; creates `hannah.<instance>.satellites.sensors.<device>.{temperature,pressure,humidity,gas_resistance}` states on first update
