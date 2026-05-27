@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "news": {
+      "0.11.0": {
+        "en": "Changed: volume and mute states moved from room-level (`satellites.rooms.<room>.volume/mute`) to per-satellite (`satellites.rooms.<room>.<deviceId>.volume/mute`)\nChanged: `AgentSatelliteControl` now supports optional `device_id` for per-satellite volume/mute commands; room-level commands (dnd, announcement) unchanged\nChanged: `AgentSatelliteUpdate` now carries optional `volume` and `mute` fields — adapter updates per-satellite states when received",
+        "de": "Geändert: Lautstärke und Mute-State von Raum-Ebene bewegt (`satellites.rooms.<room>.volume/mute`) zu per-satellite (`satellites.rooms.<room>.<deviceId>.volume/mute`)\nGeändert: `AgentSatelliteControl` unterstützt nun optional `device id` für per-satellite Volume/mute Befehle; Raum-Level-Befehle (dnd, Ankündigung) unverändert\nGeändert: `AgentSatelliteUpdate` trägt jetzt optionale `volume` und `mute` Felder — Adapter-Updates pro Satellit-Staaten, wenn empfangen",
+        "ru": "Изменены: объемные и немые состояния переместились с уровня комнаты (`satellites.rooms.<room>.volume/mute`) на перспутник (`satellites.rooms.<room>.<deviceId>.volume/mute`)\nИзмененный: «AgentSatelliteControl» теперь поддерживает опциональный «device id» для команд объема / мьюта на спутник; команды уровня комнаты (dnd, анонс) без изменений\nИзменение: «AgentSatelliteUpdate» теперь имеет дополнительные поля «объем» и «мют» — обновления адаптера для каждого состояния спутника при получении",
+        "pt": "Modificado: o volume e os estados mudos passaram do nível da sala (`satélites.rooms.<sroom>.volume/mute`) para o nível por satélite (`satélites.rooms.<satélites>.<dispositivoId>.volume/mute`)\nModificado: `AgentSatelliteControl` agora suporta opcional `dispositivo id` para comandos volume/mute por satélite; comandos de nível de sala (dnd, anúncio) inalterados\nModificado: `AgentSatelliteUpdate` agora carrega campos opcionais `volume` e `mute` — atualizações do adaptador por estados de satélite quando recebido",
+        "nl": "Veranderd: volume- en demptoestanden verplaatst van kamerniveau (\nGewijzigd: \nGewijzigd: ",
+        "fr": "Changed: volume et états muets déplacés du niveau de la pièce (`satellites.rooms.<room>.volume/mute`) au niveau du satellite (`satellites.rooms.<room>.<deviceId>.volume/mute`)\nChanged: `AgentSatelliteControl` supporte désormais les commandes optionnelles `device id` par satellite volume/mute; commandes au niveau de la pièce (dnd, annonce) inchangées\nChanged: `AgentSatelliteMise à jour` porte désormais des champs optionnels `volume` et `muet` - mises à jour d'adaptateur par satellite à la réception",
+        "it": "Cambiato: volume e stati muti spostati da livello di camera («satelliti.rooms.∼room>.volume/mute`) a per-satellitare («satelliti.rooms\nModificato: `AgentSatelliteControl` ora supporta opzionale `device id` per comandi per-satellite volume/mute; comandi a livello di camera (dnd, annuncio) invariati\nModificato: `AgentSatelliteUpdate` ora trasporta campi facoltativi `volume` e `mute` — aggiornamenti adattatori per-stati satellitari quando ricevuti",
+        "es": "Cambio: el volumen y los estados mudos se trasladaron desde el nivel de habitación (`satellites.rooms. interpretadoroom conveniente.volume/mute`) a per-satellite (`satellites.rooms.Seguido\nCambio: `AgentSatelliteControl` ahora soporta el `device id` opcional para comandos de volumen/mute por satélite; comandos de nivel de habitación (dnd, anuncio) sin cambios\nCambio: \" AgentSatelliteUpdate \" ahora lleva campos opcionales de `volume ' y `mute ' , actualizaciones de adaptadores por satélite cuando se recibe",
+        "pl": "Zmienione: stan głośności i wyciszenia przeniesiony z poziomu pokoju ('satellites.rooms < room > .volume / mute') do satelity ('satellites.rooms < room >. < deviceId > .volume / mum')\nZmieniony: 'AgentSatelliteControl' obsługuje teraz opcjonalne 'device _ id' dla komend per- satellite volume / beam; polecenie rooms-level (dnd, notice) bez zmian\nZmienione: 'AgentSatelliteUpdate' posiada teraz opcjonalne pola 'volume' i 'mum' - aktualizacje adaptera w stanie przezsatelitarnym po otrzymaniu",
+        "uk": "Змінено: об’єм та місійні стани переїхали з рівня кімнати (`satellites.rooms.<room>.volume/mute`) на per-satellite (`satellites.room>.<deviceId>.volume/mute`)\nЗмінено: `AgentSatelliteControl` тепер підтримує необов’язкове `device id` для об’єму/місцевих команд; команди на рівні (dnd, оголошення)\nЗмінено: `AgentSatelliteUpdate` тепер надає необов’язкові поля та поля `mute`` — оновлення адаптерів для супутників, які надходять після отримання",
+        "zh-cn": "更改:音量和哑音状态从会议室级别(`卫星.房间.<房间>.容积/穆特')改为每颗卫星(`卫星.房间.><房间>。<deviceId>.容积/穆特')\n更改: \" AgentSatellite Control \" 现在支持对每颗卫星的音量/音量命令的可选“device id”;房间级命令(dnd,公告)不变\n修改: \" AgentSatellite Update \" 现在带有可选的`量 ' 和`mute ' 字段——在收到每个卫星状态时的适配器更新"
+      },
       "0.10.0": {
         "en": "New: `climate` device type — detected via funcId keywords (`klima`, `aircon`, `climate`); supports `mode`, `fanSpeed`, `current`, and `expected` states",
         "de": "Neu: `climate` Gerätetyp — über funcId Schlüsselwörter (`klima`, `aircon`, `climate`); unterstützt `mode`, `fanSpeed`, `current` und `expected` Zustände",
@@ -80,19 +93,6 @@
         "pl": "Nowy: 'AgentDevice' proto nosi pole 'device _ type' (pole 5) - usunięte z 'commun.hannah.type', joBroker role (np. 'level.temperature' → 'termostat', 'sensor.window' → 'window') lub funkcji enum ID; obsługiwane typy: 'light', 'socket', 'termostat', 'temperature _ sensor', 'window', 'door', 'zaślepienie'",
         "uk": "Новий: `AgentDevice` proto несе поле `device type` (field 5) — вирішена з `common.hannah.type` override, роль ioBroker (наприклад, рівень `thermostat`, `thermostat`, `sensor.window` → `window`, `window`, `socket`, `socket`, `thermostat`, `the Infrastructure sensor`, `window`, `door`, `blin`",
         "zh-cn": "新的:`AgentDevice'原型带有`device type'字段(第5场)——从`common.hannah.type.cover,ioBroker作用(例如`level.temperat'-`thermostat',`sensor.window'-`window')或函数电源ID中解决;支持类型:`光'、`socket'、`thermostat'、`temat sensor'、`window'、`门'、`blind'"
-      },
-      "0.4.2": {
-        "en": "Fixed: automated TypeScript build via GitHub Actions",
-        "de": "Behoben: automatisierte TypeScript-Erstellung über GitHub-Aktionen",
-        "ru": "Автоматизированная сборка TypeScript через GitHub Actions",
-        "pt": "Fixo: compilação automatizada do TypeScript via ações do GitHub",
-        "nl": "Fixed: geautomatiseerde TypeScript build via GitHub Acties",
-        "fr": "Correction : création automatique de TypeScript via les actions GitHub",
-        "it": "Risolto: Creazione automatica di TypeScript tramite GitHub Actions",
-        "es": "Fijación: construcción automática de tipoScript a través de GitHub Actions",
-        "pl": "Naprawiono: zautomatyzowana budowa TypeScript poprzez działania GitHub",
-        "uk": "Виправлено: автоматизований блок TypeScript",
-        "zh-cn": "固定: 通过 GitHub 动作自动构建类型脚本"
       }
     },
     "blockly": true,
