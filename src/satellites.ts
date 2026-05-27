@@ -32,8 +32,17 @@ export class SatelliteWatcher {
      * @param room - Room the satellite is assigned to
      * @param _address - UDP address (may be empty, reserved for future use)
      * @param online - true = registered, false = gone
+     * @param volume - Current volume level (0–100), if reported
+     * @param mute - Current mute state, if reported
      */
-    async handleSatelliteUpdate(deviceId: string, room: string, _address: string, online: boolean): Promise<void> {
+    async handleSatelliteUpdate(
+        deviceId: string,
+        room: string,
+        _address: string,
+        online: boolean,
+        volume?: number,
+        mute?: boolean,
+    ): Promise<void> {
         if (!room && !online) {
             // Gone event without room info — find and clear the satellite's online states
             this.adapter.log.info(`[satellites] Satellite gone: ${deviceId}`);
@@ -48,6 +57,12 @@ export class SatelliteWatcher {
         await this._ensureRoomStates(room);
         await this._ensureSatelliteStates(deviceId, room);
         await this._setSatelliteOnline(deviceId, room, online);
+        if (volume !== undefined) {
+            await this.adapter.setState(`satellites.rooms.${room}.${deviceId}.volume`, { val: volume, ack: true });
+        }
+        if (mute !== undefined) {
+            await this.adapter.setState(`satellites.rooms.${room}.${deviceId}.mute`, { val: mute, ack: true });
+        }
         if (online) {
             this.adapter.log.info(`[satellites] Satellite online: ${deviceId} in room '${room}'`);
         } else {
@@ -97,7 +112,7 @@ export class SatelliteWatcher {
             ),
         );
         if (perSatMatch) {
-            const [, , deviceId, key] = perSatMatch;
+            const [, room, deviceId, key] = perSatMatch;
             if (key === 'update_now' && state.val === true) {
                 void this.adapter.setState(id, { val: false, ack: true });
                 void this.getGrpc()
@@ -108,6 +123,11 @@ export class SatelliteWatcher {
                     .catch(err => {
                         this.adapter.log.warn(`[satellites] TriggerFirmwareUpdate ${deviceId} failed: ${err.message}`);
                     });
+            } else if (key === 'volume' || key === 'mute') {
+                this.send({ satellite_control: { room, device_id: deviceId, [key]: state.val } });
+                this.adapter.log.debug(
+                    `[satellites] satellite_control device='${deviceId}' room='${room}' ${key}=${state.val}`,
+                );
             }
             return true;
         }
@@ -121,7 +141,7 @@ export class SatelliteWatcher {
         }
         const room = match[1];
         const key = match[2];
-        const writableKeys = ['dnd', 'mute', 'volume', 'announcement', 'announcementSsml'];
+        const writableKeys = ['dnd', 'announcement', 'announcementSsml'];
         const resetKeys = ['announcement', 'announcementSsml'];
         if (!writableKeys.includes(key)) {
             return false;
@@ -159,7 +179,6 @@ export class SatelliteWatcher {
                 },
             ],
             ['dnd', { name: 'Do not disturb', type: 'boolean', role: 'switch', read: true, write: true, def: false }],
-            ['mute', { name: 'Mute microphone', type: 'boolean', role: 'switch', read: true, write: true, def: false }],
             [
                 'speaking',
                 {
@@ -174,19 +193,6 @@ export class SatelliteWatcher {
             [
                 'lastTranscript',
                 { name: 'Last transcript', type: 'string', role: 'text', read: true, write: false, def: '' },
-            ],
-            [
-                'volume',
-                {
-                    name: 'Volume (0–100)',
-                    type: 'number',
-                    role: 'level.volume',
-                    read: true,
-                    write: true,
-                    def: 80,
-                    min: 0,
-                    max: 100,
-                },
             ],
         ];
         for (const [key, common] of states) {
@@ -248,6 +254,32 @@ export class SatelliteWatcher {
                 type: 'boolean',
                 role: 'button',
                 read: false,
+                write: true,
+                def: false,
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.volume`, {
+            type: 'state',
+            common: {
+                name: 'Volume (0–100)',
+                type: 'number',
+                role: 'level.volume',
+                read: true,
+                write: true,
+                def: 80,
+                min: 0,
+                max: 100,
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.mute`, {
+            type: 'state',
+            common: {
+                name: 'Mute microphone',
+                type: 'boolean',
+                role: 'switch',
+                read: true,
                 write: true,
                 def: false,
             },

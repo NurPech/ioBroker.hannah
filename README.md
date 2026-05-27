@@ -78,6 +78,11 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* Changed: volume and mute states moved from room-level (`satellites.rooms.<room>.volume/mute`) to per-satellite (`satellites.rooms.<room>.<deviceId>.volume/mute`)
+* Changed: `AgentSatelliteControl` now supports optional `device_id` for per-satellite volume/mute commands; room-level commands (dnd, announcement) unchanged
+* Changed: `AgentSatelliteUpdate` now carries optional `volume` and `mute` fields — adapter updates per-satellite states when received
+
 ### 0.10.0 (2026-05-25)
 * New: `climate` device type — detected via funcId keywords (`klima`, `aircon`, `climate`); supports `mode`, `fanSpeed`, `current`, and `expected` states
 

@@ -409,10 +409,13 @@ message AgentMessage {
   }
 }
 
-// Adapter instructs Hannah to control all satellites in a room.
+// Adapter instructs Hannah to control satellites in a room or a specific satellite.
 // room: room name as registered, or "all" for all rooms.
+// device_id: if non-empty, only the named satellite is targeted (volume/mute only);
+//            room is still required (used for room-scoped commands and as fallback).
 message AgentSatelliteControl {
-  string room = 1;
+  string room      = 1;
+  string device_id = 7;  // optional: target a specific satellite instead of the whole room
   oneof control {
     bool   dnd               = 2;  // set do-not-disturb
     bool   mute              = 3;  // mute/unmute microphone
@@ -487,13 +490,16 @@ message AgentSetResident {
   bool   is_guest       = 3;  // false → residents.<n>.roomie.<id>, true → residents.<n>.guest.<id>
 }
 
-// Hannah notifies the adapter that a satellite registered or disconnected.
+// Hannah notifies the adapter that a satellite registered or disconnected,
+// or that a satellite's volume or mute state changed.
 // The adapter updates hannah.<instance>.satellites.rooms.<room>.* states accordingly.
 message AgentSatelliteUpdate {
-  string device_id = 1;  // satellite device ID
-  string room      = 2;  // room the satellite is assigned to
-  string address   = 3;  // UDP address (empty if not applicable)
-  bool   online    = 4;  // true = registered/online, false = gone/offline
+  string device_id    = 1;  // satellite device ID
+  string room         = 2;  // room the satellite is assigned to
+  string address      = 3;  // UDP address (empty if not applicable)
+  bool   online       = 4;  // true = registered/online, false = gone/offline
+  optional int32 volume = 5;  // current volume level (0–100); absent = no change
+  optional bool  mute   = 6;  // current mute state; absent = no change
 }
 
 // Hannah sends the answer to a text command back to the adapter.
