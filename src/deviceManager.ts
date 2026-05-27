@@ -44,18 +44,22 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
             const onlineState = await this.adapter.getForeignStateAsync(`${device._id}.online`);
             const isOnline = onlineState?.val === true;
 
-            const muteState = await this.adapter.getForeignStateAsync(`${ns}.satellites.rooms.${room}.mute`);
-            const volumeState = await this.adapter.getForeignStateAsync(`${ns}.satellites.rooms.${room}.volume`);
+            const muteState = await this.adapter.getForeignStateAsync(
+                `${ns}.satellites.rooms.${room}.${deviceId}.mute`,
+            );
+            const volumeState = await this.adapter.getForeignStateAsync(
+                `${ns}.satellites.rooms.${room}.${deviceId}.volume`,
+            );
 
             const controls: DeviceControl<string>[] = [
                 {
                     id: 'mute',
                     type: 'switch',
-                    stateId: `satellites.rooms.${room}.mute`,
+                    stateId: `satellites.rooms.${room}.${deviceId}.mute`,
                     label: { en: 'Mute', de: 'Stumm' },
                     state: muteState ?? ({ val: false, ts: Date.now(), ack: true } as ioBroker.State),
                     handler: async (_deviceId, _actionId, state: ControlState): Promise<ioBroker.State> => {
-                        await this.adapter.setStateAsync(`satellites.rooms.${room}.mute`, {
+                        await this.adapter.setStateAsync(`satellites.rooms.${room}.${deviceId}.mute`, {
                             val: state as boolean,
                             ack: false,
                         });
@@ -65,14 +69,14 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
                 {
                     id: 'volume',
                     type: 'slider',
-                    stateId: `satellites.rooms.${room}.volume`,
+                    stateId: `satellites.rooms.${room}.${deviceId}.volume`,
                     label: { en: 'Volume', de: 'Lautstärke' },
                     min: 0,
                     max: 100,
                     unit: '%',
                     state: volumeState ?? ({ val: 80, ts: Date.now(), ack: true } as ioBroker.State),
                     handler: async (_deviceId, _actionId, state: ControlState): Promise<ioBroker.State> => {
-                        await this.adapter.setStateAsync(`satellites.rooms.${room}.volume`, {
+                        await this.adapter.setStateAsync(`satellites.rooms.${room}.${deviceId}.volume`, {
                             val: state as number,
                             ack: false,
                         });

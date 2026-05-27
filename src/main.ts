@@ -136,7 +136,11 @@ class Hannah extends utils.Adapter {
                     void this.residents?.handleSetResident(r.resident_id, r.presence_state, r.is_guest);
                 } else if (which === 'satellite_update' && cmd.satellite_update) {
                     const s = cmd.satellite_update;
-                    void this.satellites?.handleSatelliteUpdate(s.device_id, s.room, s.address, s.online);
+                    void this.satellites?.handleSatelliteUpdate(
+                        s.device_id, s.room, s.address, s.online,
+                        s.volume ?? undefined,
+                        s.mute ?? undefined,
+                    );
                 } else if (which === 'watch_more' && cmd.watch_more?.state_ids) {
                     void this.states?.watchMore(cmd.watch_more.state_ids);
                 } else if (which === 'text_answer' && cmd.text_answer) {
