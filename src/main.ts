@@ -137,7 +137,10 @@ class Hannah extends utils.Adapter {
                 } else if (which === 'satellite_update' && cmd.satellite_update) {
                     const s = cmd.satellite_update;
                     void this.satellites?.handleSatelliteUpdate(
-                        s.device_id, s.room, s.address, s.online,
+                        s.device_id,
+                        s.room,
+                        s.address,
+                        s.online,
                         s.volume ?? undefined,
                         s.mute ?? undefined,
                     );

@@ -32,6 +32,8 @@ export class SatelliteWatcher {
      * @param room - Room the satellite is assigned to
      * @param _address - UDP address (may be empty, reserved for future use)
      * @param online - true = registered, false = gone
+     * @param volume - Current volume level (0–100), if reported
+     * @param mute - Current mute state, if reported
      */
     async handleSatelliteUpdate(
         deviceId: string,
