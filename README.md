@@ -74,10 +74,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
 
 ## Changelog
 
-<!--
-    Placeholder for the next version (at the beginning of the line):
-    ### **WORK IN PROGRESS**
--->
+### **WORK IN PROGRESS**
+* Fixed: deduplicate notification messages before joining to prevent doubled text when ioBroker registers the same message twice for an adapter instance
+
 ### 0.11.0 (2026-05-27)
 * Changed: volume and mute states moved from room-level (`satellites.rooms.<room>.volume/mute`) to per-satellite (`satellites.rooms.<room>.<deviceId>.volume/mute`)
 * Changed: `AgentSatelliteControl` now supports optional `device_id` for per-satellite volume/mute commands; room-level commands (dnd, announcement) unchanged
