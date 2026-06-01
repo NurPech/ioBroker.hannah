@@ -73,7 +73,7 @@ Select which **rooms** and **functions** Hannah should be aware of. Leaving both
 The adapter expects `HannahService.AgentConnect` to be available on the configured host/port. No additional Hannah-side configuration is required — the adapter identifies itself automatically on connect.
 
 ## Changelog
-### **WORK IN PROGRESS**
+### 0.11.2 (2026-06-01)
 * Changed: minimum Node.js version bumped to 22
 * Changed: CI pipeline updated to Node 22 (lint/check) and Node 24 (deploy)
 * Changed: `@alcalzone/release-script` and plugins updated to 5.2.0
