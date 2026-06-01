@@ -104,6 +104,8 @@ class Hannah extends utils.Adapter {
 
         this.grpc = new GrpcClient({
             log: this.log,
+            setTimeout: (fn, ms) => this.setTimeout(fn, ms) ?? 0,
+            clearTimeout: t => this.clearTimeout(t as ioBroker.Timeout),
             onConnected: async () => {
                 await this.setState('info.connection', true, true);
                 await this.states!.start({
