@@ -73,6 +73,14 @@ Select which **rooms** and **functions** Hannah should be aware of. Leaving both
 The adapter expects `HannahService.AgentConnect` to be available on the configured host/port. No additional Hannah-side configuration is required — the adapter identifies itself automatically on connect.
 
 ## Changelog
+### **WORK IN PROGRESS**
+* Changed: minimum Node.js version bumped to 22
+* Changed: CI pipeline updated to Node 22 (lint/check) and Node 24 (deploy)
+* Changed: `@alcalzone/release-script` and plugins updated to 5.2.0
+* Changed: use `this.setTimeout`/`this.clearTimeout` in adapter class
+* Changed: removed outdated i18n keys from all translation files
+* Fixed: added link to `CHANGELOG_OLD.md` at end of changelog section
+
 ### 0.11.1 (2026-06-01)
 * Fixed: deduplicate notification messages before joining to prevent doubled text when ioBroker registers the same message twice for an adapter instance
 
@@ -166,6 +174,8 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
 * Enum-based device discovery with room × function filtering
 * Extra state prefix support for arbitrary state trees
 * Snapshot-on-connect replaces MQTT retained messages
+
+For older entries see [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 
 ## License
 

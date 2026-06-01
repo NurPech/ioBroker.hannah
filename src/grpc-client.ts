@@ -29,6 +29,8 @@ interface GrpcClientOptions {
     onConnected: () => void;
     onDisconnected: () => void;
     log: LogAdapter;
+    setTimeout: (fn: () => void, ms: number) => number;
+    clearTimeout: (t: number) => void;
 }
 
 /**
@@ -38,12 +40,14 @@ interface GrpcClientOptions {
 export class GrpcClient {
     private client: any = null;
     private stream: any = null;
-    private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    private reconnectTimer: number | null = null;
     private running = false;
     private onCommand: CommandHandler;
     private onConnected: () => void;
     private onDisconnected: () => void;
     private log: LogAdapter;
+    private _setTimeout: (fn: () => void, ms: number) => number;
+    private _clearTimeout: (t: number) => void;
 
     /**
      * @param opts - Configuration options including callbacks and logger
@@ -53,6 +57,8 @@ export class GrpcClient {
         this.onConnected = opts.onConnected;
         this.onDisconnected = opts.onDisconnected;
         this.log = opts.log;
+        this._setTimeout = opts.setTimeout;
+        this._clearTimeout = opts.clearTimeout;
     }
 
     /**
@@ -121,7 +127,7 @@ export class GrpcClient {
             return;
         }
         this.log.info('[grpc] Reconnecting in 10s...');
-        this.reconnectTimer = setTimeout(() => {
+        this.reconnectTimer = this._setTimeout(() => {
             this.reconnectTimer = null;
             this._connect(host, port);
         }, 10_000);
@@ -168,9 +174,9 @@ export class GrpcClient {
                 reject(new Error('not connected'));
                 return;
             }
-            const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
+            const timer = this._setTimeout(() => reject(new Error('timeout')), timeoutMs);
             this.client.Notify({ text, direct, severity }, (err: Error | null, response: any) => {
-                clearTimeout(timer);
+                this._clearTimeout(timer);
                 if (err) {
                     reject(err);
                 } else {
@@ -191,9 +197,9 @@ export class GrpcClient {
                 reject(new Error('not connected'));
                 return;
             }
-            const timer = setTimeout(() => reject(new Error('timeout')), 5000);
+            const timer = this._setTimeout(() => reject(new Error('timeout')), 5000);
             this.client.TriggerFirmwareUpdate({ device }, (err: Error | null, response: any) => {
-                clearTimeout(timer);
+                this._clearTimeout(timer);
                 if (err) {
                     reject(err);
                 } else {
@@ -225,7 +231,7 @@ export class GrpcClient {
     disconnect(): void {
         this.running = false;
         if (this.reconnectTimer) {
-            clearTimeout(this.reconnectTimer);
+            this._clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
         }
         try {
