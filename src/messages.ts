@@ -135,7 +135,7 @@ export class MessagesHandler {
                 }
             }
             if (parts.length) {
-                return parts.join('. ');
+                return [...new Set(parts)].join('. ');
             }
 
             const desc = notification?.category?.description;
