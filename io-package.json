@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.11.0",
+    "version": "0.11.1",
     "news": {
+      "0.11.1": {
+        "en": "Fixed: deduplicate notification messages before joining to prevent doubled text when ioBroker registers the same message twice for an adapter instance",
+        "de": "Behoben: deduplizieren Sie Benachrichtigungsnachrichten vor dem Fügen, um einen doppelten Text zu verhindern, wenn ioBroker die gleiche Nachricht zweimal für eine Adapterinstanz registriert",
+        "ru": "Исправлено: дублировать сообщения уведомлений перед присоединением, чтобы предотвратить дублирование текста, когда ioBroker регистрирует одно и то же сообщение дважды для экземпляра адаптера",
+        "pt": "Corrigido: deduplicar as mensagens de notificação antes de se juntar para evitar o texto duplicado quando o ioBroker regista a mesma mensagem duas vezes para uma instância de adaptador",
+        "nl": "Fixed: dedupliceer meldingsberichten voordat u toevoegt om dubbele tekst te voorkomen wanneer ioBroker hetzelfde bericht twee keer registreert voor een adapter instantie",
+        "fr": "Correction : dédoubler les messages de notification avant de se joindre pour empêcher le double du texte lorsque ioBroker enregistre le même message deux fois pour une instance d'adaptateur",
+        "it": "Fisso: deduplicare i messaggi di notifica prima di unirsi per evitare il testo raddoppiato quando ioBroker registra lo stesso messaggio due volte per un'istanza adattatore",
+        "es": "Fijo: deduplicar mensajes de notificación antes de unirse para evitar el texto duplicado cuando ioBroker registra el mismo mensaje dos veces para una instancia de adaptador",
+        "pl": "Naprawiono: odduplikować komunikaty zgłoszeniowe przed połączeniem, aby zapobiec podwójnemu tekstowi, kiedy joBroker rejestruje tę samą wiadomość dwukrotnie dla instancji adaptera",
+        "uk": "Виправлено: deduplicate повідомлень, перш ніж приєднатися до запобігання подвійного тексту, коли ioBroker реєструє те саме повідомлення двічі для екземпляра адаптера",
+        "zh-cn": "固定: 当 ioBroker 为适配器实例两次登记同一消息时, 在加入前将通知信件复制, 防止文本翻倍"
+      },
       "0.11.0": {
         "en": "Changed: volume and mute states moved from room-level (`satellites.rooms.<room>.volume/mute`) to per-satellite (`satellites.rooms.<room>.<deviceId>.volume/mute`)\nChanged: `AgentSatelliteControl` now supports optional `device_id` for per-satellite volume/mute commands; room-level commands (dnd, announcement) unchanged\nChanged: `AgentSatelliteUpdate` now carries optional `volume` and `mute` fields — adapter updates per-satellite states when received",
         "de": "Geändert: Lautstärke und Mute-State von Raum-Ebene bewegt (`satellites.rooms.<room>.volume/mute`) zu per-satellite (`satellites.rooms.<room>.<deviceId>.volume/mute`)\nGeändert: `AgentSatelliteControl` unterstützt nun optional `device id` für per-satellite Volume/mute Befehle; Raum-Level-Befehle (dnd, Ankündigung) unverändert\nGeändert: `AgentSatelliteUpdate` trägt jetzt optionale `volume` und `mute` Felder — Adapter-Updates pro Satellit-Staaten, wenn empfangen",
@@ -80,19 +93,6 @@
         "pl": "Nowy: wsparcie iBroker DeviceManager - satelity są wyświetlane jako urządzenia z wyłączonym przełącznikiem i suwakiem głośności\nNowy: Obiekty satelitarne są teraz tworzone jako \"type: device\" (poprzednio \"channel\") dla kompatybilności DeviceManager",
         "uk": "Новий: ioBroker DeviceManager support — супутники показані як пристрої з міткою та об'ємом управління слайдером\nНовий: Супутникові об'єкти тепер створюються як `тип: пристрій` (попередньо `канал`) для сумісності пристрою",
         "zh-cn": "新建: ioBroker 设备管理器支持 —— 卫星显示为带有哑弹切换和音量滑动控制设备\n新的:卫星物体现在作为设备管理兼容性的`类型:装置'(以前称为`通道')而创建"
-      },
-      "0.5.0": {
-        "en": "New: `AgentDevice` proto carries a `device_type` field (field 5) — resolved from `common.hannah.type` override, ioBroker role (e.g. `level.temperature` → `thermostat`, `sensor.window` → `window`), or function enum IDs; supported types: `light`, `socket`, `thermostat`, `temperature_sensor`, `window`, `door`, `blind`",
-        "de": "Neu: `AgentDevice` proto trägt ein `device type` Feld (Feld 5) — aufgelöst von `common.hannah.type` Override, ioBroker Rolle (z.B. `level.temperature` → `thermostat`, `sensor.window` → `window`) oder Funktion enum IDs; unterstützte Typen: `light``, `, ```````````, ````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````",
-        "ru": "Новое: прото-устройство несет поле \"device type\" (поле 5) - решено из переопределения \"common.hannah.type\", роли ioBroker (например, \"level.temperature\" → \"thermostat\", \"sensor.window\" → \"window\") или идентификаторов функции enum; поддерживаемые типы: \"light\", \"socket\", \"thermostat\", \"temperature sensor\", \"window\", \"door\", \"blind\"",
-        "pt": "Novo: `AgentDevice` proto carrega um campo `disvice type` (campo 5) — resolvido a partir de `common.hannah.type` sobreposição, papel de ioBroker (por exemplo, `level.temperatura` → `thermostat`, `sensor.window` → `window`), ou função enum IDs; tipos suportados: `light`, `socket`, `thermostat`, `temperatura sensor`, `window`, `door`, `blind`",
-        "nl": "Nieuw: ",
-        "fr": "Nouveau: `AgentDevice` proto porte un champ `device type` (champ 5) - résolu à partir de `common.hannah.type`, le rôle ioBroker (par exemple `level.temperature` → `thermostat`, `sensor.window` → `window`), ou les identifiants de fonction; types supportés: `light`, `socket`, `thermostat`, `temperature sensor`, `window`, `door`, `aveugle`",
-        "it": "Nuovo: `AgentDevice` proto trasporta un campo `device type` (campo 5) — risolto da `common.hannah.type` override, ioBroker ruolo (ad esempio `level.temperature` → `thermostat`, `sensor.window` → `window`), o funzione enum IDs; tipi supportati: `light`, `socket`, `therdoor",
-        "es": "New: `AgentDevice` proto carries a `device type` field (field 5) — resolved from `common.hannah.type` override, ioBroker role (e.g. `level.temperature` → `thermostat`, `sensor.window` → `statow`), or function enum IDs; supported types: `light`, `socket`, `ther",
-        "pl": "Nowy: 'AgentDevice' proto nosi pole 'device _ type' (pole 5) - usunięte z 'commun.hannah.type', joBroker role (np. 'level.temperature' → 'termostat', 'sensor.window' → 'window') lub funkcji enum ID; obsługiwane typy: 'light', 'socket', 'termostat', 'temperature _ sensor', 'window', 'door', 'zaślepienie'",
-        "uk": "Новий: `AgentDevice` proto несе поле `device type` (field 5) — вирішена з `common.hannah.type` override, роль ioBroker (наприклад, рівень `thermostat`, `thermostat`, `sensor.window` → `window`, `window`, `socket`, `socket`, `thermostat`, `the Infrastructure sensor`, `window`, `door`, `blin`",
-        "zh-cn": "新的:`AgentDevice'原型带有`device type'字段(第5场)——从`common.hannah.type.cover,ioBroker作用(例如`level.temperat'-`thermostat',`sensor.window'-`window')或函数电源ID中解决;支持类型:`光'、`socket'、`thermostat'、`temat sensor'、`window'、`门'、`blind'"
       }
     },
     "blockly": true,

@@ -73,8 +73,7 @@ Select which **rooms** and **functions** Hannah should be aware of. Leaving both
 The adapter expects `HannahService.AgentConnect` to be available on the configured host/port. No additional Hannah-side configuration is required — the adapter identifies itself automatically on connect.
 
 ## Changelog
-
-### **WORK IN PROGRESS**
+### 0.11.1 (2026-06-01)
 * Fixed: deduplicate notification messages before joining to prevent doubled text when ioBroker registers the same message twice for an adapter instance
 
 ### 0.11.0 (2026-05-27)
