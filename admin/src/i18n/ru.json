@@ -8,7 +8,6 @@
     "Extra State Prefixes": "Дополнительные префиксы состояний",
     "Floor Mappings": "Карты этажей",
     "Functions": "Функции",
-    "Functions Enum": "Функции Перечисление",
     "Hannah Host": "Ханна Хост",
     "IP address or hostname of the Hannah Core server": "IP-адрес или имя хоста сервера Hannah Core",
     "Integrations": "Интеграции",
@@ -19,19 +18,8 @@
     "No residents adapter found": "Адаптер для жильцов не найден",
     "Prefix": "Префикс",
     "Residents Adapter Instance": "Экземпляр резидентного адаптера",
-    "Residents Guest Prefix": "Префикс гостя для резидентов",
-    "Residents State Key": "Ключ штата резидентов",
-    "Residents State Prefix": "Префикс штата резидентов",
     "Rooms": "Номера",
-    "Rooms Enum": "Перечисление номеров",
     "Select which rooms and functions Hannah should know about. Leave all off to include everything.": "Выберите, о каких комнатах и ​​функциях должна знать Ханна. Оставьте все, чтобы включить все.",
-    "Sub-key for presence value under each resident (default: mood.state)": "Подключ для значения присутствия для каждого резидента (по умолчанию: настроение.состояние)",
-    "Text Command State ID": "Идентификатор состояния текстовой команды",
     "gRPC Port": "порт gRPC",
-    "hannah adapter settings": "Настройки адаптера Ханны",
-    "ioBroker enum for device functions (e.g. lights, heating)": "Перечисление ioBroker для функций устройства (например, освещение, отопление)",
-    "ioBroker enum for rooms": "перечисление ioBroker для комнат",
-    "ioBroker state ID to watch for text commands sent to Hannah": "Идентификатор состояния ioBroker для отслеживания текстовых команд, отправленных Ханне",
-    "ioBroker state prefix for guest presence": "Префикс состояния ioBroker для присутствия гостя",
-    "ioBroker state prefix for the residents adapter (roomies)": "Префикс состояния ioBroker для адаптера резидентов (комнаты)"
+    "hannah adapter settings": "Настройки адаптера Ханны"
 }

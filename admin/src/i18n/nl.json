@@ -8,7 +8,6 @@
     "Extra State Prefixes": "Extra staatsvoorvoegsels",
     "Floor Mappings": "Vloertoewijzingen",
     "Functions": "Functies",
-    "Functions Enum": "Functies Enum",
     "Hannah Host": "Hanna Gastheer",
     "IP address or hostname of the Hannah Core server": "IP-adres of hostnaam van de Hannah Core-server",
     "Integrations": "Integraties",
@@ -19,19 +18,8 @@
     "No residents adapter found": "Geen bewonersadapter gevonden",
     "Prefix": "Voorvoegsel",
     "Residents Adapter Instance": "Bewonersadapterinstantie",
-    "Residents Guest Prefix": "Bewoners Gastvoorvoegsel",
-    "Residents State Key": "Bewoners Staatssleutel",
-    "Residents State Prefix": "Voorvoegsel van de staat van de bewoners",
     "Rooms": "Kamers",
-    "Rooms Enum": "Kamers Enum",
     "Select which rooms and functions Hannah should know about. Leave all off to include everything.": "Selecteer welke kamers en functies Hannah moet kennen. Laat alles uitgeschakeld om alles op te nemen.",
-    "Sub-key for presence value under each resident (default: mood.state)": "Subsleutel voor aanwezigheidswaarde onder elke bewoner (standaard: mood.state)",
-    "Text Command State ID": "Tekstopdrachtstatus-ID",
     "gRPC Port": "gRPC-poort",
-    "hannah adapter settings": "Hannah-adapterinstellingen",
-    "ioBroker enum for device functions (e.g. lights, heating)": "ioBroker-opsomming voor apparaatfuncties (bijv. verlichting, verwarming)",
-    "ioBroker enum for rooms": "ioBroker-opsomming voor kamers",
-    "ioBroker state ID to watch for text commands sent to Hannah": "ioBroker-status-ID om te kijken naar tekstopdrachten die naar Hannah zijn verzonden",
-    "ioBroker state prefix for guest presence": "ioBroker-statusvoorvoegsel voor aanwezigheid van gasten",
-    "ioBroker state prefix for the residents adapter (roomies)": "ioBroker-statusvoorvoegsel voor de bewonersadapter (roomies)"
+    "hannah adapter settings": "Hannah-adapterinstellingen"
 }

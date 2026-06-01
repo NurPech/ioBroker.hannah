@@ -167,6 +167,8 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
 * Extra state prefix support for arbitrary state trees
 * Snapshot-on-connect replaces MQTT retained messages
 
+For older entries see [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
+
 ## License
 
 MIT License

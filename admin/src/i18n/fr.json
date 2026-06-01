@@ -8,7 +8,6 @@
     "Extra State Prefixes": "Préfixes d'état supplémentaires",
     "Floor Mappings": "Cartographies d'étage",
     "Functions": "Fonctions",
-    "Functions Enum": "Énumération des fonctions",
     "Hannah Host": "Hannah Hôte",
     "IP address or hostname of the Hannah Core server": "Adresse IP ou nom d'hôte du serveur Hannah Core",
     "Integrations": "Intégrations",
@@ -19,19 +18,8 @@
     "No residents adapter found": "Aucun adaptateur résident trouvé",
     "Prefix": "Préfixe",
     "Residents Adapter Instance": "Instance d’adaptateur de résidents",
-    "Residents Guest Prefix": "Préfixe invité des résidents",
-    "Residents State Key": "Clé d'État des résidents",
-    "Residents State Prefix": "Préfixe d'État des résidents",
     "Rooms": "Chambres",
-    "Rooms Enum": "Énumération des chambres",
     "Select which rooms and functions Hannah should know about. Leave all off to include everything.": "Sélectionnez les pièces et les fonctions qu'Hannah devrait connaître. Laissez tout désactivé pour tout inclure.",
-    "Sub-key for presence value under each resident (default: mood.state)": "Sous-clé pour la valeur de présence sous chaque résident (par défaut : mood.state)",
-    "Text Command State ID": "ID d’état de commande de texte",
     "gRPC Port": "Port gRPC",
-    "hannah adapter settings": "Paramètres de l'adaptateur Hannah",
-    "ioBroker enum for device functions (e.g. lights, heating)": "Énumération ioBroker pour les fonctions de l'appareil (par exemple, lumières, chauffage)",
-    "ioBroker enum for rooms": "Énumération ioBroker pour les chambres",
-    "ioBroker state ID to watch for text commands sent to Hannah": "ID d'état ioBroker pour surveiller les commandes texte envoyées à Hannah",
-    "ioBroker state prefix for guest presence": "Préfixe d'état ioBroker pour la présence d'invité",
-    "ioBroker state prefix for the residents adapter (roomies)": "Préfixe d'état ioBroker pour l'adaptateur des résidents (colocataires)"
+    "hannah adapter settings": "Paramètres de l'adaptateur Hannah"
 }

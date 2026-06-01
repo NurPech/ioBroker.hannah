@@ -17,7 +17,7 @@ class Hannah extends utils.Adapter {
     private dm: HannahDeviceManagement | null = null;
     private ble: BleWatcher | null = null;
     private sensorWatcher: SensorWatcher | null = null;
-    private enumReloadTimer: ReturnType<typeof setTimeout> | null = null;
+    private enumReloadTimer: ioBroker.Timeout | null | undefined = null;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({ ...options, name: 'hannah' });
@@ -189,9 +189,9 @@ class Hannah extends utils.Adapter {
         if (id.startsWith('enum.rooms.') || id.startsWith('enum.functions.')) {
             this.log.info(`[enums] Change detected on ${id} — reloading in 5s`);
             if (this.enumReloadTimer) {
-                clearTimeout(this.enumReloadTimer);
+                this.clearTimeout(this.enumReloadTimer);
             }
-            this.enumReloadTimer = setTimeout(() => {
+            this.enumReloadTimer = this.setTimeout(() => {
                 this.enumReloadTimer = null;
                 void this._reloadEnums();
             }, 5_000);
