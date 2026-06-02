@@ -27,7 +27,7 @@ This adapter replaces the previous MQTT-based integration and eliminates the mes
 ## Requirements
 
 - ioBroker js-controller ≥ 5.0
-- Node.js ≥ 20
+- Node.js ≥ 22
 - A running [Hannah Core](https://github.com/NurPech/hannah) instance with gRPC enabled (default port 50051)
 
 ## Installation
@@ -73,6 +73,15 @@ Select which **rooms** and **functions** Hannah should be aware of. Leaving both
 The adapter expects `HannahService.AgentConnect` to be available on the configured host/port. No additional Hannah-side configuration is required — the adapter identifies itself automatically on connect.
 
 ## Changelog
+<!--
+    Placeholder for the next version (at the beginning of the line):
+    ### **WORK IN PROGRESS**
+-->
+### **WORK IN PROGRESS**
+* Changed: update dependencies (`@grpc/grpc-js` to 1.14.4, `@grpc/proto-loader` to 0.8.1, `@iobroker/types` to 7.1.2)
+* Changed: update dev dependencies (`@tsconfig/node20` → `@tsconfig/node22`)
+* Fixed: replace `process.exit(1)` with `throw new Error()` in verify-package-contents script
+
 ### 0.11.2 (2026-06-01)
 * Changed: minimum Node.js version bumped to 22
 * Changed: CI pipeline updated to Node 22 (lint/check) and Node 24 (deploy)
