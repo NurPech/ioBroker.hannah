@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.11.3 (2026-06-02)
 * Changed: update dependencies (`@grpc/grpc-js` to 1.14.4, `@grpc/proto-loader` to 0.8.1, `@iobroker/types` to 7.1.2)
 * Changed: update dev dependencies (`@tsconfig/node20` → `@tsconfig/node22`)
 * Fixed: replace `process.exit(1)` with `throw new Error()` in verify-package-contents script
