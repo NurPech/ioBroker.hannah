@@ -26,11 +26,7 @@ function main() {
     const missingFiles = requiredFiles.filter(file => !packagedFiles.includes(file));
 
     if (missingFiles.length > 0) {
-        console.error('Package verification failed. Missing files:');
-        for (const file of missingFiles) {
-            console.error(`- ${file}`);
-        }
-        process.exit(1);
+        throw new Error(`Package verification failed. Missing files:\n${missingFiles.map(f => `- ${f}`).join('\n')}`);
     }
 
     console.log('Package verification passed. Required admin files are included.');
