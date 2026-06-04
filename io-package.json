@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.12.0",
+    "version": "0.12.1",
     "news": {
+      "0.12.1": {
+        "en": "Fixed: `announcementSsml` and `announcementRephrase` states were silently ignored by Hannah Core — proto-loader uses `keepCase: true` so field names must be snake_case on the wire; added explicit `protoKey` mapping in `satellites.ts`",
+        "de": "Behoben: `announcementSsml` und `announcementRephrase` Zustände wurden still ignoriert von Hannah Core — proto-loader verwendet `keepCase: true` so Feldnamen müssen snake case auf dem Draht sein; hinzugefügt explizit `protoKey` Mapping in `satellites.ts`",
+        "ru": "Исправлено: государства «announcementSsml» и «announcementRephrase» были молча проигнорированы Hannah Core — прото-загрузчик использует «keepCase: true», поэтому имена полей должны быть змеиными",
+        "pt": "Corrigido: `anúncioSsml' e `anúncioRefrase' estados foram silenciosamente ignorados por Hannah Core — proto-loader usa `keepCase: true` então os nomes dos campos devem ser snake case no fio; adicionado explicitamente `protoKey` mapeamento em `satellites.ts`",
+        "nl": "Vast: ",
+        "fr": "Correction : les états `annoncesSsml` et `annoncesRephrase` ont été silencieusement ignorés par Hannah Core - proto-loader utilise `keepCase: true` donc les noms de champ doivent être serpent case sur le fil; ajouté explicitement `protoKey` cartographie dans `satellites.ts`",
+        "it": "Fisso: `annuncioSsml` e `annuncioRephrase` stati sono stati silenziosamente ignorati da Hannah Core — proto-loader utilizza `keepCase: true` in modo che i nomi di campo devono essere serpente case sul filo; aggiunto esplicito `protoKey` mappatura in `satellites.ts`",
+        "es": "Corregido: `announcementSsml` y `announcementRephrase ` states were silently ignore by Hannah Core — proto-loader uses `keepCase: true` so field names must be serpiente case on the wire; added explicit `protoKey` mapping in `satellites.ts`",
+        "pl": "Naprawiono: \"noticementSsml\" i \"noticementRephrase\" stany zostały po cichu zignorowane przez Hannah Core - proto- loader używa 'keepCase: true' więc nazwy pól muszą być wężem _ case na drucie; dodano wyraźne 'protoKey' mapowanie w 'satellites.ts'",
+        "uk": "Виправлено: `announcementSsml` і `announcementRephrase` стани мовчазно ігнорували Hannah Core - proto-loader використовує `keepCase: true` так назви поля повинні бути змія case на дроті; додано явний `protoKey` на карті `satellites.ts`",
+        "zh-cn": "固定:Hannah Core默不作声地忽略了`通知Ssml ' 和`通知重述 ' 状态——原装机使用`keepCase:',所以现场名称必须是铁丝网上的蛇 case;在`卫星.ts ' 中增加了明确的`protoKey ' 绘图"
+      },
       "0.12.0": {
         "en": "Added: `announcementRephrase` state per room — writes text to Hannah Core as `AgentSatelliteControl.announcement_rephrase`; Hannah LLM reformulates before TTS",
         "de": "Hinzugefügt: `announcementRephrase` Zustand pro Zimmer — schreibt Text zu Hannah Core als `AgentSatelliteControl.announcement rephrase`; Hannah LLM reformiert vor TTS",
@@ -80,19 +93,6 @@
         "pl": "Nowy: \"climate\" device type - detected via functivid keyword ('klima', 'aircon', 'climate'); obsługuje 'mode', 'fanSpeed', 'current' i 'expected' stany",
         "uk": "Новий тип пристрою `climate`` — виявлений за допомогою FuncId ключові слова (`klima```, `aircon`, `climate`); підтримує `mode`, `fanSpeed`, `current` та `expected` стани",
         "zh-cn": "新的:`气候 ' 设备类型——通过真菌关键词检测到(`klima'、`aircon'、`气候 ' );支持`mode'、`fanSpeed'、`current'和`预期'状态)"
-      },
-      "0.9.0": {
-        "en": "New: `SensorWatcher` — handles `AgentSensorUpdate` commands; creates `hannah.<instance>.satellites.sensors.<device>.{temperature,pressure,humidity,gas_resistance}` states on first update\nFixed: `satellites.sensors` folder object is created before the per-device channel to avoid state creation failure",
-        "de": "Neu: `SensorWatcher` — handles `AgentSensorUpdate` Befehle; erstellt `hannah.<instance>.satellites.sensors.<device>.{temperatur, Pressure,humidity,gas resistance} ` Zustände beim ersten Update\nFixed: `satellites.sensors` Ordnerobjekt wird vor dem Per-Device-Kanal erstellt, um einen Ausfall der Zustandserstellung zu vermeiden",
-        "ru": "Новый: «SensorWatcher» — обрабатывает команды «AgentSensorUpdate»; создает состояния «hannah.<instance>.satellites.sensors.<device>.{temperature,pressure,humidity,gas resistance}» при первом обновлении\nИсправлено: объект папки «satellites.sensors» создается перед каналом на устройстве, чтобы избежать сбоя создания состояния",
-        "pt": "Novo: `SensorWatcher' — manipula comandos `AgentSensorUpdate`; cria `hannah.<instance>.satélites.sensores.<dispositivo>.{temperatura, pressão, umidade, gás ressistência}` estados na primeira atualização\nFixo: `satélites.sensors` objeto de pasta é criado antes do canal per-dispositivo para evitar falha de criação de estado",
-        "nl": "Nieuw: SensorWatcher.Heeft de commando's van AgentSensorUpdate.Hannah.<instance>.satellieten.sensoren.<device>.{temperatuur,druk,vochtigheid,gas onzekerheid} staat op de eerste update\nVast: ",
-        "fr": "Nouveau: `SensorWatcher` — gère les commandes `AgentSensorUpdate`; crée des états `hannah.<instance>.satellites.sensors.<device>.{température,pression,humidité,gas résistance}` à la première mise à jour\nCorrection : le dossier `satellites.sensors` objet est créé avant le canal par périphérique pour éviter l'échec de création d'état",
-        "it": "Nuovo: `SensorWatcher` — gestisce i comandi `AgentSensorUpdate`; crea `hannah\nFisso: `satelliti.sensori ` oggetto della cartella è creato prima del canale per-dispositivo per evitare guasto della creazione di stato",
-        "es": "New: `SensorWatcher` — handles `AgentSensorUpdate` commands; creates `hannah. efectuainstance titulada.satellites.sensors.Secretaría.{temperature,pressure,humidity,gas resistance}` states on first update\nFijo: `satellites.sensors` objeto de carpeta se crea antes del canal per-dispositivo para evitar el fracaso de la creación del estado",
-        "pl": "Nowy: 'SensorWatcher' - obsługuje 'AgentSensorUpdate'; tworzy 'hannah. < instance > .satellites.sensors. < device >. {temperatura, ciśnienie, wilgotność, opór gazu}' stanowi przy pierwszej aktualizacji\nNaprawiono: obiekt folderu 'satellites.sensory' jest tworzony przed kanałem per- device, aby uniknąć awarii tworzenia stanu",
-        "uk": "Новий: `SensorWatcher` — ручки `AgentSensorUpdate``; створює `hannah.<instance>.satellites.sensors.<device>.{температура,пресія, humidity,gas resistance}’ стани на першому оновленні\nВиправлено: `satellites.sensors`` `satellites.sensors`` `satellites.sensors`` `satellites.sensors`` `satellites.sensors``` `satellites.sensors``` `satellites.sensors`` `satellites.sensors` `sensors` `satellites.sensors`` `satellites.sensors` `sensors` `satellites.sensors`sensors` `sensors` ` ` ` `sensors` ` ` ` ` ` ` ` ` `sensensensensensensensensensors` ` ` `sensensors` ` ` ` ` ` ` ` ` ` `sensensensensensensensensensensors` ` ` ` ` `sensensens",
-        "zh-cn": "新的:`传感器监视器 ' ——处理`传感器更新 ' 命令;创建`hannah.<instance>.satellites.sensors.<device>.{温度、压力、湿度、气体 抵抗>在第一次更新时说明\n固定: \" satellites.sensors \" 文件夹对象在每设备通道之前创建,以避免状态创建失败"
       }
     },
     "blockly": true,
