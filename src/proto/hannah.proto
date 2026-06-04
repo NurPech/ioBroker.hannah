@@ -65,6 +65,18 @@ service HannahService {
   // Trigger an immediate OTA update for a satellite (bypasses residents check).
   rpc TriggerFirmwareUpdate (TriggerFirmwareUpdateRequest) returns (StatusResponse);
 
+  // --- Wakeword Capture ---
+  // Put a satellite in audio-capture mode for wakeword training data collection.
+  // While captured: wakeword detection is suspended, speaker is muted, DND is active.
+  // Hannah relays raw PCM chunks from the satellite to the collector via StreamSatelliteAudio.
+  // The stream stays open until the collector disconnects; Hannah then auto-releases the satellite.
+  rpc RequestSatelliteCapture (SatelliteCaptureRequest) returns (SatelliteCaptureResponse);
+  rpc ReleaseSatelliteCapture (SatelliteCaptureRequest) returns (StatusResponse);
+  rpc StreamSatelliteAudio    (SatelliteCaptureRequest) returns (stream SatelliteAudioChunk);
+  // Play a plink sound on the satellite, then hold virtual PTT for record_duration seconds.
+  // Returns after PTT is released — Collector calls this in a loop for guided hey-hannah collection.
+  rpc TriggerPlink (TriggerPlinkRequest) returns (StatusResponse);
+
   // --- Satellite Proxy (Go gRPC proxy) ---
   // Bidirectional keepalive stream. Proxy sends heartbeats; Hannah sends TTS
   // audio commands back (for announcements). While this stream is open, Hannah
@@ -81,6 +93,12 @@ service HannahService {
 
   // --- Speaker Enrollment ---
   rpc EnrollVoiceprint    (EnrollVoiceprintRequest)            returns (StatusResponse);
+
+  // --- Timer Service ---
+  // Bidirectional stream between the Hannah Timer Service and Hannah Core.
+  // The Timer Service initiates the connection; if Hannah restarts, the service reconnects.
+  // Hannah sends timer commands (create, cancel, list); the service fires events when timers expire.
+  rpc TimerConnect (stream TimerMessage) returns (stream TimerCommand);
 
   // --- ioBroker Agent ---
   // Single bidirectional stream between the HannahAgent ioBroker adapter and Hannah Core.
@@ -417,11 +435,12 @@ message AgentSatelliteControl {
   string room      = 1;
   string device_id = 7;  // optional: target a specific satellite instead of the whole room
   oneof control {
-    bool   dnd               = 2;  // set do-not-disturb
-    bool   mute              = 3;  // mute/unmute microphone
-    int32  volume            = 4;  // set volume (0–100)
-    string announcement      = 5;  // speak plain-text announcement
-    string announcement_ssml = 6;  // speak SSML announcement
+    bool   dnd                    = 2;  // set do-not-disturb
+    bool   mute                   = 3;  // mute/unmute microphone
+    int32  volume                 = 4;  // set volume (0–100)
+    string announcement           = 5;  // speak plain-text announcement (verbatim)
+    string announcement_ssml      = 6;  // speak SSML announcement
+    string announcement_rephrase  = 8;  // speak announcement, text rephrased by LLM first
   }
 }
 
@@ -570,4 +589,115 @@ message AgentSensorUpdate {
   float  pressure        = 3;  // hPa
   float  humidity        = 4;  // % relative humidity (0 when not available)
   float  gas_resistance  = 5;  // Ω VOC raw resistance (0 when not available)
+}
+
+// ============================================================
+//  Wakeword Capture messages (Wakeword Collector ↔ Hannah Core)
+// ============================================================
+
+message SatelliteCaptureRequest {
+  string device_id   = 1;
+  // "noise" (default) or "hey_hannah" — controls ESP streaming behaviour.
+  // noise: continuous auto-flush every 5 s.
+  // hey_hannah: stream only while PTT is held, flush on PTT release.
+  string sample_type = 2;
+}
+
+message TriggerPlinkRequest {
+  string device_id       = 1;
+  float  record_duration = 2;  // seconds to hold virtual PTT after plink (default 3.0)
+}
+
+// ok=false when the satellite is unknown or already captured by another client.
+message SatelliteCaptureResponse {
+  bool   ok    = 1;
+  string error = 2;
+}
+
+// A single audio chunk streamed from a captured satellite to the collector.
+// end_of_utterance=true marks a PTT-release boundary — the collector should
+// finalise and save the accumulated audio as a labelled sample at that point.
+message SatelliteAudioChunk {
+  bytes pcm              = 1;  // raw PCM, 16-bit signed mono
+  int32 sample_rate      = 2;  // Hz, typically 16000
+  bool  end_of_utterance = 3;  // true = PTT released, utterance boundary
+}
+
+// ============================================================
+//  Timer Service messages (Hannah Timer Service ↔ Hannah Core)
+// ============================================================
+
+// Sent by Hannah Core over the TimerConnect stream.
+message TimerCommand {
+  oneof command {
+    TimerCreate      create    = 1;  // create a new timer
+    TimerCancel      cancel    = 2;  // cancel an existing timer
+    TimerListRequest list      = 3;  // request current timer list
+    TimerReady       ready     = 4;  // Hannah is ready to receive pending fired events
+    TimerNotReady    not_ready = 5;  // Hannah is temporarily unable to process timer firings
+  }
+}
+
+// Hannah signals that she is ready to receive queued TimerFired events.
+// Sent after startup once ioBroker states are loaded. The service flushes
+// any TimerFired events that occurred while Hannah was offline, in order.
+message TimerReady {}
+
+// Hannah signals a temporary degraded state — the Timer Service should hold
+// any TimerFired events in its queue until a subsequent TimerReady is received.
+// Hannah sends this when core subsystems are unavailable (e.g. ioBroker disconnected).
+message TimerNotReady {
+  optional string reason = 1;  // human-readable reason, e.g. "ioBroker disconnected"
+}
+
+// Hannah instructs the timer service to create a new timer.
+message TimerCreate {
+  string           timer_id  = 1;  // UUID assigned by Hannah
+  string           label     = 2;  // human-readable label, e.g. "Spazieren gehen"
+  int64            fire_at   = 3;  // Unix timestamp (seconds) when to fire
+  string           room      = 4;  // room to announce in, or "all"
+  optional string  roomie_id = 5;  // optional: which user set the timer
+}
+
+// Hannah instructs the timer service to cancel a timer.
+message TimerCancel {
+  string timer_id = 1;
+}
+
+// Hannah requests the current list of active timers (e.g. "welche Timer habe ich?").
+message TimerListRequest {}
+
+// Sent by the Timer Service over the TimerConnect stream.
+message TimerMessage {
+  oneof payload {
+    TimerAck          ack   = 1;  // initial confirmation when stream is established
+    TimerFired        fired = 2;  // a timer has expired
+    TimerListResponse list  = 3;  // response to TimerListRequest
+  }
+}
+
+// Sent once by the Timer Service after TimerConnect stream is established.
+message TimerAck {
+  string message       = 1;  // human-readable status
+  int32  active_timers = 2;  // number of timers currently tracked
+}
+
+// Timer Service notifies Hannah that a timer has expired.
+// Hannah looks up the timer_id in its own store to determine what to announce and where.
+message TimerFired {
+  string timer_id = 1;
+  string label    = 2;  // convenience copy for logging; Hannah has it in its own store
+}
+
+// Response to TimerListRequest — used for sync and "welche Timer habe ich?" queries.
+message TimerListResponse {
+  repeated TimerInfo timers = 1;
+}
+
+message TimerInfo {
+  string           timer_id  = 1;
+  string           label     = 2;
+  int64            fire_at   = 3;  // Unix timestamp (seconds)
+  string           room      = 4;
+  optional string  roomie_id = 5;
 }
