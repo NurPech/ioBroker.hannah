@@ -146,7 +146,14 @@ export class SatelliteWatcher {
         if (!writableKeys.includes(key)) {
             return false;
         }
-        this.send({ satellite_control: { room, [key]: state.val } });
+        // keepCase:true in proto-loader → field names stay snake_case on the wire
+        const protoKey: Record<string, string> = {
+            dnd: 'dnd',
+            announcement: 'announcement',
+            announcementSsml: 'announcement_ssml',
+            announcementRephrase: 'announcement_rephrase',
+        };
+        this.send({ satellite_control: { room, [protoKey[key] ?? key]: state.val } });
         if (resetKeys.includes(key)) {
             void this.adapter.setState(id, { val: '', ack: true });
         }
