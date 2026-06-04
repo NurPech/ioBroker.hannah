@@ -141,8 +141,8 @@ export class SatelliteWatcher {
         }
         const room = match[1];
         const key = match[2];
-        const writableKeys = ['dnd', 'announcement', 'announcementSsml'];
-        const resetKeys = ['announcement', 'announcementSsml'];
+        const writableKeys = ['dnd', 'announcement', 'announcementSsml', 'announcementRephrase'];
+        const resetKeys = ['announcement', 'announcementSsml', 'announcementRephrase'];
         if (!writableKeys.includes(key)) {
             return false;
         }
@@ -166,6 +166,10 @@ export class SatelliteWatcher {
             [
                 'announcementSsml',
                 { name: 'Announcement (SSML)', type: 'string', role: 'text', read: true, write: true, def: '' },
+            ],
+            [
+                'announcementRephrase',
+                { name: 'Announcement (LLM rephrase)', type: 'string', role: 'text', read: true, write: true, def: '' },
             ],
             [
                 'anyOnline',
