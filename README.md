@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.12.0 (2026-06-04)
 * Added: `announcementRephrase` state per room — writes text to Hannah Core as `AgentSatelliteControl.announcement_rephrase`; Hannah LLM reformulates before TTS
 
 ### 0.11.3 (2026-06-02)

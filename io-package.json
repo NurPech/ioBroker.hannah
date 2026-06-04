@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.11.3",
+    "version": "0.12.0",
     "news": {
+      "0.12.0": {
+        "en": "Added: `announcementRephrase` state per room — writes text to Hannah Core as `AgentSatelliteControl.announcement_rephrase`; Hannah LLM reformulates before TTS",
+        "de": "Hinzugefügt: `announcementRephrase` Zustand pro Zimmer — schreibt Text zu Hannah Core als `AgentSatelliteControl.announcement rephrase`; Hannah LLM reformiert vor TTS",
+        "ru": "Добавлено: ‘announcementRephrase’ state per room — пишет текст на Hannah Core как ‘AgentSatelliteControl.announcement rephrase’; Hannah LLM переформулирует перед TTS",
+        "pt": "Adicionado: `announcementRefrase` estado por sala — escreve texto para Hannah Core como `AgentSatelliteControl.announcement refrase`; Hannah LLM reformula antes de TTS",
+        "nl": "Toegevoegd: ",
+        "fr": "Ajouté: `annonceRephrase` état par chambre — écrit un texte à Hannah Core comme `AgentSatelliteControl.annoncement rephrase`; Hannah LLM reformule avant TTS",
+        "it": "Aggiunto: `announcementRephrase` state per stanza — scrive il testo a Hannah Core come `AgentSatelliteControl.announcement rephrase`; Hannah LLM riformula prima TTS",
+        "es": "Añadido: `announcementRephrase` state per room — escribe texto a Hannah Core como `AgentSatelliteControl.announcement rephrase`; Hannah LLM reformula ante TTS",
+        "pl": "Dodano: 'noticementRephrase' stan na pokój - pisze tekst do Hannah Core jako 'AgentSatelliteControl.declaration _ refrazse'; Hannah LLM przeformułowuje przed TTS",
+        "uk": "Додано: `announcementRephrase` State per room — записує текст до Hannah Core як `AgentSatelliteControl.announcement rephrase`; Hannah LLM реформи до TTS",
+        "zh-cn": "添加:`通知重述 ' 每个房间的状态——将文本写给Hannah Core,作为`AgentSatellite Control.announcment repeat';Hannah LLM在TTS之前重拟"
+      },
       "0.11.3": {
         "en": "Changed: update dependencies (`@grpc/grpc-js` to 1.14.4, `@grpc/proto-loader` to 0.8.1, `@iobroker/types` to 7.1.2)\nChanged: update dev dependencies (`@tsconfig/node20` → `@tsconfig/node22`)\nFixed: replace `process.exit(1)` with `throw new Error()` in verify-package-contents script",
         "de": "Geändert: Aktualisierung der Abhängigkeiten (`@grpc/grpc-js` auf 1.14.4, `@grpc/proto-loader` auf 0.8.1, `@iobroker/Typen` auf 7.1.2)\nGeändert: Aktualisierung von Abhängigkeiten (`@tsconfig/node20` → `@tsconfig/node22`)\nBehoben: `process.exit(1)` mit `throw new Error()` im Skript Verpacken-Contents ersetzen",
@@ -80,19 +93,6 @@
         "pl": "Nowy: 'SensorWatcher' - obsługuje 'AgentSensorUpdate'; tworzy 'hannah. < instance > .satellites.sensors. < device >. {temperatura, ciśnienie, wilgotność, opór gazu}' stanowi przy pierwszej aktualizacji\nNaprawiono: obiekt folderu 'satellites.sensory' jest tworzony przed kanałem per- device, aby uniknąć awarii tworzenia stanu",
         "uk": "Новий: `SensorWatcher` — ручки `AgentSensorUpdate``; створює `hannah.<instance>.satellites.sensors.<device>.{температура,пресія, humidity,gas resistance}’ стани на першому оновленні\nВиправлено: `satellites.sensors`` `satellites.sensors`` `satellites.sensors`` `satellites.sensors`` `satellites.sensors``` `satellites.sensors``` `satellites.sensors`` `satellites.sensors` `sensors` `satellites.sensors`` `satellites.sensors` `sensors` `satellites.sensors`sensors` `sensors` ` ` ` `sensors` ` ` ` ` ` ` ` ` `sensensensensensensensensensors` ` ` `sensensors` ` ` ` ` ` ` ` ` ` `sensensensensensensensensensensors` ` ` ` ` `sensensens",
         "zh-cn": "新的:`传感器监视器 ' ——处理`传感器更新 ' 命令;创建`hannah.<instance>.satellites.sensors.<device>.{温度、压力、湿度、气体 抵抗>在第一次更新时说明\n固定: \" satellites.sensors \" 文件夹对象在每设备通道之前创建,以避免状态创建失败"
-      },
-      "0.8.0": {
-        "en": "New: `BleWatcher` — handles `AgentBleUpdate` commands from Hannah Core; creates `hannah.<instance>.ble.<label>.room`, `.satellite`, and `.rssi` states on first update and keeps them current on every location change",
-        "de": "Neu: `BleWatcher` — handles `AgentBleUpdate` Befehle von Hannah Core; erstellt `hannah.<instance>.ble.<label>.room`, `.satellite` und `.rssi` Zustände beim ersten Update und hält sie auf jedem Standortwechsel aktuell",
-        "ru": "Новый: «BleWatcher» — обрабатывает команды «AgentBleUpdate» от Hannah Core; создает состояния «hannah.<instance>.ble.<label>.room», «.satellite» и «.rssi» при первом обновлении и поддерживает их актуальность при каждом изменении местоположения",
-        "pt": "Novo: `BleWatcher` — lida com os comandos `AgentBleUpdate` de Hannah Core; cria `hannah.<instance>.ble.<label>.room`, `.satellite` e `.rssi` na primeira atualização e os mantém atuais em cada mudança de local",
-        "nl": "Nieuw: ",
-        "fr": "Nouveau: `BleWatcher` — gère les commandes `AgentBleUpdate` de Hannah Core; crée `hannah.<instance>.ble.<label>.room`, `.satellite` et `.rssi` états à la première mise à jour et les maintient à jour sur chaque changement d`emplacement",
-        "it": "Novità: `BleWatcher` — gestisce i comandi `AgentBleUpdate` di Hannah Core; crea `hannah",
-        "es": "New: `BleWatcher` — handles `AgentBleUpdate` commands from Hannah Core; creates `hannah. interpretadoinstance titulada.ble. Haga cliclabel icono.room`, `.satellite`, and `.rssi` states on first update and keep them current on every location change",
-        "pl": "Nowy: 'BleWatcher' - obsługuje polecenia 'AgentBleUpdate' z Hannah Core; tworzy 'hannah. < instance > .ble. < label > .room', '.satellite' i '.rssi' w pierwszej aktualizacji i utrzymuje je aktualne na każdej zmianie lokalizacji",
-        "uk": "Новий: `BleWatcher` — ручки `AgentBleUpdate`` команди від Hannah Core; створює `hannah.<instance>.ble.<label>.room`, `.satellite`, `.rssi` стани на першому оновленні та зберігають їх на будь-якому місці",
-        "zh-cn": "新的:`BleWatcher ' ——处理Hannah Core发出的`AgentBleUpdate ' 命令;创建`hanah.<instance>.ble.<label>.room`、`.satellite ' 和`.rssi ' 表示第一次更新,并随时更新每个地点的变化"
       }
     },
     "blockly": true,
