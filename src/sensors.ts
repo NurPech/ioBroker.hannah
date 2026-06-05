@@ -8,10 +8,20 @@ export class SensorWatcher {
     private adapter: utils.AdapterInstance;
     private ensuredDevices = new Set<string>();
 
+    /** @param adapter - ioBroker adapter instance */
     constructor(adapter: utils.AdapterInstance) {
         this.adapter = adapter;
     }
 
+    /**
+     * Called when Hannah pushes a sensor update for a satellite device.
+     *
+     * @param device - Satellite device ID
+     * @param temperature - Temperature in °C
+     * @param pressure - Pressure in hPa
+     * @param humidity - Relative humidity in %
+     * @param gasResistance - Gas resistance in Ω (0 if not available)
+     */
     async handleSensorUpdate(
         device: string,
         temperature: number,
