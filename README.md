@@ -77,6 +77,12 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* Fixed: `info` channel object was missing — adapter checker E3009; created before `info.connection` state in `onReady`
+* Fixed: satellite room objects were `channel` type — adapter checker E2003 (device after channel); changed to `folder` so satellite devices remain valid under them
+* Fixed: `indicator.update` role on `update_available` state is unknown — changed to `indicator`
+* Fixed: room and device names containing spaces (e.g. "Leonie Schlafzimmer") produced invalid state IDs — `sanitizeId()` now replaces non-`[a-zA-Z0-9_,-]` characters with `_` in ID paths; `common.name` retains the original name; `satellite_control` gRPC messages use the original room name via reverse map
+
 ### 0.12.1 (2026-06-04)
 * Fixed: `announcementSsml` and `announcementRephrase` states were silently ignored by Hannah Core — proto-loader uses `keepCase: true` so field names must be snake_case on the wire; added explicit `protoKey` mapping in `satellites.ts`
 
