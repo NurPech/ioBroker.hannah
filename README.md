@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.13.0 (2026-06-05)
 * Fixed: `info` channel object was missing — adapter checker E3009; created before `info.connection` state in `onReady`
 * Fixed: satellite room objects were `channel` type — adapter checker E2003 (device after channel); changed to `folder` so satellite devices remain valid under them
 * Fixed: `indicator.update` role on `update_available` state is unknown — changed to `indicator`
