@@ -2,7 +2,7 @@ import type * as utils from '@iobroker/adapter-core';
 import type { AgentMessageSender, GrpcClient } from './grpc-client';
 
 function sanitizeId(name: string): string {
-    return name.replace(/[^a-zA-Z0-9_,\-]/g, '_');
+    return name.replace(/[^a-zA-Z0-9_,-]/g, '_');
 }
 
 /**
@@ -64,16 +64,16 @@ export class SatelliteWatcher {
         await this._ensureSatelliteStates(deviceId, room);
         await this._setSatelliteOnline(deviceId, room, online);
         if (volume !== undefined) {
-            await this.adapter.setState(
-                `satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.volume`,
-                { val: volume, ack: true },
-            );
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.volume`, {
+                val: volume,
+                ack: true,
+            });
         }
         if (mute !== undefined) {
-            await this.adapter.setState(
-                `satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.mute`,
-                { val: mute, ack: true },
-            );
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.mute`, {
+                val: mute,
+                ack: true,
+            });
         }
         if (online) {
             this.adapter.log.info(`[satellites] Satellite online: ${deviceId} in room '${room}'`);
@@ -316,10 +316,10 @@ export class SatelliteWatcher {
         if (!room) {
             return;
         }
-        await this.adapter.setState(
-            `satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.online`,
-            { val: online, ack: true },
-        );
+        await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.online`, {
+            val: online,
+            ack: true,
+        });
     }
 
     private async _updateAnyOnline(room: string): Promise<void> {
