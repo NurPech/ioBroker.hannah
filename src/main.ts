@@ -30,6 +30,11 @@ class Hannah extends utils.Adapter {
 
     /** @inheritdoc */
     private async onReady(): Promise<void> {
+        await this.setObjectNotExistsAsync('info', {
+            type: 'channel',
+            common: { name: 'Information' },
+            native: {},
+        });
         await this.setObjectNotExistsAsync('info.connection', {
             type: 'state',
             common: {

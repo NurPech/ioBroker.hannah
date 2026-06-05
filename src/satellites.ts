@@ -1,6 +1,10 @@
 import type * as utils from '@iobroker/adapter-core';
 import type { AgentMessageSender, GrpcClient } from './grpc-client';
 
+function sanitizeId(name: string): string {
+    return name.replace(/[^a-zA-Z0-9_,-]/g, '_');
+}
+
 /**
  * Manages satellite states under hannah.<instance>.satellites.rooms.<room>.
  * Room-level states (dnd, mute, volume, speaking, …) are shared across all
@@ -12,6 +16,7 @@ export class SatelliteWatcher {
     private send: AgentMessageSender;
     private getGrpc: () => GrpcClient | null;
     private deviceRooms: Map<string, string> = new Map();
+    private roomNames: Map<string, string> = new Map(); // sanitizeId(room).toLowerCase() → original room
 
     /**
      * @param adapter - ioBroker adapter instance
@@ -51,6 +56,7 @@ export class SatelliteWatcher {
         }
         if (online) {
             this.deviceRooms.set(deviceId.toLowerCase(), room);
+            this.roomNames.set(sanitizeId(room).toLowerCase(), room);
         } else {
             this.deviceRooms.delete(deviceId.toLowerCase());
         }
@@ -58,10 +64,16 @@ export class SatelliteWatcher {
         await this._ensureSatelliteStates(deviceId, room);
         await this._setSatelliteOnline(deviceId, room, online);
         if (volume !== undefined) {
-            await this.adapter.setState(`satellites.rooms.${room}.${deviceId}.volume`, { val: volume, ack: true });
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.volume`, {
+                val: volume,
+                ack: true,
+            });
         }
         if (mute !== undefined) {
-            await this.adapter.setState(`satellites.rooms.${room}.${deviceId}.mute`, { val: mute, ack: true });
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.mute`, {
+                val: mute,
+                ack: true,
+            });
         }
         if (online) {
             this.adapter.log.info(`[satellites] Satellite online: ${deviceId} in room '${room}'`);
@@ -84,7 +96,7 @@ export class SatelliteWatcher {
             this.adapter.log.debug(`[satellites] firmware event for unknown device ${deviceId} — ignored`);
             return;
         }
-        const base = `satellites.rooms.${room}.${deviceId}`;
+        const base = `satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}`;
         await this.adapter.setState(`${base}.firmware_version`, { val: version, ack: true });
         if (updateAvailable !== undefined) {
             await this.adapter.setState(`${base}.update_available`, { val: updateAvailable, ack: true });
@@ -112,7 +124,8 @@ export class SatelliteWatcher {
             ),
         );
         if (perSatMatch) {
-            const [, room, deviceId, key] = perSatMatch;
+            const [, roomId, deviceId, key] = perSatMatch;
+            const originalRoom = this.roomNames.get(roomId.toLowerCase()) ?? roomId;
             if (key === 'update_now' && state.val === true) {
                 void this.adapter.setState(id, { val: false, ack: true });
                 void this.getGrpc()
@@ -124,9 +137,9 @@ export class SatelliteWatcher {
                         this.adapter.log.warn(`[satellites] TriggerFirmwareUpdate ${deviceId} failed: ${err.message}`);
                     });
             } else if (key === 'volume' || key === 'mute') {
-                this.send({ satellite_control: { room, device_id: deviceId, [key]: state.val } });
+                this.send({ satellite_control: { room: originalRoom, device_id: deviceId, [key]: state.val } });
                 this.adapter.log.debug(
-                    `[satellites] satellite_control device='${deviceId}' room='${room}' ${key}=${state.val}`,
+                    `[satellites] satellite_control device='${deviceId}' room='${originalRoom}' ${key}=${state.val}`,
                 );
             }
             return true;
@@ -139,8 +152,9 @@ export class SatelliteWatcher {
         if (!match) {
             return false;
         }
-        const room = match[1];
+        const roomId = match[1];
         const key = match[2];
+        const originalRoom = this.roomNames.get(roomId.toLowerCase()) ?? roomId;
         const writableKeys = ['dnd', 'announcement', 'announcementSsml', 'announcementRephrase'];
         const resetKeys = ['announcement', 'announcementSsml', 'announcementRephrase'];
         if (!writableKeys.includes(key)) {
@@ -153,18 +167,18 @@ export class SatelliteWatcher {
             announcementSsml: 'announcement_ssml',
             announcementRephrase: 'announcement_rephrase',
         };
-        this.send({ satellite_control: { room, [protoKey[key] ?? key]: state.val } });
+        this.send({ satellite_control: { room: originalRoom, [protoKey[key] ?? key]: state.val } });
         if (resetKeys.includes(key)) {
             void this.adapter.setState(id, { val: '', ack: true });
         }
-        this.adapter.log.debug(`[satellites] satellite_control room='${room}' ${key}=${state.val}`);
+        this.adapter.log.debug(`[satellites] satellite_control room='${originalRoom}' ${key}=${state.val}`);
         return true;
     }
 
     private async _ensureRoomStates(room: string): Promise<void> {
-        const base = `satellites.rooms.${room}`;
+        const base = `satellites.rooms.${sanitizeId(room)}`;
         await this.adapter.setObjectNotExistsAsync(base, {
-            type: 'channel',
+            type: 'folder',
             common: { name: `Room ${room}` },
             native: {},
         });
@@ -216,7 +230,7 @@ export class SatelliteWatcher {
     }
 
     private async _ensureSatelliteStates(deviceId: string, room: string): Promise<void> {
-        const base = `satellites.rooms.${room}.${deviceId}`;
+        const base = `satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}`;
         await this.adapter.setObjectNotExistsAsync(base, {
             type: 'device',
             common: { name: `Satellite ${deviceId}` },
@@ -251,7 +265,7 @@ export class SatelliteWatcher {
             common: {
                 name: 'Firmware update available',
                 type: 'boolean',
-                role: 'indicator.update',
+                role: 'indicator',
                 read: true,
                 write: false,
                 def: false,
@@ -302,14 +316,17 @@ export class SatelliteWatcher {
         if (!room) {
             return;
         }
-        await this.adapter.setState(`satellites.rooms.${room}.${deviceId}.online`, { val: online, ack: true });
+        await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.online`, {
+            val: online,
+            ack: true,
+        });
     }
 
     private async _updateAnyOnline(room: string): Promise<void> {
         // Read all <deviceId>.online states under this room and compute anyOnline
-        const pattern = `${this.adapter.namespace}.satellites.rooms.${room}.*.online`;
+        const pattern = `${this.adapter.namespace}.satellites.rooms.${sanitizeId(room)}.*.online`;
         const states = await this.adapter.getForeignStatesAsync(pattern);
         const anyOnline = Object.values(states).some(s => s?.val === true);
-        await this.adapter.setState(`satellites.rooms.${room}.anyOnline`, { val: anyOnline, ack: true });
+        await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.anyOnline`, { val: anyOnline, ack: true });
     }
 }
