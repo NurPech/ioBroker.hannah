@@ -331,6 +331,35 @@ export class SatelliteWatcher {
         });
     }
 
+    /**
+     * After the initial GetSatellites sync, mark any satellite device objects that are
+     * not in Hannah's current list as offline. Prevents stale "online" states when a
+     * satellite is renamed or reassigned to a different room.
+     *
+     * @param knownSatellites - Satellites currently reported by Hannah Core
+     */
+    async markUnknownOffline(knownSatellites: Array<{ device_id: string; room: string }>): Promise<void> {
+        const known = new Set(knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.device_id)}`));
+        const objects = await this.adapter.getForeignObjectsAsync(
+            `${this.adapter.namespace}.satellites.rooms.*.*`,
+            'device',
+        );
+        for (const id of Object.keys(objects)) {
+            const m = id.match(/\.satellites\.rooms\.([^.]+)\.([^.]+)$/);
+            if (!m) {
+                continue;
+            }
+            const [, roomId, deviceId] = m;
+            if (!known.has(`${roomId}.${deviceId}`)) {
+                await this.adapter.setState(`satellites.rooms.${roomId}.${deviceId}.online`, {
+                    val: false,
+                    ack: true,
+                });
+                this.adapter.log.info(`[satellites] Marked offline (not reported by Hannah): ${deviceId} in ${roomId}`);
+            }
+        }
+    }
+
     private async _setSatelliteOnline(deviceId: string, room: string, online: boolean): Promise<void> {
         if (!room) {
             return;

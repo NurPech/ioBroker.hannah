@@ -77,6 +77,12 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* Added: satellite `address` state (`info.ip` role) — populated from `AgentSatelliteUpdate.address` on registration; IP extracted from `ip:port` UDP address
+* Added: admin tab "Hannah Satellites" — card view per satellite showing name, room, online status, firmware version badge, and link to satellite HTTP config page (`http://<ip>/`)
+* Added: `SatelliteWatcher.markUnknownOffline()` — on connect, sets `online: false` for satellite device objects not reported by Hannah Core, preventing stale online states after rename/reassignment
+* Added: delete button per satellite card in admin tab — removes full ioBroker object tree on confirmation
+
 ### 0.13.0 (2026-06-05)
 * Fixed: `info` channel object was missing — adapter checker E3009; created before `info.connection` state in `onReady`
 * Fixed: satellite room objects were `channel` type — adapter checker E2003 (device after channel); changed to `folder` so satellite devices remain valid under them
