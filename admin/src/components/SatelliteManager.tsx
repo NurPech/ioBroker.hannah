@@ -50,10 +50,8 @@ function parseSatellites(
         const [, namespace, roomId, deviceId] = m;
         const base = `${namespace}.satellites.rooms.${roomId}.${deviceId}`;
         const roomObj = objects[`${namespace}.satellites.rooms.${roomId}`];
-        const roomName =
-            typeof roomObj?.common?.name === 'string' ? roomObj.common.name.replace(/^Room /, '') : roomId;
-        const deviceName =
-            typeof obj.common?.name === 'string' ? obj.common.name.replace(/^Satellite /, '') : deviceId;
+        const roomName = typeof roomObj?.common?.name === 'string' ? roomObj.common.name.replace(/^Room /, '') : roomId;
+        const deviceName = typeof obj.common?.name === 'string' ? obj.common.name.replace(/^Satellite /, '') : deviceId;
         result.push({
             deviceId,
             deviceName,
