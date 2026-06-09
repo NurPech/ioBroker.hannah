@@ -35,7 +35,7 @@ export class SatelliteWatcher {
      *
      * @param deviceId - Satellite device ID
      * @param room - Room the satellite is assigned to
-     * @param _address - UDP address (may be empty, reserved for future use)
+     * @param address - UDP address (IP:port); IP is stored as satellite state
      * @param online - true = registered, false = gone
      * @param volume - Current volume level (0–100), if reported
      * @param mute - Current mute state, if reported
@@ -43,7 +43,7 @@ export class SatelliteWatcher {
     async handleSatelliteUpdate(
         deviceId: string,
         room: string,
-        _address: string,
+        address: string,
         online: boolean,
         volume?: number,
         mute?: boolean,
@@ -63,6 +63,13 @@ export class SatelliteWatcher {
         await this._ensureRoomStates(room);
         await this._ensureSatelliteStates(deviceId, room);
         await this._setSatelliteOnline(deviceId, room, online);
+        if (online && address) {
+            const ip = address.split(':')[0];
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.address`, {
+                val: ip,
+                ack: true,
+            });
+        }
         if (volume !== undefined) {
             await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.volume`, {
                 val: volume,
@@ -245,6 +252,18 @@ export class SatelliteWatcher {
                 read: true,
                 write: false,
                 def: false,
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.address`, {
+            type: 'state',
+            common: {
+                name: 'IP address',
+                type: 'string',
+                role: 'info.ip',
+                read: true,
+                write: false,
+                def: '',
             },
             native: {},
         });
