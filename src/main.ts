@@ -128,6 +128,7 @@ class Hannah extends utils.Adapter {
                 for (const sat of sats) {
                     await this.satellites!.handleSatelliteUpdate(sat.device_id, sat.room, sat.address, true);
                 }
+                await this.satellites!.markUnknownOffline(sats);
             },
             onDisconnected: async () => {
                 await this.setState('info.connection', false, true);

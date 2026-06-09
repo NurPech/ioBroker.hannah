@@ -149,7 +149,15 @@
     "connectionType": "local",
     "dataSource": "poll",
     "adminUI": {
-      "config": "html"
+      "config": "html",
+      "tab": "admin/tab.html"
+    },
+    "adminTab": {
+      "singleton": true,
+      "name": "Hannah Satellites",
+      "icon": "adapter/hannah/hannah.png",
+      "link": "",
+      "fa-icon": "wifi"
     },
     "eraseOnUpload": true,
     "dependencies": [

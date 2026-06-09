@@ -35,7 +35,7 @@ export class SatelliteWatcher {
      *
      * @param deviceId - Satellite device ID
      * @param room - Room the satellite is assigned to
-     * @param _address - UDP address (may be empty, reserved for future use)
+     * @param address - UDP address (IP:port); IP is stored as satellite state
      * @param online - true = registered, false = gone
      * @param volume - Current volume level (0–100), if reported
      * @param mute - Current mute state, if reported
@@ -43,7 +43,7 @@ export class SatelliteWatcher {
     async handleSatelliteUpdate(
         deviceId: string,
         room: string,
-        _address: string,
+        address: string,
         online: boolean,
         volume?: number,
         mute?: boolean,
@@ -63,6 +63,13 @@ export class SatelliteWatcher {
         await this._ensureRoomStates(room);
         await this._ensureSatelliteStates(deviceId, room);
         await this._setSatelliteOnline(deviceId, room, online);
+        if (online && address) {
+            const ip = address.split(':')[0];
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.address`, {
+                val: ip,
+                ack: true,
+            });
+        }
         if (volume !== undefined) {
             await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.volume`, {
                 val: volume,
@@ -248,6 +255,18 @@ export class SatelliteWatcher {
             },
             native: {},
         });
+        await this.adapter.setObjectNotExistsAsync(`${base}.address`, {
+            type: 'state',
+            common: {
+                name: 'IP address',
+                type: 'string',
+                role: 'info.ip',
+                read: true,
+                write: false,
+                def: '',
+            },
+            native: {},
+        });
         await this.adapter.setObjectNotExistsAsync(`${base}.firmware_version`, {
             type: 'state',
             common: {
@@ -310,6 +329,35 @@ export class SatelliteWatcher {
             },
             native: {},
         });
+    }
+
+    /**
+     * After the initial GetSatellites sync, mark any satellite device objects that are
+     * not in Hannah's current list as offline. Prevents stale "online" states when a
+     * satellite is renamed or reassigned to a different room.
+     *
+     * @param knownSatellites - Satellites currently reported by Hannah Core
+     */
+    async markUnknownOffline(knownSatellites: Array<{ device_id: string; room: string }>): Promise<void> {
+        const known = new Set(knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.device_id)}`));
+        const objects = await this.adapter.getForeignObjectsAsync(
+            `${this.adapter.namespace}.satellites.rooms.*.*`,
+            'device',
+        );
+        for (const id of Object.keys(objects)) {
+            const m = id.match(/\.satellites\.rooms\.([^.]+)\.([^.]+)$/);
+            if (!m) {
+                continue;
+            }
+            const [, roomId, deviceId] = m;
+            if (!known.has(`${roomId}.${deviceId}`)) {
+                await this.adapter.setState(`satellites.rooms.${roomId}.${deviceId}.online`, {
+                    val: false,
+                    ack: true,
+                });
+                this.adapter.log.info(`[satellites] Marked offline (not reported by Hannah): ${deviceId} in ${roomId}`);
+            }
+        }
     }
 
     private async _setSatelliteOnline(deviceId: string, room: string, online: boolean): Promise<void> {
