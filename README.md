@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.14.0 (2026-06-09)
 * Added: satellite `address` state (`info.ip` role) — populated from `AgentSatelliteUpdate.address` on registration; IP extracted from `ip:port` UDP address
 * Added: admin tab "Hannah Satellites" — card view per satellite showing name, room, online status, firmware version badge, and link to satellite HTTP config page (`http://<ip>/`)
 * Added: `SatelliteWatcher.markUnknownOffline()` — on connect, sets `online: false` for satellite device objects not reported by Hannah Core, preventing stale online states after rename/reassignment
