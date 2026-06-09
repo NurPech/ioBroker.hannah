@@ -14,11 +14,13 @@ const socket = new AdminConnection({
     doNotLoadACL: true,
 });
 
-socket.startSocket();
+void socket.startSocket();
 
 void socket.waitForFirstConnection().then(() => {
     const container = document.getElementById('root');
-    if (!container) return;
+    if (!container) {
+        return;
+    }
     const root = createRoot(container);
     root.render(
         <StyledEngineProvider injectFirst>

@@ -38,21 +38,22 @@ function parseSatellites(
     states: Record<string, IoBrokerState | null>,
 ): Satellite[] {
     const result: Satellite[] = [];
-    // Find all satellite device objects: <namespace>.satellites.rooms.<room>.<deviceId>
     const devicePattern = /^(hannah\.\d+)\.satellites\.rooms\.([^.]+)\.([^.]+)$/;
     for (const [id, obj] of Object.entries(objects)) {
-        if (obj.type !== 'device') continue;
+        if (obj.type !== 'device') {
+            continue;
+        }
         const m = id.match(devicePattern);
-        if (!m) continue;
+        if (!m) {
+            continue;
+        }
         const [, namespace, roomId, deviceId] = m;
         const base = `${namespace}.satellites.rooms.${roomId}.${deviceId}`;
         const roomObj = objects[`${namespace}.satellites.rooms.${roomId}`];
-        const roomName = typeof roomObj?.common?.name === 'string'
-            ? roomObj.common.name.replace(/^Room /, '')
-            : roomId;
-        const deviceName = typeof obj.common?.name === 'string'
-            ? obj.common.name.replace(/^Satellite /, '')
-            : deviceId;
+        const roomName =
+            typeof roomObj?.common?.name === 'string' ? roomObj.common.name.replace(/^Room /, '') : roomId;
+        const deviceName =
+            typeof obj.common?.name === 'string' ? obj.common.name.replace(/^Satellite /, '') : deviceId;
         result.push({
             deviceId,
             deviceName,
@@ -60,8 +61,8 @@ function parseSatellites(
             namespace,
             objectId: base,
             online: states[`${base}.online`]?.val === true,
-            address: String(states[`${base}.address`]?.val ?? ''),
-            firmwareVersion: String(states[`${base}.firmware_version`]?.val ?? ''),
+            address: (states[`${base}.address`]?.val as string | undefined) ?? '',
+            firmwareVersion: (states[`${base}.firmware_version`]?.val as string | undefined) ?? '',
             updateAvailable: states[`${base}.update_available`]?.val === true,
         });
     }
@@ -83,12 +84,18 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
 
         const load = async (): Promise<void> => {
             const [deviceObjs, folderObjs, states] = await Promise.all([
-                socket.getForeignObjects('hannah.*.satellites.rooms.*.*', 'device') as Promise<Record<string, IoBrokerObject>>,
-                socket.getForeignObjects('hannah.*.satellites.rooms.*', 'folder') as Promise<Record<string, IoBrokerObject>>,
+                socket.getForeignObjects('hannah.*.satellites.rooms.*.*', 'device') as Promise<
+                    Record<string, IoBrokerObject>
+                >,
+                socket.getForeignObjects('hannah.*.satellites.rooms.*', 'folder') as Promise<
+                    Record<string, IoBrokerObject>
+                >,
                 socket.getForeignStates('hannah.*.satellites.rooms.*.*.*'),
             ]);
             const allObjs = { ...folderObjs, ...deviceObjs };
-            if (!mounted) return;
+            if (!mounted) {
+                return;
+            }
             setObjectsCache(allObjs);
             setStatesCache(states as Record<string, IoBrokerState | null>);
             setSatellites(parseSatellites(allObjs, states as Record<string, IoBrokerState | null>));
@@ -97,15 +104,17 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
         void load();
 
         const onStateChange = (id: string, state: IoBrokerState | null | undefined): void => {
-            if (!id.includes('.satellites.rooms.')) return;
+            if (!id.includes('.satellites.rooms.')) {
+                return;
+            }
             setStatesCache(prev => {
                 const next = { ...prev, [id]: state ?? null };
-                setSatellites(sats => parseSatellites(objectsCache, next));
+                setSatellites(() => parseSatellites(objectsCache, next));
                 return next;
             });
         };
 
-        socket.subscribeState('hannah.*.satellites.rooms.*.*.*', onStateChange);
+        void socket.subscribeState('hannah.*.satellites.rooms.*.*.*', onStateChange);
 
         return () => {
             mounted = false;
@@ -121,10 +130,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
     const handleDelete = async (sat: Satellite): Promise<void> => {
-        const children = await socket.getForeignObjects(
-            `${sat.objectId}.*`,
-            'state',
-        ) as Record<string, IoBrokerObject>;
+        const children = await socket.getForeignObjects(`${sat.objectId}.*`, 'state');
         for (const id of Object.keys(children ?? {})) {
             await (socket as any).delObject(id);
         }
@@ -139,19 +145,39 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
 
     return (
         <Box sx={{ p: 3 }}>
-            <Typography variant="h5" color="text.primary" sx={{ mb: 3, fontWeight: 600 }}>
+            <Typography
+                variant="h5"
+                color="text.primary"
+                sx={{ mb: 3, fontWeight: 600 }}
+            >
                 Satelliten
             </Typography>
             {satellites.length === 0 ? (
                 <Typography color="text.secondary">Keine Satelliten bekannt.</Typography>
             ) : (
-                <Grid container spacing={2}>
+                <Grid
+                    container
+                    spacing={2}
+                >
                     {satellites.map(sat => (
-                        <Grid item key={sat.objectId} xs={12} sm={6} md={4} lg={3}>
-                            <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Grid
+                            item
+                            key={sat.objectId}
+                            xs={12}
+                            sm={6}
+                            md={4}
+                            lg={3}
+                        >
+                            <Card
+                                variant="outlined"
+                                sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+                            >
                                 <CardContent sx={{ flexGrow: 1 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                        <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                                        <Typography
+                                            variant="h6"
+                                            sx={{ flexGrow: 1 }}
+                                        >
                                             {sat.deviceName}
                                         </Typography>
                                         <Chip
@@ -160,16 +186,27 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                             color={sat.online ? 'success' : 'default'}
                                         />
                                     </Box>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{ mb: 1 }}
+                                    >
                                         {sat.room}
                                     </Typography>
                                     {sat.firmwareVersion ? (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Typography variant="caption" color="text.secondary">
+                                            <Typography
+                                                variant="caption"
+                                                color="text.secondary"
+                                            >
                                                 Firmware: {sat.firmwareVersion}
                                             </Typography>
                                             {sat.updateAvailable && (
-                                                <Chip size="small" label="Update" color="warning" />
+                                                <Chip
+                                                    size="small"
+                                                    label="Update"
+                                                    color="warning"
+                                                />
                                             )}
                                         </Box>
                                     ) : null}
@@ -185,18 +222,41 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                             Konfigurieren
                                         </Button>
                                     ) : (
-                                        <Button size="small" disabled>
+                                        <Button
+                                            size="small"
+                                            disabled
+                                        >
                                             Konfigurieren
                                         </Button>
                                     )}
                                     {confirmDeleteId === sat.objectId ? (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            <Typography variant="caption" color="error">Löschen?</Typography>
-                                            <Button size="small" color="error" onClick={() => void handleDelete(sat)}>Ja</Button>
-                                            <Button size="small" onClick={() => setConfirmDeleteId(null)}>Nein</Button>
+                                            <Typography
+                                                variant="caption"
+                                                color="error"
+                                            >
+                                                Löschen?
+                                            </Typography>
+                                            <Button
+                                                size="small"
+                                                color="error"
+                                                onClick={() => void handleDelete(sat)}
+                                            >
+                                                Ja
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                onClick={() => setConfirmDeleteId(null)}
+                                            >
+                                                Nein
+                                            </Button>
                                         </Box>
                                     ) : (
-                                        <Button size="small" color="error" onClick={() => setConfirmDeleteId(sat.objectId)}>
+                                        <Button
+                                            size="small"
+                                            color="error"
+                                            onClick={() => setConfirmDeleteId(sat.objectId)}
+                                        >
                                             Entfernen
                                         </Button>
                                     )}
