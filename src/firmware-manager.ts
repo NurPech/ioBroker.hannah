@@ -73,7 +73,10 @@ export class FirmwareManager {
     /** Optional bearer token for authenticated update servers */
     private token: string | undefined;
 
-    /** @param url - Firmware source URL */
+    /**
+     * @param url - Firmware source URL
+     * @param token - Token
+     */
     constructor(url: string, token?: string) {
         this.url = url;
         this.token = token || undefined;
