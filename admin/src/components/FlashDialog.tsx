@@ -106,7 +106,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
             setErrorMsg('');
             setFirmwareVersion('');
         }
-    }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [open]); // deps intentionally omitted: reset only on open, not on defaults change
 
     const addLog = (line: string): void => {
         setLog(prev => {
@@ -684,9 +684,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                         </Button>
                     </>
                 )}
-                {(step === 'connecting' || step === 'flashing') && (
-                    <Button disabled>{I18n.t('Please wait...')}</Button>
-                )}
+                {(step === 'connecting' || step === 'flashing') && <Button disabled>{I18n.t('Please wait...')}</Button>}
                 {step === 'monitoring' && (
                     <Button
                         variant="outlined"

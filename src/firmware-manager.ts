@@ -18,14 +18,21 @@ interface Manifest {
     builds: ManifestBuild[];
 }
 
+/** A single binary file to be flashed, as returned by the firmware manager. */
 export interface FirmwareFile {
+    /** Filename from the manifest */
     name: string;
+    /** Flash offset in bytes */
     offset: number;
-    data: string; // base64
+    /** File contents as base64 string */
+    data: string;
 }
 
+/** Result returned by FirmwareManager.getFirmwareFiles(). */
 export interface FirmwareResult {
+    /** Firmware version string from manifest */
     version: string;
+    /** List of binary files to flash */
     files: FirmwareFile[];
 }
 
@@ -59,15 +66,20 @@ function fetchBuffer(url: string, token?: string): Promise<Buffer> {
     });
 }
 
+/** Downloads firmware ZIPs from an update server and unpacks them for flashing. */
 export class FirmwareManager {
+    /** Firmware source URL (update server releases endpoint) */
     private url: string;
+    /** Optional bearer token for authenticated update servers */
     private token: string | undefined;
 
+    /** @param url - Firmware source URL */
     constructor(url: string, token?: string) {
         this.url = url;
         this.token = token || undefined;
     }
 
+    /** Download, unpack and return all firmware files ready for flashing. */
     async getFirmwareFiles(): Promise<FirmwareResult> {
         const raw = await fetchBuffer(this.url, this.token);
 

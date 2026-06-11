@@ -22,17 +22,29 @@ import Typography from '@mui/material/Typography';
 import { I18n } from '@iobroker/adapter-react-v5';
 import type { EnumItem } from '../app';
 
+/** Default NVS values pre-filled when flashing or rewriting a satellite. */
 export interface SatelliteDefaults {
+    /** WiFi SSID */
     wifiSsid?: string;
+    /** WiFi password */
     wifiPass?: string;
+    /** MQTT broker address */
     mqttBroker?: string;
+    /** MQTT port (default 1883) */
     mqttPort?: string;
+    /** MQTT username */
     mqttUser?: string;
+    /** MQTT password */
     mqttPass?: string;
+    /** OTA update server base URL */
     otaUrl?: string;
+    /** OTA channel name */
     otaChannel?: string;
+    /** OTA bearer token */
     otaToken?: string;
+    /** Asset server base URL */
     assetUrl?: string;
+    /** Asset server bearer token */
     assetToken?: string;
 }
 

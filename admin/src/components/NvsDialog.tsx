@@ -472,9 +472,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults })
                         </Button>
                     </>
                 )}
-                {(step === 'connecting' || step === 'flashing') && (
-                    <Button disabled>{I18n.t('Please wait...')}</Button>
-                )}
+                {(step === 'connecting' || step === 'flashing') && <Button disabled>{I18n.t('Please wait...')}</Button>}
                 {(step === 'done' || step === 'error') && (
                     <Button
                         variant="contained"
