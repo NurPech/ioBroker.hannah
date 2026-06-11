@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.14.0",
+    "version": "0.15.0",
     "news": {
       "0.15.0": {
         "en": "Added: web flasher — flash new satellites directly from the admin UI via WebSerial with full device provisioning (WiFi, MQTT, OTA, asset server) written as NVS partition in one step\nAdded: serial monitor mode in flash dialog — streams the full boot log immediately after flashing\nFixed: NVS CRC was calculated incorrectly by `esp-nvs-utils`; switched to `@m1kad0/esp-nvs-utils` — ESP-IDF 6.0 no longer erases the NVS partition on first boot",
@@ -93,19 +93,6 @@
         "pl": "Zmieniona: minimum Node.js wersja wzrosła do 22\nZmieniony: gazociąg CI zaktualizowany do węzła 22 (lint / check) i węzła 24 (pust)\nZmieniony: '@ alcalzone / release- script' i wtyczki zaktualizowane do 5.2.0\nZmieniono: użyj 'to.setTimeout' / 'to.clearTimeout' w klasie adaptera\nZmienione: usunięte przestarzałe klucze i18n ze wszystkich plików tłumaczeniowych\nNaprawiono: dodany link do 'CHANGELOG _ OLD.md' na końcu sekcji changelog",
         "uk": "Змінено: мінімум Node.js версія bumped до 22\nЗмінено: CI-провідник оновлено до Node 22 (лінт/check) і Node 24 (deploy)\nЗмінено: `@alcalzone/release-script` та плагіни оновлено до 5.2.0\nЗмінено: Використовуйте `this.setTimeout`/`this.clearTimeout` у класі адаптера\nЗмінено: вилучені ключі i18n з усіх файлів перекладу\nВиправлено: додано посилання на `CHANGELOG OLD.md` в кінці розділу зміни",
         "zh-cn": "更改:最小节点.js版本跌至22\n更改:CI管道更新为22号节点(lint/check)和24号节点(部署)\n更改: QQalcalzone/ release-script' 和插件更新为 5.2.0\n更改: 在适配器类中使用“ 此. setTimeout” /“ this. clearTimeout”\n更改: 从所有翻译文件中删除过时的 i18n 密钥\n固定:在更改日志部分末尾添加到“ChangelOG OLD.md”的链接"
-      },
-      "0.11.1": {
-        "en": "Fixed: deduplicate notification messages before joining to prevent doubled text when ioBroker registers the same message twice for an adapter instance",
-        "de": "Behoben: deduplizieren Sie Benachrichtigungsnachrichten vor dem Fügen, um einen doppelten Text zu verhindern, wenn ioBroker die gleiche Nachricht zweimal für eine Adapterinstanz registriert",
-        "ru": "Исправлено: дублировать сообщения уведомлений перед присоединением, чтобы предотвратить дублирование текста, когда ioBroker регистрирует одно и то же сообщение дважды для экземпляра адаптера",
-        "pt": "Corrigido: deduplicar as mensagens de notificação antes de se juntar para evitar o texto duplicado quando o ioBroker regista a mesma mensagem duas vezes para uma instância de adaptador",
-        "nl": "Fixed: dedupliceer meldingsberichten voordat u toevoegt om dubbele tekst te voorkomen wanneer ioBroker hetzelfde bericht twee keer registreert voor een adapter instantie",
-        "fr": "Correction : dédoubler les messages de notification avant de se joindre pour empêcher le double du texte lorsque ioBroker enregistre le même message deux fois pour une instance d'adaptateur",
-        "it": "Fisso: deduplicare i messaggi di notifica prima di unirsi per evitare il testo raddoppiato quando ioBroker registra lo stesso messaggio due volte per un'istanza adattatore",
-        "es": "Fijo: deduplicar mensajes de notificación antes de unirse para evitar el texto duplicado cuando ioBroker registra el mismo mensaje dos veces para una instancia de adaptador",
-        "pl": "Naprawiono: odduplikować komunikaty zgłoszeniowe przed połączeniem, aby zapobiec podwójnemu tekstowi, kiedy joBroker rejestruje tę samą wiadomość dwukrotnie dla instancji adaptera",
-        "uk": "Виправлено: deduplicate повідомлень, перш ніж приєднатися до запобігання подвійного тексту, коли ioBroker реєструє те саме повідомлення двічі для екземпляра адаптера",
-        "zh-cn": "固定: 当 ioBroker 为适配器实例两次登记同一消息时, 在加入前将通知信件复制, 防止文本翻倍"
       }
     },
     "blockly": true,

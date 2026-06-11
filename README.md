@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.15.0 (2026-06-11)
 - Added: web flasher — flash new satellites directly from the admin UI via WebSerial with full device provisioning (WiFi, MQTT, OTA, asset server) written as NVS partition in one step
 - Added: serial monitor mode in flash dialog — streams the full boot log immediately after flashing
 - Fixed: NVS CRC was calculated incorrectly by `esp-nvs-utils`; switched to `@m1kad0/esp-nvs-utils` — ESP-IDF 6.0 no longer erases the NVS partition on first boot
