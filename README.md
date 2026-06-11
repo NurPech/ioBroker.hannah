@@ -77,130 +77,135 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: web flasher — flash new satellites directly from the admin UI via WebSerial with full device provisioning (WiFi, MQTT, OTA, asset server) written as NVS partition in one step
+- Added: serial monitor mode in flash dialog — streams the full boot log immediately after flashing
+- Fixed: NVS CRC was calculated incorrectly by `esp-nvs-utils`; switched to `@m1kad0/esp-nvs-utils` — ESP-IDF 6.0 no longer erases the NVS partition on first boot
+
 ### 0.14.0 (2026-06-09)
-* Added: satellite `address` state (`info.ip` role) — populated from `AgentSatelliteUpdate.address` on registration; IP extracted from `ip:port` UDP address
-* Added: admin tab "Hannah Satellites" — card view per satellite showing name, room, online status, firmware version badge, and link to satellite HTTP config page (`http://<ip>/`)
-* Added: `SatelliteWatcher.markUnknownOffline()` — on connect, sets `online: false` for satellite device objects not reported by Hannah Core, preventing stale online states after rename/reassignment
-* Added: delete button per satellite card in admin tab — removes full ioBroker object tree on confirmation
+- Added: satellite `address` state (`info.ip` role) — populated from `AgentSatelliteUpdate.address` on registration; IP extracted from `ip:port` UDP address
+- Added: admin tab "Hannah Satellites" — card view per satellite showing name, room, online status, firmware version badge, and link to satellite HTTP config page (`http://<ip>/`)
+- Added: `SatelliteWatcher.markUnknownOffline()` — on connect, sets `online: false` for satellite device objects not reported by Hannah Core, preventing stale online states after rename/reassignment
+- Added: delete button per satellite card in admin tab — removes full ioBroker object tree on confirmation
 
 ### 0.13.0 (2026-06-05)
-* Fixed: `info` channel object was missing — adapter checker E3009; created before `info.connection` state in `onReady`
-* Fixed: satellite room objects were `channel` type — adapter checker E2003 (device after channel); changed to `folder` so satellite devices remain valid under them
-* Fixed: `indicator.update` role on `update_available` state is unknown — changed to `indicator`
-* Fixed: room and device names containing spaces (e.g. "Leonie Schlafzimmer") produced invalid state IDs — `sanitizeId()` now replaces non-`[a-zA-Z0-9_,-]` characters with `_` in ID paths; `common.name` retains the original name; `satellite_control` gRPC messages use the original room name via reverse map
+- Fixed: `info` channel object was missing — adapter checker E3009; created before `info.connection` state in `onReady`
+- Fixed: satellite room objects were `channel` type — adapter checker E2003 (device after channel); changed to `folder` so satellite devices remain valid under them
+- Fixed: `indicator.update` role on `update_available` state is unknown — changed to `indicator`
+- Fixed: room and device names containing spaces (e.g. "Leonie Schlafzimmer") produced invalid state IDs — `sanitizeId()` now replaces non-`[a-zA-Z0-9_,-]` characters with `_` in ID paths; `common.name` retains the original name; `satellite_control` gRPC messages use the original room name via reverse map
 
 ### 0.12.1 (2026-06-04)
-* Fixed: `announcementSsml` and `announcementRephrase` states were silently ignored by Hannah Core — proto-loader uses `keepCase: true` so field names must be snake_case on the wire; added explicit `protoKey` mapping in `satellites.ts`
+- Fixed: `announcementSsml` and `announcementRephrase` states were silently ignored by Hannah Core — proto-loader uses `keepCase: true` so field names must be snake_case on the wire; added explicit `protoKey` mapping in `satellites.ts`
 
 ### 0.12.0 (2026-06-04)
-* Added: `announcementRephrase` state per room — writes text to Hannah Core as `AgentSatelliteControl.announcement_rephrase`; Hannah LLM reformulates before TTS
+- Added: `announcementRephrase` state per room — writes text to Hannah Core as `AgentSatelliteControl.announcement_rephrase`; Hannah LLM reformulates before TTS
 
 ### 0.11.3 (2026-06-02)
-* Changed: update dependencies (`@grpc/grpc-js` to 1.14.4, `@grpc/proto-loader` to 0.8.1, `@iobroker/types` to 7.1.2)
-* Changed: update dev dependencies (`@tsconfig/node20` → `@tsconfig/node22`)
-* Fixed: replace `process.exit(1)` with `throw new Error()` in verify-package-contents script
+- Changed: update dependencies (`@grpc/grpc-js` to 1.14.4, `@grpc/proto-loader` to 0.8.1, `@iobroker/types` to 7.1.2)
+- Changed: update dev dependencies (`@tsconfig/node20` → `@tsconfig/node22`)
+- Fixed: replace `process.exit(1)` with `throw new Error()` in verify-package-contents script
 
 ### 0.11.2 (2026-06-01)
-* Changed: minimum Node.js version bumped to 22
-* Changed: CI pipeline updated to Node 22 (lint/check) and Node 24 (deploy)
-* Changed: `@alcalzone/release-script` and plugins updated to 5.2.0
-* Changed: use `this.setTimeout`/`this.clearTimeout` in adapter class
-* Changed: removed outdated i18n keys from all translation files
-* Fixed: added link to `CHANGELOG_OLD.md` at end of changelog section
+- Changed: minimum Node.js version bumped to 22
+- Changed: CI pipeline updated to Node 22 (lint/check) and Node 24 (deploy)
+- Changed: `@alcalzone/release-script` and plugins updated to 5.2.0
+- Changed: use `this.setTimeout`/`this.clearTimeout` in adapter class
+- Changed: removed outdated i18n keys from all translation files
+- Fixed: added link to `CHANGELOG_OLD.md` at end of changelog section
 
 ### 0.11.1 (2026-06-01)
-* Fixed: deduplicate notification messages before joining to prevent doubled text when ioBroker registers the same message twice for an adapter instance
+- Fixed: deduplicate notification messages before joining to prevent doubled text when ioBroker registers the same message twice for an adapter instance
 
 ### 0.11.0 (2026-05-27)
-* Changed: volume and mute states moved from room-level (`satellites.rooms.<room>.volume/mute`) to per-satellite (`satellites.rooms.<room>.<deviceId>.volume/mute`)
-* Changed: `AgentSatelliteControl` now supports optional `device_id` for per-satellite volume/mute commands; room-level commands (dnd, announcement) unchanged
-* Changed: `AgentSatelliteUpdate` now carries optional `volume` and `mute` fields — adapter updates per-satellite states when received
+- Changed: volume and mute states moved from room-level (`satellites.rooms.<room>.volume/mute`) to per-satellite (`satellites.rooms.<room>.<deviceId>.volume/mute`)
+- Changed: `AgentSatelliteControl` now supports optional `device_id` for per-satellite volume/mute commands; room-level commands (dnd, announcement) unchanged
+- Changed: `AgentSatelliteUpdate` now carries optional `volume` and `mute` fields — adapter updates per-satellite states when received
 
 ### 0.10.0 (2026-05-25)
-* New: `climate` device type — detected via funcId keywords (`klima`, `aircon`, `climate`); supports `mode`, `fanSpeed`, `current`, and `expected` states
+- New: `climate` device type — detected via funcId keywords (`klima`, `aircon`, `climate`); supports `mode`, `fanSpeed`, `current`, and `expected` states
 
 ### 0.9.0 (2026-05-24)
-* New: `SensorWatcher` — handles `AgentSensorUpdate` commands; creates `hannah.<instance>.satellites.sensors.<device>.{temperature,pressure,humidity,gas_resistance}` states on first update
-* Fixed: `satellites.sensors` folder object is created before the per-device channel to avoid state creation failure
+- New: `SensorWatcher` — handles `AgentSensorUpdate` commands; creates `hannah.<instance>.satellites.sensors.<device>.{temperature,pressure,humidity,gas_resistance}` states on first update
+- Fixed: `satellites.sensors` folder object is created before the per-device channel to avoid state creation failure
 
 ### 0.8.0 (2026-05-24)
-* New: `BleWatcher` — handles `AgentBleUpdate` commands from Hannah Core; creates `hannah.<instance>.ble.<label>.room`, `.satellite`, and `.rssi` states on first update and keeps them current on every location change
+- New: `BleWatcher` — handles `AgentBleUpdate` commands from Hannah Core; creates `hannah.<instance>.ble.<label>.room`, `.satellite`, and `.rssi` states on first update and keeps them current on every location change
 
 ### 0.7.0 (2026-05-23)
-* New: Per-satellite state `satellites.rooms.<room>.<device>.firmware_version` — updated whenever the satellite reports its running firmware version at boot
-* New: Per-satellite state `satellites.rooms.<room>.<device>.update_available` (`indicator.update`) — set to `true` when the satellite reports a pending OTA update, reset to `false` on the next boot version report
-* New: Per-satellite button `satellites.rooms.<room>.<device>.update_now` — triggers an immediate firmware update (bypasses residents/away check) via `TriggerFirmwareUpdate` gRPC RPC
-* Changed: Build artifacts (`build/`, `admin/build/`) removed from git; `prepack` hook builds automatically on `npm pack`/`npm publish`; Auto-Build GitHub Action removed
-* Changed: `nogit: true` set in `io-package.json` — adapter is distributed via npm only
+- New: Per-satellite state `satellites.rooms.<room>.<device>.firmware_version` — updated whenever the satellite reports its running firmware version at boot
+- New: Per-satellite state `satellites.rooms.<room>.<device>.update_available` (`indicator.update`) — set to `true` when the satellite reports a pending OTA update, reset to `false` on the next boot version report
+- New: Per-satellite button `satellites.rooms.<room>.<device>.update_now` — triggers an immediate firmware update (bypasses residents/away check) via `TriggerFirmwareUpdate` gRPC RPC
+- Changed: Build artifacts (`build/`, `admin/build/`) removed from git; `prepack` hook builds automatically on `npm pack`/`npm publish`; Auto-Build GitHub Action removed
+- Changed: `nogit: true` set in `io-package.json` — adapter is distributed via npm only
 
 ### 0.6.0 (2026-05-22)
-* New: ioBroker DeviceManager support — satellites are shown as devices with mute toggle and volume slider controls
-* New: Satellite objects are now created as `type: device` (previously `channel`) for DeviceManager compatibility
+- New: ioBroker DeviceManager support — satellites are shown as devices with mute toggle and volume slider controls
+- New: Satellite objects are now created as `type: device` (previously `channel`) for DeviceManager compatibility
 
 ### 0.5.0 (2026-05-06)
-* New: `AgentDevice` proto carries a `device_type` field (field 5) — resolved from `common.hannah.type` override, ioBroker role (e.g. `level.temperature` → `thermostat`, `sensor.window` → `window`), or function enum IDs; supported types: `light`, `socket`, `thermostat`, `temperature_sensor`, `window`, `door`, `blind`
+- New: `AgentDevice` proto carries a `device_type` field (field 5) — resolved from `common.hannah.type` override, ioBroker role (e.g. `level.temperature` → `thermostat`, `sensor.window` → `window`), or function enum IDs; supported types: `light`, `socket`, `thermostat`, `temperature_sensor`, `window`, `door`, `blind`
 
 ### 0.4.2 (2026-05-04)
-* Fixed: automated TypeScript build via GitHub Actions
+- Fixed: automated TypeScript build via GitHub Actions
 
 ### 0.4.1 (2026-05-04)
-* Fixed: Deployment Issues. Not all required files where inside the package
+- Fixed: Deployment Issues. Not all required files where inside the package
 
 ### 0.4.0 (2026-05-03)
-* Fixed: States may only be set if the state is writable (`common.write === true`).
-* New: `AgentDevice` now includes a `floor` field — resolved from `common.floor` on the device object, with a fallback that scans the state ID path for known floor abbreviations (EG, OG, UG, DG, KG, ZG).
-* New: Configurable floor mappings — define custom label→abbreviation pairs in the Device Discovery tab (e.g. "Erdgeschoss" → "EG"); mappings normalize both `common.floor` values and ID path segments, and extend (not replace) the built-in abbreviation set.
+- Fixed: States may only be set if the state is writable (`common.write === true`).
+- New: `AgentDevice` now includes a `floor` field — resolved from `common.floor` on the device object, with a fallback that scans the state ID path for known floor abbreviations (EG, OG, UG, DG, KG, ZG).
+- New: Configurable floor mappings — define custom label→abbreviation pairs in the Device Discovery tab (e.g. "Erdgeschoss" → "EG"); mappings normalize both `common.floor` values and ID path segments, and extend (not replace) the built-in abbreviation set.
 
 ### 0.3.2 (2026-05-03)
-* Fixed: Device names in Telegram and Hannah were showing the full state ID instead of the readable name
+- Fixed: Device names in Telegram and Hannah were showing the full state ID instead of the readable name
 
 ### 0.3.1 (2026-05-02)
-* Fixed: The adapter sends too much data to Hannah
+- Fixed: The adapter sends too much data to Hannah
 
 ### 0.3.0 (2026-05-02)
 
-* New: Device snapshot on connect — the adapter now sends room, device name, function and current value for every subscribed state immediately after connecting, so Hannah Core no longer needs to query the ioBroker REST API for device discovery
-* New: Resident snapshot on connect — all known residents are forwarded to Hannah Core once after connecting, replacing the previous API-based resident lookup
-* New: `AgentDevice` proto message carries full metadata (room, device, functions, current value) per state; `AgentDeviceSnapshot` wraps the complete list
-* Improved: Enum lookups during snapshot are now fetched once and reused across all states instead of once per state, significantly reducing startup time for large installations
+- New: Device snapshot on connect — the adapter now sends room, device name, function and current value for every subscribed state immediately after connecting, so Hannah Core no longer needs to query the ioBroker REST API for device discovery
+- New: Resident snapshot on connect — all known residents are forwarded to Hannah Core once after connecting, replacing the previous API-based resident lookup
+- New: `AgentDevice` proto message carries full metadata (room, device, functions, current value) per state; `AgentDeviceSnapshot` wraps the complete list
+- Improved: Enum lookups during snapshot are now fetched once and reused across all states instead of once per state, significantly reducing startup time for large installations
 
 ### 0.2.1 (2026-05-01)
-* Fixed: Hannah could set any state. That could be a security Issue. Hannah can now only edit the states that the adapter actively manages.
+- Fixed: Hannah could set any state. That could be a security Issue. Hannah can now only edit the states that the adapter actively manages.
 
 ### 0.2.0 (2026-04-30)
 
-* New: Send direct messages to Hannah via `sendTo('hannah.<instance>', 'sendDirect', { text: '...' })` — plays via TTS on all satellites and forwards to Telegram, no LLM involved
-* New: Native ioBroker Notification Manager integration — system notifications are automatically forwarded to Hannah and reformulated by the LLM before being spoken and sent to Telegram
-* New: Announcements via `sendTo('hannah.<instance>', 'announce', { rooms: ['Wohnzimmer', 'Küche'], text: '...' })` — plays TTS in specific rooms only, bypasses LLM and Telegram. Use `rooms: ['all']` to address every satellite
-* New: Blockly block **"Hannah say"** for direct voice messages
-* New: Blockly block **"Hannah announce"** with a list input for target rooms
-* Fixed: Duplicate gRPC connections on reconnect — old stream is now properly closed before opening a new one
-* Fixed: `prepublishOnly` instead of `prepack` — installing the adapter locally no longer triggers a full build
+- New: Send direct messages to Hannah via `sendTo('hannah.<instance>', 'sendDirect', { text: '...' })` — plays via TTS on all satellites and forwards to Telegram, no LLM involved
+- New: Native ioBroker Notification Manager integration — system notifications are automatically forwarded to Hannah and reformulated by the LLM before being spoken and sent to Telegram
+- New: Announcements via `sendTo('hannah.<instance>', 'announce', { rooms: ['Wohnzimmer', 'Küche'], text: '...' })` — plays TTS in specific rooms only, bypasses LLM and Telegram. Use `rooms: ['all']` to address every satellite
+- New: Blockly block **"Hannah say"** for direct voice messages
+- New: Blockly block **"Hannah announce"** with a list input for target rooms
+- Fixed: Duplicate gRPC connections on reconnect — old stream is now properly closed before opening a new one
+- Fixed: `prepublishOnly` instead of `prepack` — installing the adapter locally no longer triggers a full build
 
 ### 0.1.0 (2026-04-30)
-* New: Native AgentTextAnswer via gRPC pushes responses directly to hannah.<instance>.textAnswer
-* New: Dedicated resident_set gRPC command for residents.set_presence() to eliminate the final MQTT dependency
-* New: Satellite state management integrated into adapter via GetSatellites() and gRPC subscriptions (NotifySatelliteRegistered/Gone)
-* New: Automatic satellite state initialization under hannah.<instance>.satellites.* at startup
-* Fixed: Removed redundant residentsPrefix from StateWatcher to prevent duplicate state_update transmissions
-* Fixed: Consolidated resident tracking into ResidentsWatcher for a single, clean telemetry path
-* Fixed: Replaced legacy JavaScript satellite/room logic with native adapter functionality
-* Fixed: Full deprecation of the ioBroker-to-Hannah MQTT feedback channel in favor of gRPC streams
+- New: Native AgentTextAnswer via gRPC pushes responses directly to hannah.<instance>.textAnswer
+- New: Dedicated resident_set gRPC command for residents.set_presence() to eliminate the final MQTT dependency
+- New: Satellite state management integrated into adapter via GetSatellites() and gRPC subscriptions (NotifySatelliteRegistered/Gone)
+- New: Automatic satellite state initialization under hannah.<instance>.satellites.- at startup
+- Fixed: Removed redundant residentsPrefix from StateWatcher to prevent duplicate state_update transmissions
+- Fixed: Consolidated resident tracking into ResidentsWatcher for a single, clean telemetry path
+- Fixed: Replaced legacy JavaScript satellite/room logic with native adapter functionality
+- Fixed: Full deprecation of the ioBroker-to-Hannah MQTT feedback channel in favor of gRPC streams
 
 ### 0.0.2 (2026-04-28)
-* Fixed: ControlDevice feedback channel — device state updates correctly after Hannah sets a state
-* Fixed: Wildcard pattern matching for subscribed states
-* Fixed: Resident presence subscription restricted to configured instance
-* Fixed: Only forward confirmed states (ack=true) to Hannah; commands (ack=false) are ignored
-* New: Text command state moved into adapter namespace (`hannah.<instance>.textCommand`)
-* New: Automatic reloading of enum subscriptions when rooms or functions change in ioBroker
+- Fixed: ControlDevice feedback channel — device state updates correctly after Hannah sets a state
+- Fixed: Wildcard pattern matching for subscribed states
+- Fixed: Resident presence subscription restricted to configured instance
+- Fixed: Only forward confirmed states (ack=true) to Hannah; commands (ack=false) are ignored
+- New: Text command state moved into adapter namespace (`hannah.<instance>.textCommand`)
+- New: Automatic reloading of enum subscriptions when rooms or functions change in ioBroker
 
 ### 0.0.1 (2026-04-27)
-* Initial release
-* Bidirectional gRPC stream (state updates, resident presence, text commands, SetState)
-* Enum-based device discovery with room × function filtering
-* Extra state prefix support for arbitrary state trees
-* Snapshot-on-connect replaces MQTT retained messages
+- Initial release
+- Bidirectional gRPC stream (state updates, resident presence, text commands, SetState)
+- Enum-based device discovery with room × function filtering
+- Extra state prefix support for arbitrary state trees
+- Snapshot-on-connect replaces MQTT retained messages
 
 For older entries see [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 

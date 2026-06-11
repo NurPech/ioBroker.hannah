@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
+import Fab from '@mui/material/Fab';
 import Grid from '@mui/material/Grid';
-import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import { I18n } from '@iobroker/adapter-react-v5';
 import type { AdminConnection } from '@iobroker/adapter-react-v5';
+import FlashDialog from './FlashDialog';
+import NvsDialog from './NvsDialog';
+import type { SatelliteDefaults } from './settings';
 
 interface IoBrokerObject {
     _id: string;
@@ -76,6 +82,32 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
     const [satellites, setSatellites] = useState<Satellite[]>([]);
     const [objectsCache, setObjectsCache] = useState<Record<string, IoBrokerObject>>({});
     const [statesCache, setStatesCache] = useState<Record<string, IoBrokerState | null>>({});
+    const [flashOpen, setFlashOpen] = useState(false);
+    const [nvsTarget, setNvsTarget] = useState<{ deviceId: string; room: string } | null>(null);
+    const [satelliteDefaults, setSatelliteDefaults] = useState<SatelliteDefaults>({});
+
+    const adapterNamespace = 'hannah.0';
+
+    useEffect(() => {
+        void (socket as any).getObject('system.adapter.hannah.0').then((obj: any) => {
+            if (obj?.native) {
+                const n = obj.native;
+                setSatelliteDefaults({
+                    wifiSsid: n.satWifiSsid,
+                    wifiPass: n.satWifiPass,
+                    mqttBroker: n.satMqttBroker,
+                    mqttPort: n.satMqttPort,
+                    mqttUser: n.satMqttUser,
+                    mqttPass: n.satMqttPass,
+                    otaUrl: n.satOtaUrl,
+                    otaChannel: n.satOtaChannel,
+                    otaToken: n.satOtaToken,
+                    assetUrl: n.satAssetUrl,
+                    assetToken: n.satAssetToken,
+                });
+            }
+        });
+    }, [socket]);
 
     useEffect(() => {
         let mounted = true;
@@ -142,16 +174,30 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
     };
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 3, position: 'relative', minHeight: '100%' }}>
+            <FlashDialog
+                open={flashOpen}
+                onClose={() => setFlashOpen(false)}
+                socket={socket}
+                adapterNamespace={adapterNamespace}
+                defaults={satelliteDefaults}
+            />
+            <NvsDialog
+                open={nvsTarget !== null}
+                onClose={() => setNvsTarget(null)}
+                deviceId={nvsTarget?.deviceId ?? ''}
+                room={nvsTarget?.room ?? ''}
+                defaults={satelliteDefaults}
+            />
             <Typography
                 variant="h5"
                 color="text.primary"
                 sx={{ mb: 3, fontWeight: 600 }}
             >
-                Satelliten
+                {I18n.t('Satellites')}
             </Typography>
             {satellites.length === 0 ? (
-                <Typography color="text.secondary">Keine Satelliten bekannt.</Typography>
+                <Typography color="text.secondary">{I18n.t('No satellites known.')}</Typography>
             ) : (
                 <Grid
                     container
@@ -180,7 +226,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                         </Typography>
                                         <Chip
                                             size="small"
-                                            label={sat.online ? 'Online' : 'Offline'}
+                                            label={sat.online ? I18n.t('Online') : I18n.t('Offline')}
                                             color={sat.online ? 'success' : 'default'}
                                         />
                                     </Box>
@@ -197,56 +243,65 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                                 variant="caption"
                                                 color="text.secondary"
                                             >
-                                                Firmware: {sat.firmwareVersion}
+                                                {I18n.t('Firmware:')} {sat.firmwareVersion}
                                             </Typography>
                                             {sat.updateAvailable && (
                                                 <Chip
                                                     size="small"
-                                                    label="Update"
+                                                    label={I18n.t('Update available')}
                                                     color="warning"
                                                 />
                                             )}
                                         </Box>
                                     ) : null}
                                 </CardContent>
-                                <CardActions sx={{ justifyContent: 'space-between' }}>
-                                    {sat.address ? (
+                                <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 0.5 }}>
+                                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                        {sat.address ? (
+                                            <Button
+                                                size="small"
+                                                href={`http://${sat.address}/`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                {I18n.t('Configure')}
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                size="small"
+                                                disabled
+                                            >
+                                                {I18n.t('Configure')}
+                                            </Button>
+                                        )}
                                         <Button
                                             size="small"
-                                            href={`http://${sat.address}/`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                            variant="outlined"
+                                            onClick={() => setNvsTarget({ deviceId: sat.deviceId, room: sat.room })}
                                         >
-                                            Konfigurieren
+                                            NVS
                                         </Button>
-                                    ) : (
-                                        <Button
-                                            size="small"
-                                            disabled
-                                        >
-                                            Konfigurieren
-                                        </Button>
-                                    )}
+                                    </Box>
                                     {confirmDeleteId === sat.objectId ? (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                             <Typography
                                                 variant="caption"
                                                 color="error"
                                             >
-                                                Löschen?
+                                                {I18n.t('Delete?')}
                                             </Typography>
                                             <Button
                                                 size="small"
                                                 color="error"
                                                 onClick={() => void handleDelete(sat)}
                                             >
-                                                Ja
+                                                {I18n.t('Yes')}
                                             </Button>
                                             <Button
                                                 size="small"
                                                 onClick={() => setConfirmDeleteId(null)}
                                             >
-                                                Nein
+                                                {I18n.t('No')}
                                             </Button>
                                         </Box>
                                     ) : (
@@ -255,7 +310,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                             color="error"
                                             onClick={() => setConfirmDeleteId(sat.objectId)}
                                         >
-                                            Entfernen
+                                            {I18n.t('Remove')}
                                         </Button>
                                     )}
                                 </CardActions>
@@ -264,6 +319,16 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                     ))}
                 </Grid>
             )}
+            <Tooltip title={I18n.t('Flash new satellite')}>
+                <Fab
+                    color="success"
+                    variant="extended"
+                    onClick={() => setFlashOpen(true)}
+                    sx={{ position: 'fixed', bottom: 24, right: 24 }}
+                >
+                    + {I18n.t('New Device')}
+                </Fab>
+            </Tooltip>
         </Box>
     );
 };

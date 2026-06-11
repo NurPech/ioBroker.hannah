@@ -7,6 +7,7 @@ import { MessagesHandler } from './messages';
 import HannahDeviceManagement from './deviceManager';
 import { BleWatcher } from './ble';
 import { SensorWatcher } from './sensors';
+import { FirmwareManager } from './firmware-manager';
 
 class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
@@ -244,6 +245,34 @@ class Hannah extends utils.Adapter {
     }
 
     public onMessage(obj: ioBroker.Message): void {
+        if (obj.command === 'getFirmwareFiles') {
+            this.log.debug(`[firmware] getFirmwareFiles request from ${obj.from}`);
+            const url: string = this.config.firmwareSourceUrl || '';
+            const token: string = this.config.firmwareSourceToken || '';
+            if (!url) {
+                this.log.warn('[firmware] No firmware source URL configured');
+                if (obj.callback) {
+                    this.sendTo(obj.from, obj.command, { error: 'No firmware source URL configured' }, obj.callback);
+                }
+                return;
+            }
+            this.log.info(`[firmware] Downloading firmware from ${url}`);
+            const mgr = new FirmwareManager(url, token || undefined);
+            mgr.getFirmwareFiles()
+                .then(result => {
+                    this.log.info(`[firmware] Firmware ready: ${result.version} (${result.files.length} files)`);
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, result, obj.callback);
+                    }
+                })
+                .catch((err: Error) => {
+                    this.log.warn(`[firmware] getFirmwareFiles failed: ${err.message}`);
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, { error: err.message }, obj.callback);
+                    }
+                });
+            return;
+        }
         this.messages?.onMessage(obj);
     }
 }

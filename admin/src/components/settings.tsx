@@ -22,6 +22,32 @@ import Typography from '@mui/material/Typography';
 import { I18n } from '@iobroker/adapter-react-v5';
 import type { EnumItem } from '../app';
 
+/** Default NVS values pre-filled when flashing or rewriting a satellite. */
+export interface SatelliteDefaults {
+    /** WiFi SSID */
+    wifiSsid?: string;
+    /** WiFi password */
+    wifiPass?: string;
+    /** MQTT broker address */
+    mqttBroker?: string;
+    /** MQTT port (default 1883) */
+    mqttPort?: string;
+    /** MQTT username */
+    mqttUser?: string;
+    /** MQTT password */
+    mqttPass?: string;
+    /** OTA update server base URL */
+    otaUrl?: string;
+    /** OTA channel name */
+    otaChannel?: string;
+    /** OTA bearer token */
+    otaToken?: string;
+    /** Asset server base URL */
+    assetUrl?: string;
+    /** Asset server bearer token */
+    assetToken?: string;
+}
+
 interface SettingsProps {
     native: Record<string, any>;
     onChange: (attr: string, value: any) => void;
@@ -335,6 +361,180 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
         );
     }
 
+    private renderSatelliteDefaultsTab(): React.JSX.Element {
+        const { native, onChange } = this.props;
+        return (
+            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 600 }}>
+                <Typography
+                    variant="body2"
+                    color="text.secondary"
+                >
+                    {I18n.t(
+                        'Default values pre-filled when flashing a new satellite or rewriting its NVS. Can be overridden per device.',
+                    )}
+                </Typography>
+
+                <Typography
+                    variant="subtitle2"
+                    color="text.primary"
+                >
+                    {I18n.t('WiFi')}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <TextField
+                        label={I18n.t('SSID')}
+                        value={native.satWifiSsid || ''}
+                        onChange={e => onChange('satWifiSsid', e.target.value)}
+                        size="small"
+                        fullWidth
+                    />
+                    <TextField
+                        label={I18n.t('Password')}
+                        value={native.satWifiPass || ''}
+                        onChange={e => onChange('satWifiPass', e.target.value)}
+                        type="password"
+                        size="small"
+                        fullWidth
+                    />
+                </Box>
+
+                <Divider />
+                <Typography
+                    variant="subtitle2"
+                    color="text.primary"
+                >
+                    {I18n.t('MQTT')}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <TextField
+                        label={I18n.t('Broker')}
+                        value={native.satMqttBroker || ''}
+                        onChange={e => onChange('satMqttBroker', e.target.value)}
+                        size="small"
+                        fullWidth
+                        placeholder="192.168.1.10"
+                    />
+                    <TextField
+                        label={I18n.t('Port')}
+                        value={native.satMqttPort || '1883'}
+                        onChange={e => onChange('satMqttPort', e.target.value)}
+                        size="small"
+                        sx={{ width: 100 }}
+                    />
+                </Box>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <TextField
+                        label={I18n.t('User')}
+                        value={native.satMqttUser || ''}
+                        onChange={e => onChange('satMqttUser', e.target.value)}
+                        size="small"
+                        fullWidth
+                    />
+                    <TextField
+                        label={I18n.t('Password')}
+                        value={native.satMqttPass || ''}
+                        onChange={e => onChange('satMqttPass', e.target.value)}
+                        type="password"
+                        size="small"
+                        fullWidth
+                    />
+                </Box>
+
+                <Divider />
+                <Typography
+                    variant="subtitle2"
+                    color="text.primary"
+                >
+                    {I18n.t('OTA')}
+                </Typography>
+                <TextField
+                    label={I18n.t('OTA URL')}
+                    value={native.satOtaUrl || ''}
+                    onChange={e => onChange('satOtaUrl', e.target.value)}
+                    size="small"
+                    fullWidth
+                    placeholder="https://update.example.com"
+                />
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <TextField
+                        label={I18n.t('Channel')}
+                        value={native.satOtaChannel || 'satellite-esp-stable'}
+                        onChange={e => onChange('satOtaChannel', e.target.value)}
+                        size="small"
+                        fullWidth
+                    />
+                    <TextField
+                        label={I18n.t('Token')}
+                        value={native.satOtaToken || ''}
+                        onChange={e => onChange('satOtaToken', e.target.value)}
+                        type="password"
+                        size="small"
+                        fullWidth
+                    />
+                </Box>
+
+                <Divider />
+                <Typography
+                    variant="subtitle2"
+                    color="text.primary"
+                >
+                    {I18n.t('Asset Server')}
+                </Typography>
+                <TextField
+                    label={I18n.t('Asset URL')}
+                    value={native.satAssetUrl || ''}
+                    onChange={e => onChange('satAssetUrl', e.target.value)}
+                    size="small"
+                    fullWidth
+                    placeholder="https://hannah-asset.example.com"
+                />
+                <TextField
+                    label={I18n.t('Token')}
+                    value={native.satAssetToken || ''}
+                    onChange={e => onChange('satAssetToken', e.target.value)}
+                    type="password"
+                    size="small"
+                    fullWidth
+                />
+            </Box>
+        );
+    }
+
+    private renderFirmwareTab(): React.JSX.Element {
+        const { native, onChange } = this.props;
+        return (
+            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 600 }}>
+                <Typography
+                    variant="body2"
+                    color="text.secondary"
+                >
+                    {I18n.t(
+                        'URL to the firmware ZIP file (served as .bin). Supports Hannah Update Server, GitHub/GitLab releases, or any direct URL. The file must contain a manifest.json and the binary files.',
+                    )}
+                </Typography>
+                <TextField
+                    label={I18n.t('Firmware Source URL')}
+                    value={native.firmwareSourceUrl || ''}
+                    onChange={e => onChange('firmwareSourceUrl', e.target.value)}
+                    placeholder="https://update.example.com/releases/latest?channel=satellite-esp-stable-init"
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                />
+                <TextField
+                    label={I18n.t('Auth Token (optional)')}
+                    value={native.firmwareSourceToken || ''}
+                    onChange={e => onChange('firmwareSourceToken', e.target.value)}
+                    type="password"
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                    helperText={I18n.t('Sent as Bearer token. Leave empty if the URL is public.')}
+                />
+            </Box>
+        );
+    }
+
     private renderIntegrationsTab(): React.JSX.Element {
         const { native, onChange, residentsInstances } = this.props;
         return (
@@ -388,12 +588,16 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                         <Tab label={I18n.t('Connection')} />
                         <Tab label={I18n.t('Device Discovery')} />
                         <Tab label={I18n.t('Integrations')} />
+                        <Tab label={I18n.t('Firmware')} />
+                        <Tab label={I18n.t('Satellite Defaults')} />
                     </Tabs>
                 </AppBar>
                 <Box sx={{ flex: 1, overflowY: 'auto', pb: '70px' }}>
                     {activeTab === 0 && this.renderConnectionTab()}
                     {activeTab === 1 && this.renderDiscoveryTab()}
                     {activeTab === 2 && this.renderIntegrationsTab()}
+                    {activeTab === 3 && this.renderFirmwareTab()}
+                    {activeTab === 4 && this.renderSatelliteDefaultsTab()}
                 </Box>
             </Box>
         );

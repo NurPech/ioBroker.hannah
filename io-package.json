@@ -184,7 +184,9 @@
     "extraStatePrefixes": [],
     "floorMappings": [],
     "residentsInstance": "0",
-    "textCommandStateId": "0_userdata.0.hannah.set.textCommand"
+    "textCommandStateId": "0_userdata.0.hannah.set.textCommand",
+    "firmwareSourceUrl": "",
+    "firmwareSourceToken": ""
   },
   "objects": [],
   "instanceObjects": [

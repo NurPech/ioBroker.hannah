@@ -26,7 +26,8 @@
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
     "@iobroker/adapter-core": "^3.3.2",
-    "@iobroker/dm-utils": "^3.0.19"
+    "@iobroker/dm-utils": "^3.0.19",
+    "adm-zip": "^0.5.17"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^5.2.1",
@@ -42,10 +43,13 @@
     "@iobroker/testing": "^5.2.2",
     "@mui/material": "^6.5.0",
     "@tsconfig/node22": "^22.0.5",
+    "@types/adm-zip": "^0.5.8",
     "@types/iobroker": "npm:@iobroker/types@^7.1.2",
     "@types/node": "^20.19.39",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
+    "@m1kad0/esp-nvs-utils": "^0.2.1",
+    "esptool-js": "^0.6.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "rimraf": "^6.1.3",
