@@ -335,6 +335,41 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
         );
     }
 
+    private renderFirmwareTab(): React.JSX.Element {
+        const { native, onChange } = this.props;
+        return (
+            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 600 }}>
+                <Typography
+                    variant="body2"
+                    color="text.secondary"
+                >
+                    {I18n.t(
+                        'URL to the firmware ZIP file (served as .bin). Supports Hannah Update Server, GitHub/GitLab releases, or any direct URL. The file must contain a manifest.json and the binary files.',
+                    )}
+                </Typography>
+                <TextField
+                    label={I18n.t('Firmware Source URL')}
+                    value={native.firmwareSourceUrl || ''}
+                    onChange={e => onChange('firmwareSourceUrl', e.target.value)}
+                    placeholder="https://update.example.com/releases/latest?channel=satellite-esp-stable-init"
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                />
+                <TextField
+                    label={I18n.t('Auth Token (optional)')}
+                    value={native.firmwareSourceToken || ''}
+                    onChange={e => onChange('firmwareSourceToken', e.target.value)}
+                    type="password"
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                    helperText={I18n.t('Sent as Bearer token. Leave empty if the URL is public.')}
+                />
+            </Box>
+        );
+    }
+
     private renderIntegrationsTab(): React.JSX.Element {
         const { native, onChange, residentsInstances } = this.props;
         return (
@@ -388,12 +423,14 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                         <Tab label={I18n.t('Connection')} />
                         <Tab label={I18n.t('Device Discovery')} />
                         <Tab label={I18n.t('Integrations')} />
+                        <Tab label={I18n.t('Firmware')} />
                     </Tabs>
                 </AppBar>
                 <Box sx={{ flex: 1, overflowY: 'auto', pb: '70px' }}>
                     {activeTab === 0 && this.renderConnectionTab()}
                     {activeTab === 1 && this.renderDiscoveryTab()}
                     {activeTab === 2 && this.renderIntegrationsTab()}
+                    {activeTab === 3 && this.renderFirmwareTab()}
                 </Box>
             </Box>
         );

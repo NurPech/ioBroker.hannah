@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
+import Fab from '@mui/material/Fab';
 import Grid from '@mui/material/Grid';
-import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import type { AdminConnection } from '@iobroker/adapter-react-v5';
+import FlashDialog from './FlashDialog';
 
 interface IoBrokerObject {
     _id: string;
@@ -76,6 +79,9 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
     const [satellites, setSatellites] = useState<Satellite[]>([]);
     const [objectsCache, setObjectsCache] = useState<Record<string, IoBrokerObject>>({});
     const [statesCache, setStatesCache] = useState<Record<string, IoBrokerState | null>>({});
+    const [flashOpen, setFlashOpen] = useState(false);
+
+    const adapterNamespace = 'hannah.0';
 
     useEffect(() => {
         let mounted = true;
@@ -142,7 +148,13 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
     };
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 3, position: 'relative', minHeight: '100%' }}>
+            <FlashDialog
+                open={flashOpen}
+                onClose={() => setFlashOpen(false)}
+                socket={socket}
+                adapterNamespace={adapterNamespace}
+            />
             <Typography
                 variant="h5"
                 color="text.primary"
@@ -264,6 +276,16 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                     ))}
                 </Grid>
             )}
+            <Tooltip title="Neuen Satelliten flashen">
+                <Fab
+                    color="success"
+                    variant="extended"
+                    onClick={() => setFlashOpen(true)}
+                    sx={{ position: 'fixed', bottom: 24, right: 24 }}
+                >
+                    + New Device
+                </Fab>
+            </Tooltip>
         </Box>
     );
 };

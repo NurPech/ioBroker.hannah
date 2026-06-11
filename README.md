@@ -77,6 +77,11 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* Added: web flasher — flash new satellites directly from the admin UI via WebSerial with full device provisioning (WiFi, MQTT, OTA, asset server) written as NVS partition in one step
+* Added: serial monitor mode in flash dialog — streams the full boot log immediately after flashing
+* Fixed: NVS CRC was calculated incorrectly by `esp-nvs-utils`; switched to `@m1kad0/esp-nvs-utils` — ESP-IDF 6.0 no longer erases the NVS partition on first boot
+
 ### 0.14.0 (2026-06-09)
 * Added: satellite `address` state (`info.ip` role) — populated from `AgentSatelliteUpdate.address` on registration; IP extracted from `ip:port` UDP address
 * Added: admin tab "Hannah Satellites" — card view per satellite showing name, room, online status, firmware version badge, and link to satellite HTTP config page (`http://<ip>/`)

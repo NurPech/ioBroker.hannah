@@ -11,6 +11,8 @@ declare global {
             extraStatePrefixes: Array<{ prefix: string }>;
             floorMappings: Array<{ label: string; abbreviation: string }>;
             residentsInstance: string;
+            firmwareSourceUrl: string;
+            firmwareSourceToken: string;
         }
     }
 }
