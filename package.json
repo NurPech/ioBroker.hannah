@@ -94,11 +94,4 @@
     "url": "https://github.com/NurPech/ioBroker.hannah/issues"
   },
   "readmeFilename": "README.md",
-  "allowScripts": {
-    "esbuild@0.11.23": true,
-    "esbuild@0.25.12": true,
-    "diskusage@1.2.0": true,
-    "protobufjs@7.5.5": true,
-    "unix-dgram@2.0.6": true
-  }
 }

@@ -1,5 +1,5 @@
-import * as https from 'https';
-import * as http from 'http';
+import * as https from 'node:https';
+import * as http from 'node:http';
 import AdmZip from 'adm-zip';
 
 interface ManifestPart {

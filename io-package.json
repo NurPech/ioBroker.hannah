@@ -150,14 +150,15 @@
     "dataSource": "poll",
     "adminUI": {
       "config": "html",
-      "tab": "admin/tab.html"
+      "tab": "html"
     },
     "adminTab": {
       "singleton": true,
-      "name": "Hannah Satellites",
-      "icon": "adapter/hannah/hannah.png",
-      "link": "",
-      "fa-icon": "wifi"
+      "name": {
+        "en": "Hannah Satellites",
+        "de": "Hannah Satelliten"
+      },
+      "link": ""
     },
     "eraseOnUpload": true,
     "dependencies": [
@@ -188,6 +189,12 @@
     "firmwareSourceUrl": "",
     "firmwareSourceToken": ""
   },
+  "encryptedNative": [
+    "firmwareSourceToken"
+  ],
+  "protectedNative": [
+    "firmwareSourceToken"
+  ],
   "objects": [],
   "instanceObjects": [
     {
