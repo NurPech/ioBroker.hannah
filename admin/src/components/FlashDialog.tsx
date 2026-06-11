@@ -178,7 +178,6 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                     ...(config.assetToken
                         ? [{ name: 'asset_token', encoding: 'string' as const, value: config.assetToken }]
                         : []),
-                    { name: 'wakeword', encoding: 'u8', value: 0 },
                     { name: 'ww_threshold', encoding: 'u8', value: 75 },
                 ],
             });

@@ -3,6 +3,19 @@
     "name": "hannah",
     "version": "0.15.0",
     "news": {
+      "0.15.1": {
+        "en": "Fixed: `wakeword` NVS key removed from flash and NVS-rewrite dialogs — wake-word on/off is compile-time only; `ww_threshold` remains configurable\nFixed: adapter checker warnings — removed `allowScripts` (E0058), fixed `adminTab` schema (E1084/E1105), switched to `node:http`/`node:https` imports (E5043), added `firmwareSourceToken` to `protectedNative`/`encryptedNative` (W1073/W1074)",
+        "de": "Behoben: NVS-Schlüssel `wakeword` aus Flash- und NVS-Schreib-Dialogen entfernt — Wake-Word an/aus ist Compile-Zeit-Entscheidung; `ww_threshold` bleibt konfigurierbar\nBehoben: Adapter-Checker-Warnungen — `allowScripts` entfernt (E0058), `adminTab`-Schema korrigiert (E1084/E1105), `node:http`/`node:https`-Imports (E5043), `firmwareSourceToken` zu `protectedNative`/`encryptedNative` hinzugefügt (W1073/W1074)",
+        "es": "Corregido: clave NVS `wakeword` eliminada de los diálogos de flash y reescritura NVS — activar/desactivar wake-word es solo decisión de compilación; `ww_threshold` sigue siendo configurable\nCorregido: advertencias del comprobador — eliminado `allowScripts` (E0058), corregido esquema `adminTab` (E1084/E1105), importaciones `node:http`/`node:https` (E5043), `firmwareSourceToken` añadido a `protectedNative`/`encryptedNative` (W1073/W1074)",
+        "fr": "Corrigé : clé NVS `wakeword` supprimée des dialogues de flash et de réécriture NVS — activer/désactiver le wake-word est une décision à la compilation ; `ww_threshold` reste configurable\nCorrigé : avertissements du vérificateur — suppression de `allowScripts` (E0058), correction du schéma `adminTab` (E1084/E1105), imports `node:http`/`node:https` (E5043), `firmwareSourceToken` ajouté à `protectedNative`/`encryptedNative` (W1073/W1074)",
+        "it": "Corretto: chiave NVS `wakeword` rimossa dai dialoghi di flash e riscrittura NVS — attivazione/disattivazione wake-word è decisione in fase di compilazione; `ww_threshold` rimane configurabile\nCorretto: avvisi del controllo adattatore — rimosso `allowScripts` (E0058), corretto schema `adminTab` (E1084/E1105), import `node:http`/`node:https` (E5043), `firmwareSourceToken` aggiunto a `protectedNative`/`encryptedNative` (W1073/W1074)",
+        "nl": "Opgelost: NVS-sleutel `wakeword` verwijderd uit flash- en NVS-herschrijf dialogen — wake-word aan/uit is alleen een compilatietijdbeslissing; `ww_threshold` blijft configureerbaar\nOpgelost: adapter checker waarschuwingen — `allowScripts` verwijderd (E0058), `adminTab`-schema gecorrigeerd (E1084/E1105), `node:http`/`node:https`-imports (E5043), `firmwareSourceToken` toegevoegd aan `protectedNative`/`encryptedNative` (W1073/W1074)",
+        "pl": "Naprawiono: klucz NVS `wakeword` usunięty z dialogów flash i nadpisywania NVS — włączanie/wyłączanie wake-word to decyzja czasu kompilacji; `ww_threshold` pozostaje konfigurowalny\nNaprawiono: ostrzeżenia sprawdzarki adaptera — usunięto `allowScripts` (E0058), poprawiono schemat `adminTab` (E1084/E1105), importy `node:http`/`node:https` (E5043), `firmwareSourceToken` dodano do `protectedNative`/`encryptedNative` (W1073/W1074)",
+        "pt": "Corrigido: chave NVS `wakeword` removida dos diálogos de flash e reescrita NVS — ativar/desativar wake-word é decisão em tempo de compilação; `ww_threshold` permanece configurável\nCorrigido: avisos do verificador — removido `allowScripts` (E0058), corrigido esquema `adminTab` (E1084/E1105), importações `node:http`/`node:https` (E5043), `firmwareSourceToken` adicionado a `protectedNative`/`encryptedNative` (W1073/W1074)",
+        "ru": "Исправлено: ключ NVS `wakeword` удалён из диалогов прошивки и перезаписи NVS — включение/выключение wake-word является решением времени компиляции; `ww_threshold` остаётся настраиваемым\nИсправлено: предупреждения проверщика адаптера — удалён `allowScripts` (E0058), исправлена схема `adminTab` (E1084/E1105), импорты `node:http`/`node:https` (E5043), `firmwareSourceToken` добавлен в `protectedNative`/`encryptedNative` (W1073/W1074)",
+        "uk": "Виправлено: ключ NVS `wakeword` видалено з діалогів прошивки та перезапису NVS — увімкнення/вимкнення wake-word є рішенням часу компіляції; `ww_threshold` залишається налаштовуваним\nВиправлено: попередження перевірки адаптера — видалено `allowScripts` (E0058), виправлено схему `adminTab` (E1084/E1105), імпорти `node:http`/`node:https` (E5043), `firmwareSourceToken` додано до `protectedNative`/`encryptedNative` (W1073/W1074)",
+        "zh-cn": "修复：NVS 键 `wakeword` 已从烧录和 NVS 重写对话框中移除 — wake-word 开/关仅为编译期决定；`ww_threshold` 仍可配置\n修复：适配器检查器警告 — 移除 `allowScripts`（E0058），修正 `adminTab` 模式（E1084/E1105），使用 `node:http`/`node:https` 导入（E5043），将 `firmwareSourceToken` 添加到 `protectedNative`/`encryptedNative`（W1073/W1074）"
+      },
       "0.15.0": {
         "en": "Added: web flasher — flash new satellites directly from the admin UI via WebSerial with full device provisioning (WiFi, MQTT, OTA, asset server) written as NVS partition in one step\nAdded: serial monitor mode in flash dialog — streams the full boot log immediately after flashing\nFixed: NVS CRC was calculated incorrectly by `esp-nvs-utils`; switched to `@m1kad0/esp-nvs-utils` — ESP-IDF 6.0 no longer erases the NVS partition on first boot",
         "de": "Hinzugefügt: Web-Flasher — neue Satelliten direkt aus der Admin-Oberfläche per WebSerial flashen mit vollständiger Gerätekonfiguration (WLAN, MQTT, OTA, Asset-Server) als NVS-Partition in einem Schritt\nHinzugefügt: Serieller Monitor-Modus im Flash-Dialog — überträgt das vollständige Boot-Log direkt nach dem Flashen\nBehoben: NVS-CRC wurde von `esp-nvs-utils` falsch berechnet; Umstieg auf `@m1kad0/esp-nvs-utils` — ESP-IDF 6.0 löscht die NVS-Partition beim ersten Boot nicht mehr",
@@ -150,14 +163,15 @@
     "dataSource": "poll",
     "adminUI": {
       "config": "html",
-      "tab": "admin/tab.html"
+      "tab": "html"
     },
     "adminTab": {
       "singleton": true,
-      "name": "Hannah Satellites",
-      "icon": "adapter/hannah/hannah.png",
-      "link": "",
-      "fa-icon": "wifi"
+      "name": {
+        "en": "Hannah Satellites",
+        "de": "Hannah Satelliten"
+      },
+      "link": ""
     },
     "eraseOnUpload": true,
     "dependencies": [
@@ -188,6 +202,12 @@
     "firmwareSourceUrl": "",
     "firmwareSourceToken": ""
   },
+  "encryptedNative": [
+    "firmwareSourceToken"
+  ],
+  "protectedNative": [
+    "firmwareSourceToken"
+  ],
   "objects": [],
   "instanceObjects": [
     {
