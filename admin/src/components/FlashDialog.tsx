@@ -1,7 +1,8 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
+import Collapse from '@mui/material/Collapse';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -12,7 +13,9 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { ESPLoader, Transport, UsbJtagSerialReset } from 'esptool-js';
 import { encodeNVS } from '@m1kad0/esp-nvs-utils';
+import { I18n } from '@iobroker/adapter-react-v5';
 import type { AdminConnection } from '@iobroker/adapter-react-v5';
+import type { SatelliteDefaults } from './settings';
 
 interface FirmwareFile {
     name: string;
@@ -49,6 +52,7 @@ interface Props {
     onClose: () => void;
     socket: AdminConnection;
     adapterNamespace: string;
+    defaults?: SatelliteDefaults;
 }
 
 function base64ToUint8Array(b64: string): Uint8Array {
@@ -63,22 +67,25 @@ function base64ToUint8Array(b64: string): Uint8Array {
 const NVS_OFFSET = 0x9000;
 const NVS_SIZE = 0x5000;
 
-const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace }) => {
-    const [config, setConfig] = useState<FlashConfig>({
-        deviceId: '',
-        room: '',
-        wifiSsid: '',
-        wifiPass: '',
-        mqttBroker: '',
-        mqttPort: '1883',
-        mqttUser: '',
-        mqttPass: '',
-        otaUrl: '',
-        otaChannel: 'satellite-esp-stable',
-        otaToken: '',
-        assetUrl: '',
-        assetToken: '',
-    });
+const buildConfigFromDefaults = (defaults?: SatelliteDefaults): FlashConfig => ({
+    deviceId: '',
+    room: '',
+    wifiSsid: defaults?.wifiSsid ?? '',
+    wifiPass: defaults?.wifiPass ?? '',
+    mqttBroker: defaults?.mqttBroker ?? '',
+    mqttPort: defaults?.mqttPort ?? '1883',
+    mqttUser: defaults?.mqttUser ?? '',
+    mqttPass: defaults?.mqttPass ?? '',
+    otaUrl: defaults?.otaUrl ?? '',
+    otaChannel: defaults?.otaChannel ?? 'satellite-esp-stable',
+    otaToken: defaults?.otaToken ?? '',
+    assetUrl: defaults?.assetUrl ?? '',
+    assetToken: defaults?.assetToken ?? '',
+});
+
+const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace, defaults }) => {
+    const [config, setConfig] = useState<FlashConfig>(() => buildConfigFromDefaults(defaults));
+    const [configExpanded, setConfigExpanded] = useState(false);
 
     const [step, setStep] = useState<FlashStep>('config');
     const [log, setLog] = useState<string[]>([]);
@@ -87,6 +94,19 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
     const [firmwareVersion, setFirmwareVersion] = useState('');
     const logRef = useRef<HTMLDivElement>(null);
     const monitorReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
+
+    useEffect(() => {
+        if (open) {
+            const cfg = buildConfigFromDefaults(defaults);
+            setConfig(cfg);
+            setConfigExpanded(!cfg.wifiSsid || !cfg.mqttBroker);
+            setStep('config');
+            setLog([]);
+            setProgress(0);
+            setErrorMsg('');
+            setFirmwareVersion('');
+        }
+    }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const addLog = (line: string): void => {
         setLog(prev => {
@@ -109,11 +129,6 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
 
     const handleClose = (): void => {
         stopMonitor();
-        setStep('config');
-        setLog([]);
-        setProgress(0);
-        setErrorMsg('');
-        setFirmwareVersion('');
         onClose();
     };
 
@@ -129,17 +144,19 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
 
         try {
             // 1. Fetch firmware from adapter
-            addLog('Lade Firmware vom Adapter...');
+            addLog(I18n.t('Loading firmware from adapter...'));
             const fw = (await (socket as any).sendTo(adapterNamespace, 'getFirmwareFiles', {})) as FirmwareResult;
 
             if (fw.error || !fw.files?.length) {
-                throw new Error(fw.error ?? 'Keine Firmware-Dateien erhalten');
+                throw new Error(fw.error ?? I18n.t('No firmware files received'));
             }
-            addLog(`Firmware geladen: ${fw.version ?? 'unbekannte Version'} (${fw.files.length} Dateien)`);
+            addLog(
+                `${I18n.t('Firmware loaded:')} ${fw.version ?? I18n.t('unknown version')} (${fw.files.length} ${I18n.t('files')})`,
+            );
             setFirmwareVersion(fw.version ?? '');
 
             // 2. Generate NVS partition
-            addLog('Generiere NVS-Partition...');
+            addLog(I18n.t('Generating NVS partition...'));
             const nvsData = encodeNVS({
                 hannah: [
                     { name: 'wifi_ssid', encoding: 'string', value: config.wifiSsid },
@@ -170,13 +187,13 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
             const nvsPartition = new Uint8Array(NVS_SIZE);
             nvsPartition.fill(0xff);
             nvsPartition.set(nvsData.slice(0, NVS_SIZE));
-            addLog(`NVS-Partition generiert (${nvsData.byteLength} Bytes)`);
+            addLog(`${I18n.t('NVS partition generated')} (${nvsData.byteLength} ${I18n.t('bytes')})`);
 
             // 3. Connect to ESP via WebSerial
-            addLog('Öffne WebSerial...');
+            addLog(I18n.t('Opening WebSerial...'));
             const serial = (navigator as any).serial;
             if (!serial) {
-                throw new Error('WebSerial wird von diesem Browser nicht unterstützt (Chrome/Edge erforderlich)');
+                throw new Error(I18n.t('WebSerial is not supported by this browser (Chrome/Edge required)'));
             }
             const port = await serial.requestPort();
             const info = port.getInfo();
@@ -198,9 +215,9 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                 },
             });
 
-            addLog('Verbinde mit ESP...');
+            addLog(I18n.t('Connecting to ESP...'));
             const chipName = await esploader.main();
-            addLog(`Verbunden: ${chipName}`);
+            addLog(`${I18n.t('Connected:')} ${chipName}`);
 
             // 4. Build file array: firmware files + NVS
             setStep('flashing');
@@ -215,7 +232,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                 { data: nvsPartition, address: NVS_OFFSET },
             ];
 
-            addLog(`Starte Flash (${fileArray.length} Partitionen)...`);
+            addLog(`${I18n.t('Starting flash')} (${fileArray.length} ${I18n.t('partitions')})...`);
 
             await esploader.writeFlash({
                 fileArray,
@@ -227,7 +244,9 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                 reportProgress: (fileIndex, written, total) => {
                     if (written === total && written > 0) {
                         filesDone = fileIndex + 1;
-                        addLog(`  ${fileIndex < fw.files!.length ? fw.files![fileIndex].name : 'nvs'}: fertig`);
+                        addLog(
+                            `  ${fileIndex < fw.files!.length ? fw.files![fileIndex].name : 'nvs'}: ${I18n.t('done')}`,
+                        );
                     }
                     const pct = (filesDone / totalFiles + (written / total) * (1 / totalFiles)) * 100;
                     setProgress(Math.min(pct, 99));
@@ -235,7 +254,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
             });
 
             setProgress(100);
-            addLog('Flash abgeschlossen.');
+            addLog(I18n.t('Flash complete.'));
             if (isUsbJtag) {
                 await esploader.after('no_reset');
                 await port.setSignals({ dataTerminalReady: false, requestToSend: false });
@@ -248,7 +267,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
             }
             await transport.disconnect();
 
-            // Monitor: Port nach Reboot wieder öffnen
+            // Monitor: reopen port after reboot
             setStep('monitoring');
             addLog('--- Monitor ---');
             await new Promise(r => setTimeout(r, 1500));
@@ -274,14 +293,14 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                     }
                 }
             } catch {
-                // Geschlossen durch Nutzer oder Fehler
+                // closed by user or error
             }
             monitorReaderRef.current = null;
             setStep('done');
         } catch (err: any) {
             setErrorMsg(err?.message ?? String(err));
             setStep('error');
-            addLog(`Fehler: ${err?.message ?? err}`);
+            addLog(`${I18n.t('Error:')} ${err?.message ?? err}`);
         }
     };
 
@@ -302,16 +321,10 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
             maxWidth="sm"
             fullWidth
         >
-            <DialogTitle>Neuen Satelliten flashen</DialogTitle>
+            <DialogTitle>{I18n.t('Flash new satellite')}</DialogTitle>
             <DialogContent>
                 {(step === 'config' || step === 'connecting' || step === 'flashing') && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                        <Typography
-                            variant="subtitle2"
-                            color="text.secondary"
-                        >
-                            Gerät
-                        </Typography>
                         <Box sx={{ display: 'flex', gap: 2 }}>
                             <TextField
                                 label="Device ID"
@@ -324,7 +337,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                                 required
                             />
                             <TextField
-                                label="Raum"
+                                label={I18n.t('Room')}
                                 value={config.room}
                                 onChange={set('room')}
                                 size="small"
@@ -336,143 +349,177 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                         </Box>
 
                         <Divider />
-                        <Typography
-                            variant="subtitle2"
-                            color="text.secondary"
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: step === 'config' ? 'pointer' : 'default',
+                                userSelect: 'none',
+                            }}
+                            onClick={() => step === 'config' && setConfigExpanded(v => !v)}
                         >
-                            WiFi
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            <TextField
-                                label="SSID"
-                                value={config.wifiSsid}
-                                onChange={set('wifiSsid')}
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                                required
-                            />
-                            <TextField
-                                label="Passwort"
-                                value={config.wifiPass}
-                                onChange={set('wifiPass')}
-                                type="password"
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                            />
+                            <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                                sx={{ flex: 1 }}
+                            >
+                                {I18n.t('Configuration')}
+                                {!configExpanded && config.wifiSsid && (
+                                    <Typography
+                                        component="span"
+                                        variant="caption"
+                                        color="text.disabled"
+                                        sx={{ ml: 1 }}
+                                    >
+                                        {I18n.t('WiFi')}: {config.wifiSsid}
+                                        {config.mqttBroker ? `, MQTT: ${config.mqttBroker}` : ''}
+                                    </Typography>
+                                )}
+                            </Typography>
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ ml: 1 }}
+                            >
+                                {configExpanded ? '▴' : '▾'}
+                            </Typography>
                         </Box>
+                        <Collapse in={configExpanded}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                >
+                                    {I18n.t('WiFi')}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <TextField
+                                        label={I18n.t('SSID')}
+                                        value={config.wifiSsid}
+                                        onChange={set('wifiSsid')}
+                                        size="small"
+                                        fullWidth
+                                        disabled={step !== 'config'}
+                                        required
+                                    />
+                                    <TextField
+                                        label={I18n.t('Password')}
+                                        value={config.wifiPass}
+                                        onChange={set('wifiPass')}
+                                        type="password"
+                                        size="small"
+                                        fullWidth
+                                        disabled={step !== 'config'}
+                                    />
+                                </Box>
 
-                        <Divider />
-                        <Typography
-                            variant="subtitle2"
-                            color="text.secondary"
-                        >
-                            MQTT
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            <TextField
-                                label="Broker"
-                                value={config.mqttBroker}
-                                onChange={set('mqttBroker')}
-                                size="small"
-                                fullWidth
-                                placeholder="192.168.1.10"
-                                disabled={step !== 'config'}
-                                required
-                            />
-                            <TextField
-                                label="Port"
-                                value={config.mqttPort}
-                                onChange={set('mqttPort')}
-                                size="small"
-                                sx={{ width: 100 }}
-                                disabled={step !== 'config'}
-                            />
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            <TextField
-                                label="User"
-                                value={config.mqttUser}
-                                onChange={set('mqttUser')}
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                            />
-                            <TextField
-                                label="Passwort"
-                                value={config.mqttPass}
-                                onChange={set('mqttPass')}
-                                type="password"
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                            />
-                        </Box>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                >
+                                    {I18n.t('MQTT')}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <TextField
+                                        label={I18n.t('Broker')}
+                                        value={config.mqttBroker}
+                                        onChange={set('mqttBroker')}
+                                        size="small"
+                                        fullWidth
+                                        placeholder="192.168.1.10"
+                                        disabled={step !== 'config'}
+                                        required
+                                    />
+                                    <TextField
+                                        label={I18n.t('Port')}
+                                        value={config.mqttPort}
+                                        onChange={set('mqttPort')}
+                                        size="small"
+                                        sx={{ width: 100 }}
+                                        disabled={step !== 'config'}
+                                    />
+                                </Box>
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <TextField
+                                        label={I18n.t('User')}
+                                        value={config.mqttUser}
+                                        onChange={set('mqttUser')}
+                                        size="small"
+                                        fullWidth
+                                        disabled={step !== 'config'}
+                                    />
+                                    <TextField
+                                        label={I18n.t('Password')}
+                                        value={config.mqttPass}
+                                        onChange={set('mqttPass')}
+                                        type="password"
+                                        size="small"
+                                        fullWidth
+                                        disabled={step !== 'config'}
+                                    />
+                                </Box>
 
-                        <Divider />
-                        <Typography
-                            variant="subtitle2"
-                            color="text.secondary"
-                        >
-                            OTA
-                        </Typography>
-                        <TextField
-                            label="OTA URL"
-                            value={config.otaUrl}
-                            onChange={set('otaUrl')}
-                            size="small"
-                            fullWidth
-                            placeholder="https://update.example.com"
-                            disabled={step !== 'config'}
-                        />
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            <TextField
-                                label="Channel"
-                                value={config.otaChannel}
-                                onChange={set('otaChannel')}
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                            />
-                            <TextField
-                                label="Token"
-                                value={config.otaToken}
-                                onChange={set('otaToken')}
-                                type="password"
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                            />
-                        </Box>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                >
+                                    {I18n.t('OTA')}
+                                </Typography>
+                                <TextField
+                                    label={I18n.t('OTA URL')}
+                                    value={config.otaUrl}
+                                    onChange={set('otaUrl')}
+                                    size="small"
+                                    fullWidth
+                                    placeholder="https://update.example.com"
+                                    disabled={step !== 'config'}
+                                />
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <TextField
+                                        label={I18n.t('Channel')}
+                                        value={config.otaChannel}
+                                        onChange={set('otaChannel')}
+                                        size="small"
+                                        fullWidth
+                                        disabled={step !== 'config'}
+                                    />
+                                    <TextField
+                                        label={I18n.t('Token')}
+                                        value={config.otaToken}
+                                        onChange={set('otaToken')}
+                                        type="password"
+                                        size="small"
+                                        fullWidth
+                                        disabled={step !== 'config'}
+                                    />
+                                </Box>
 
-                        <Divider />
-                        <Typography
-                            variant="subtitle2"
-                            color="text.secondary"
-                        >
-                            Asset-Server
-                        </Typography>
-                        <TextField
-                            label="Asset URL"
-                            value={config.assetUrl}
-                            onChange={set('assetUrl')}
-                            size="small"
-                            fullWidth
-                            placeholder="https://hannah-asset.example.com"
-                            disabled={step !== 'config'}
-                        />
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            <TextField
-                                label="Token"
-                                value={config.assetToken}
-                                onChange={set('assetToken')}
-                                type="password"
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                            />
-                        </Box>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                >
+                                    {I18n.t('Asset Server')}
+                                </Typography>
+                                <TextField
+                                    label={I18n.t('Asset URL')}
+                                    value={config.assetUrl}
+                                    onChange={set('assetUrl')}
+                                    size="small"
+                                    fullWidth
+                                    placeholder="https://hannah-asset.example.com"
+                                    disabled={step !== 'config'}
+                                />
+                                <TextField
+                                    label={I18n.t('Token')}
+                                    value={config.assetToken}
+                                    onChange={set('assetToken')}
+                                    type="password"
+                                    size="small"
+                                    fullWidth
+                                    disabled={step !== 'config'}
+                                />
+                            </Box>
+                        </Collapse>
 
                         {(step === 'connecting' || step === 'flashing') && (
                             <Box sx={{ mt: 1 }}>
@@ -515,7 +562,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                             color="text.secondary"
                             sx={{ mb: 1 }}
                         >
-                            Serieller Monitor — ESP bootet...
+                            {I18n.t('Serial monitor — ESP booting...')}
                         </Typography>
                         <Box
                             ref={logRef}
@@ -546,14 +593,14 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                             color="success.main"
                             sx={{ mb: 1 }}
                         >
-                            Flash erfolgreich!
+                            {I18n.t('Flash successful!')}
                         </Typography>
                         {firmwareVersion && (
                             <Typography
                                 variant="body2"
                                 color="text.secondary"
                             >
-                                Firmware: {firmwareVersion}
+                                {I18n.t('Firmware:')} {firmwareVersion}
                             </Typography>
                         )}
                         <Typography
@@ -561,7 +608,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                             color="text.secondary"
                             sx={{ mt: 1 }}
                         >
-                            Der Satellit startet jetzt und verbindet sich mit dem WLAN.
+                            {I18n.t('The satellite is now starting and connecting to WiFi.')}
                         </Typography>
                         <Box
                             ref={logRef}
@@ -620,7 +667,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
             <DialogActions>
                 {step === 'config' && (
                     <>
-                        <Button onClick={handleClose}>Abbrechen</Button>
+                        <Button onClick={handleClose}>{I18n.t('Cancel')}</Button>
                         <Button
                             variant="contained"
                             color="success"
@@ -633,11 +680,13 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                                 />
                             }
                         >
-                            Flashen
+                            {I18n.t('Flash')}
                         </Button>
                     </>
                 )}
-                {(step === 'connecting' || step === 'flashing') && <Button disabled>Bitte warten...</Button>}
+                {(step === 'connecting' || step === 'flashing') && (
+                    <Button disabled>{I18n.t('Please wait...')}</Button>
+                )}
                 {step === 'monitoring' && (
                     <Button
                         variant="outlined"
@@ -645,7 +694,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                             stopMonitor();
                         }}
                     >
-                        Monitor beenden
+                        {I18n.t('Stop monitor')}
                     </Button>
                 )}
                 {(step === 'done' || step === 'error') && (
@@ -653,7 +702,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace 
                         variant="contained"
                         onClick={handleClose}
                     >
-                        Schließen
+                        {I18n.t('Close')}
                     </Button>
                 )}
             </DialogActions>
