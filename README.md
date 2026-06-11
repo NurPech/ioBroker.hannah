@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.15.1 (2026-06-11)
 - Fixed: `wakeword` NVS key removed from flash and NVS-rewrite dialogs — wake-word on/off is compile-time only; `ww_threshold` remains
 - Fixed: adapter checker E0058 — removed unsupported `allowScripts` field from `package.json`
 - Fixed: adapter checker E1084/E1105 — removed deprecated `fa-icon` and `icon` from `adminTab`, converted `adminTab.name` to i18n object, fixed `adminUI.tab` value to `"html"`
