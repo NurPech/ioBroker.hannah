@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: firmware download failed with "Invalid character in header content [Authorization]" when the configured firmware source token contained a trailing newline or whitespace — the token is now trimmed before being used as a Bearer header
+
 ### 0.15.1 (2026-06-11)
 - Fixed: `wakeword` NVS key removed from flash and NVS-rewrite dialogs — wake-word on/off is compile-time only; `ww_threshold` remains
 - Fixed: adapter checker E0058 — removed unsupported `allowScripts` field from `package.json`
