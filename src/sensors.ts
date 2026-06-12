@@ -7,7 +7,6 @@ import type * as utils from '@iobroker/adapter-core';
 export class SensorWatcher {
     private adapter: utils.AdapterInstance;
     private ensuredDevices = new Set<string>();
-    private ensuredGas = new Set<string>();
 
     /** @param adapter - ioBroker adapter instance */
     constructor(adapter: utils.AdapterInstance) {
@@ -31,7 +30,7 @@ export class SensorWatcher {
         gasResistance: number,
     ): Promise<void> {
         try {
-            await this._ensureStates(device);
+            await this._ensureStates(device, gasResistance > 0);
             const ns = `satellites.sensors.${device}`;
             const updates: Promise<unknown>[] = [
                 this.adapter.setState(`${ns}.temperature`, { val: Math.round(temperature * 10) / 10, ack: true }),
@@ -43,9 +42,6 @@ export class SensorWatcher {
                 );
             }
             if (gasResistance > 0) {
-                // Gas resistance can be 0 during BME680 warm-up, so the object may
-                // not have existed on the first update — ensure it on demand.
-                await this._ensureGasState(device);
                 updates.push(
                     this.adapter.setState(`${ns}.gas_resistance`, { val: Math.round(gasResistance), ack: true }),
                 );
@@ -72,10 +68,9 @@ export class SensorWatcher {
             // No sensor tree for this device — nothing to delete.
         }
         this.ensuredDevices.delete(device);
-        this.ensuredGas.delete(device);
     }
 
-    private async _ensureStates(device: string): Promise<void> {
+    private async _ensureStates(device: string, hasGas: boolean): Promise<void> {
         if (this.ensuredDevices.has(device)) {
             return;
         }
@@ -114,24 +109,19 @@ export class SensorWatcher {
             common: { name: 'Humidity', type: 'number', role: 'value.humidity', unit: '%', read: true, write: false },
             native: {},
         });
-    }
-
-    private async _ensureGasState(device: string): Promise<void> {
-        if (this.ensuredGas.has(device)) {
-            return;
+        if (hasGas) {
+            await this.adapter.setObjectNotExistsAsync(`${ns}.gas_resistance`, {
+                type: 'state',
+                common: {
+                    name: 'Gas Resistance (VOC)',
+                    type: 'number',
+                    role: 'value',
+                    unit: 'Ω',
+                    read: true,
+                    write: false,
+                },
+                native: {},
+            });
         }
-        this.ensuredGas.add(device);
-        await this.adapter.setObjectNotExistsAsync(`satellites.sensors.${device}.gas_resistance`, {
-            type: 'state',
-            common: {
-                name: 'Gas Resistance (VOC)',
-                type: 'number',
-                role: 'value',
-                unit: 'Ω',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
     }
 }
