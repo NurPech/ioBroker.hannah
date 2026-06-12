@@ -79,7 +79,10 @@ export class FirmwareManager {
      */
     constructor(url: string, token?: string) {
         this.url = url;
-        this.token = token || undefined;
+        // Trim the token: a trailing newline/whitespace (e.g. from copy-paste into
+        // the config) produces an invalid HTTP header value and Node's http.request
+        // throws "Invalid character in header content".
+        this.token = token?.trim() || undefined;
     }
 
     /** Download, unpack and return all firmware files ready for flashing. */

@@ -30,6 +30,35 @@ export class SatelliteWatcher {
     }
 
     /**
+     * Deletes a satellite's full object tree. If it was the last satellite
+     * (device) in its room, the room container — including the shared
+     * room-level states (dnd, announcement, …) — is removed too, so empty
+     * rooms don't linger in the object database forever.
+     *
+     * @param deviceId - Satellite device ID (raw, unsanitized)
+     * @param room - Room the satellite is assigned to (raw name)
+     * @returns true if the (now empty) room container was also removed
+     */
+    async deleteSatellite(deviceId: string, room: string): Promise<boolean> {
+        const roomBase = `satellites.rooms.${sanitizeId(room)}`;
+        const satBase = `${roomBase}.${sanitizeId(deviceId)}`;
+
+        await this.adapter.delObjectAsync(satBase, { recursive: true });
+        this.deviceRooms.delete(deviceId.toLowerCase());
+
+        // Remove the room container only if no satellite (device) remains in it.
+        // Room-level states are not of type 'device', so they don't count.
+        const prefix = `${this.adapter.namespace}.${roomBase}.`;
+        const remaining = await this.adapter.getForeignObjectsAsync(`${prefix}*`, 'device');
+        if (Object.keys(remaining ?? {}).length === 0) {
+            await this.adapter.delObjectAsync(roomBase, { recursive: true });
+            this.roomNames.delete(sanitizeId(room).toLowerCase());
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Called when Hannah pushes a satellite registered/gone event, or on
      * initial connect when existing satellites are fetched via GetSatellites.
      *

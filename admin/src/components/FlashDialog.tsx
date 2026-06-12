@@ -94,6 +94,8 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
     const [firmwareVersion, setFirmwareVersion] = useState('');
     const logRef = useRef<HTMLDivElement>(null);
     const monitorReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
+    const portRef = useRef<any>(null);
+    const transportRef = useRef<Transport | null>(null);
 
     useEffect(() => {
         if (open) {
@@ -120,17 +122,59 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
         });
     };
 
-    const stopMonitor = useCallback((): void => {
-        if (monitorReaderRef.current) {
-            void monitorReaderRef.current.cancel();
+    // Releases the WebSerial port completely: cancels the monitor reader,
+    // disconnects the esptool transport and closes the raw port. Without the
+    // port.close() the serial connection stayed open until the whole page was
+    // left. Every step is defensive — the reader/transport/port may already be
+    // gone depending on which step the dialog was closed in.
+    const cleanupSerial = useCallback(async (): Promise<void> => {
+        const reader = monitorReaderRef.current;
+        if (reader) {
             monitorReaderRef.current = null;
+            try {
+                await reader.cancel();
+            } catch {
+                // ignore
+            }
+            try {
+                reader.releaseLock();
+            } catch {
+                // ignore
+            }
+        }
+        const transport = transportRef.current;
+        if (transport) {
+            transportRef.current = null;
+            try {
+                await transport.disconnect();
+            } catch {
+                // ignore
+            }
+        }
+        const port = portRef.current;
+        if (port) {
+            portRef.current = null;
+            try {
+                await port.close();
+            } catch {
+                // ignore
+            }
         }
     }, []);
 
     const handleClose = (): void => {
-        stopMonitor();
+        void cleanupSerial();
         onClose();
     };
+
+    // Safety net: release the serial port if the dialog unmounts without an
+    // explicit close (e.g. the admin tab is navigated away).
+    useEffect(
+        () => () => {
+            void cleanupSerial();
+        },
+        [cleanupSerial],
+    );
 
     const handleFlash = async (): Promise<void> => {
         if (!config.deviceId || !config.room || !config.wifiSsid || !config.mqttBroker) {
@@ -195,9 +239,11 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                 throw new Error(I18n.t('WebSerial is not supported by this browser (Chrome/Edge required)'));
             }
             const port = await serial.requestPort();
+            portRef.current = port;
             const info = port.getInfo();
             const isUsbJtag = info.usbVendorId === 0x303a && info.usbProductId === 0x1001;
             const transport = new Transport(port, true);
+            transportRef.current = transport;
 
             const terminal = {
                 clean: () => {},
@@ -265,6 +311,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                 await esploader.after('hard_reset');
             }
             await transport.disconnect();
+            transportRef.current = null;
 
             // Monitor: reopen port after reboot
             setStep('monitoring');
@@ -297,6 +344,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
             monitorReaderRef.current = null;
             setStep('done');
         } catch (err: any) {
+            await cleanupSerial();
             setErrorMsg(err?.message ?? String(err));
             setStep('error');
             addLog(`${I18n.t('Error:')} ${err?.message ?? err}`);
@@ -688,7 +736,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                     <Button
                         variant="outlined"
                         onClick={() => {
-                            stopMonitor();
+                            void cleanupSerial();
                         }}
                     >
                         {I18n.t('Stop monitor')}

@@ -273,6 +273,35 @@ class Hannah extends utils.Adapter {
                 });
             return;
         }
+        if (obj.command === 'deleteSatellite') {
+            const params = (obj.message ?? {}) as { deviceId?: string; room?: string };
+            const { deviceId, room } = params;
+            if (!deviceId || !room) {
+                if (obj.callback) {
+                    this.sendTo(obj.from, obj.command, { error: 'deviceId and room required' }, obj.callback);
+                }
+                return;
+            }
+            this.log.info(`[satellites] Deleting satellite ${deviceId} in room ${room}`);
+            void (async (): Promise<void> => {
+                try {
+                    const roomRemoved = (await this.satellites?.deleteSatellite(deviceId, room)) ?? false;
+                    await this.sensorWatcher?.deleteSensors(deviceId);
+                    this.log.info(
+                        `[satellites] Deleted ${deviceId}${roomRemoved ? ` and now-empty room ${room}` : ''}`,
+                    );
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, { success: true, roomRemoved }, obj.callback);
+                    }
+                } catch (err) {
+                    this.log.warn(`[satellites] deleteSatellite failed: ${(err as Error).message}`);
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, { error: (err as Error).message }, obj.callback);
+                    }
+                }
+            })();
+            return;
+        }
         this.messages?.onMessage(obj);
     }
 }
