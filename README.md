@@ -79,6 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
 -->
 ### **WORK IN PROGRESS**
 - Fixed: firmware download failed with "Invalid character in header content [Authorization]" when the configured firmware source token contained a trailing newline or whitespace — the token is now trimmed before being used as a Bearer header
+- Fixed: deleting a satellite left orphaned objects behind — the sensor tree (`satellites.sensors.<device>`, a separate object branch) and the room container (`satellites.rooms.<room>`, including its shared room-level states) were never removed; deletion now runs in the backend via a `deleteSatellite` command that removes the satellite tree, the sensor tree, and the room container when it becomes empty (no `device` children left)
 
 ### 0.15.1 (2026-06-11)
 - Fixed: `wakeword` NVS key removed from flash and NVS-rewrite dialogs — wake-word on/off is compile-time only; `ww_threshold` remains

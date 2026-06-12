@@ -55,6 +55,21 @@ export class SensorWatcher {
         }
     }
 
+    /**
+     * Deletes a satellite's sensor object tree and clears the ensured-state
+     * cache, so a future sensor update re-creates the states cleanly.
+     *
+     * @param device - Satellite device ID (raw)
+     */
+    async deleteSensors(device: string): Promise<void> {
+        try {
+            await this.adapter.delObjectAsync(`satellites.sensors.${device}`, { recursive: true });
+        } catch {
+            // No sensor tree for this device — nothing to delete.
+        }
+        this.ensuredDevices.delete(device);
+    }
+
     private async _ensureStates(device: string, hasGas: boolean): Promise<void> {
         if (this.ensuredDevices.has(device)) {
             return;
