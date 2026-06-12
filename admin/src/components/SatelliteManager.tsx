@@ -285,37 +285,40 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                             NVS
                                         </Button>
                                     </Box>
-                                    {confirmDeleteId === sat.objectId ? (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            <Typography
-                                                variant="caption"
-                                                color="error"
-                                            >
-                                                {I18n.t('Delete?')}
-                                            </Typography>
+                                    {/* Only offline satellites can be deleted: an online one would
+                                        re-register itself immediately via its own updates. */}
+                                    {!sat.online &&
+                                        (confirmDeleteId === sat.objectId ? (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    color="error"
+                                                >
+                                                    {I18n.t('Delete?')}
+                                                </Typography>
+                                                <Button
+                                                    size="small"
+                                                    color="error"
+                                                    onClick={() => void handleDelete(sat)}
+                                                >
+                                                    {I18n.t('Yes')}
+                                                </Button>
+                                                <Button
+                                                    size="small"
+                                                    onClick={() => setConfirmDeleteId(null)}
+                                                >
+                                                    {I18n.t('No')}
+                                                </Button>
+                                            </Box>
+                                        ) : (
                                             <Button
                                                 size="small"
                                                 color="error"
-                                                onClick={() => void handleDelete(sat)}
+                                                onClick={() => setConfirmDeleteId(sat.objectId)}
                                             >
-                                                {I18n.t('Yes')}
+                                                {I18n.t('Remove')}
                                             </Button>
-                                            <Button
-                                                size="small"
-                                                onClick={() => setConfirmDeleteId(null)}
-                                            >
-                                                {I18n.t('No')}
-                                            </Button>
-                                        </Box>
-                                    ) : (
-                                        <Button
-                                            size="small"
-                                            color="error"
-                                            onClick={() => setConfirmDeleteId(sat.objectId)}
-                                        >
-                                            {I18n.t('Remove')}
-                                        </Button>
-                                    )}
+                                        ))}
                                 </CardActions>
                             </Card>
                         </Grid>
