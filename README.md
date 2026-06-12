@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.15.2 (2026-06-12)
 - Fixed: firmware download failed with "Invalid character in header content [Authorization]" when the configured firmware source token contained a trailing newline or whitespace — the token is now trimmed before being used as a Bearer header
 - Fixed: deleting a satellite left orphaned objects behind — the sensor tree (`satellites.sensors.<device>`, a separate object branch) and the room container (`satellites.rooms.<room>`, including its shared room-level states) were never removed; deletion now runs in the backend via a `deleteSatellite` command that removes the satellite tree, the sensor tree, and the room container when it becomes empty (no `device` children left)
 - Fixed: the WebSerial port in the flash dialog was not released when the overlay was closed (only the monitor reader was cancelled, never `port.close()`) — the serial connection stayed locked until the whole page was left; closing the dialog, pressing "Stop monitor", or unmounting now fully releases the reader, esptool transport and port

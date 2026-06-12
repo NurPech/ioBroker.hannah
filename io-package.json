@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.15.1",
+    "version": "0.15.2",
     "news": {
       "0.15.2": {
         "en": "Fixed: firmware download failed with 'Invalid character in header content [Authorization]' when token had trailing whitespace — token is now trimmed\nFixed: deleting a satellite now also removes the sensor object tree and the room container if it becomes empty\nFixed: WebSerial port was not released when closing the flash dialog — reader, transport and port are now fully closed on dialog close, stop-monitor, or unmount\nChanged: delete button is hidden for online satellites — an online satellite re-registers itself immediately",
@@ -93,19 +93,6 @@
         "pl": "Dodano: 'noticementRephrase' stan na pokój - pisze tekst do Hannah Core jako 'AgentSatelliteControl.declaration _ refrazse'; Hannah LLM przeformułowuje przed TTS",
         "uk": "Додано: `announcementRephrase` State per room — записує текст до Hannah Core як `AgentSatelliteControl.announcement rephrase`; Hannah LLM реформи до TTS",
         "zh-cn": "添加:`通知重述 ' 每个房间的状态——将文本写给Hannah Core,作为`AgentSatellite Control.announcment repeat';Hannah LLM在TTS之前重拟"
-      },
-      "0.11.3": {
-        "en": "Changed: update dependencies (`@grpc/grpc-js` to 1.14.4, `@grpc/proto-loader` to 0.8.1, `@iobroker/types` to 7.1.2)\nChanged: update dev dependencies (`@tsconfig/node20` → `@tsconfig/node22`)\nFixed: replace `process.exit(1)` with `throw new Error()` in verify-package-contents script",
-        "de": "Geändert: Aktualisierung der Abhängigkeiten (`@grpc/grpc-js` auf 1.14.4, `@grpc/proto-loader` auf 0.8.1, `@iobroker/Typen` auf 7.1.2)\nGeändert: Aktualisierung von Abhängigkeiten (`@tsconfig/node20` → `@tsconfig/node22`)\nBehoben: `process.exit(1)` mit `throw new Error()` im Skript Verpacken-Contents ersetzen",
-        "ru": "Изменения: зависимости от обновлений (от @grpc/grpc-js до 1.14.4, от @grpc/proto-loader до 0.8.1, от @iobroker/types до 7.1.2)\nИзменено: обновление зависимостей dev (`@tsconfig/node20` → `@tsconfig/node22`)\nИсправлено: заменить \"process.exit(1)\" на \"torow new Error()\" в скрипте верификационного пакета",
-        "pt": "Modificado: dependências de atualização (`@grpc/grpc-js` para 1.14.4, `@grpc/proto-loader` para 0.8.1, `@iobroker/types` para 7.1.2)\nModificado: atualizar dependências dev (`@tsconfig/node20` → `@tsconfig/node22`)\nCorrigido: substituir `process.exit(1)` por `throw new Error()` no script check-package-contents",
-        "nl": "Gewijzigd: update afhankelijkheden (\nGewijzigd: update dev afhankelijkheden (\nFixed: vervang ",
-        "fr": "Modifiée : mise à jour des dépendances (`@grpc/grpc-js` à 1.14.4, `@grpc/proto-loader` à 0.8.1, `@iobroker/types` à 7.1.2)\nChanged: update dev dependences (`@tsconfig/node20` → `@tsconfig/node22`)\nCorrection : remplacer `process.exit(1)` par `jeter une nouvelle erreur()` dans le script verifie-package-contents",
-        "it": "Modificato: aggiornamento dipendenze (`@grpc/grpc-js` a 1.14.4, `@grpc/proto-loader` a 0.8.1, `@iobroker/types` a 7.1.2)\nModificato: update dev dependencies (`@tsconfig/node20` → `@tsconfig/node22`)\nRisolto: sostituire `process.exit(1)` con `dopo nuovo errore()` in script di verifica-confezione-contenuti",
-        "es": "Cambio: dependencias de actualización (@grpc/grpc-js) a 1.14.4, `@grpc/proto-loader` a 0.8.1, `@iobroker/types` a 7.1.2)\nCambio: actualización de las dependencias dev (`@tsconfig/node20` → `@tsconfig/node22`)\nFijado: reemplazar `process.exit(1)` por `throw new Error()` en el script verificado-package-contents",
-        "pl": "Zmieniono: update dependences ('@ grpc / grpc- js' na 1.14.4, '@ grpc / proto- loader' na 0.8.1, '@ iobroker / types' na 7.1.2)\nZmieniono: aktualizację zależności dev ('@ tsconfig / node20' → '@ tsconfig / node22')\nNaprawiono: zastąpić 'process.exit (1)' przez 'Throw new Error ()' w skrypcie verify- package- content",
-        "uk": "Змінено: оновлення залежності (`@grpc/grpc-js` до 1.14.4, `@grpc/proto-loader` до 0.8.1, `@iobroker/types` до 7.1.2)\nЗмінено: оновлення залежності (`@tsconfig/node20` → `@tsconfig/node22`)\nВиправлено: замінити `process.exit(1)` з `trow new error()` у скрипті перевірки-package-contents",
-        "zh-cn": "更改: 更新依赖关系(X`@grpc/grpc-js ' 改为1.14.4,X`@grpc/protoloader ' 改为0.8.1,X`@io经纪人/型号 ' 改为7.1.2)\n更改: 更新非依赖性( `@tsconfig/ node20 ' →tsconfig/ node22')\n固定: 将“ process.exit(1)” 替换为“ 扔出新错误( ) ”"
       }
     },
     "blockly": true,
