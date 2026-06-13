@@ -37,6 +37,7 @@
     "Token": "Token",
     "Asset Server": "Asset Server",
     "Asset URL": "Asset URL",
+    "Disable TLS certificate validation (insecure)": "Disable TLS certificate validation (insecure)",
     "Flash new satellite": "Flash new satellite",
     "New Device": "New Device",
     "Room": "Room",

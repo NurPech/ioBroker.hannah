@@ -46,6 +46,8 @@ export interface SatelliteDefaults {
     assetUrl?: string;
     /** Asset server bearer token */
     assetToken?: string;
+    /** Skip TLS certificate validation (for self-signed certs) */
+    tlsSkipVerify?: boolean;
 }
 
 interface SettingsProps {
@@ -496,6 +498,20 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                     size="small"
                     fullWidth
                 />
+
+                <Divider />
+                <Switch
+                    checked={!!native.satTlsSkipVerify}
+                    onChange={e => onChange('satTlsSkipVerify', e.target.checked)}
+                    color="warning"
+                />
+                <Typography
+                    variant="body2"
+                    color="warning.main"
+                    component="span"
+                >
+                    {I18n.t('Disable TLS certificate validation (insecure)')}
+                </Typography>
             </Box>
         );
     }

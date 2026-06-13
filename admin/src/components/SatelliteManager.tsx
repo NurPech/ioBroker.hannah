@@ -104,6 +104,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                     otaToken: n.satOtaToken,
                     assetUrl: n.satAssetUrl,
                     assetToken: n.satAssetToken,
+                    tlsSkipVerify: n.satTlsSkipVerify,
                 });
             }
         });

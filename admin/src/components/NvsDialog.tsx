@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import LinearProgress from '@mui/material/LinearProgress';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -28,6 +30,7 @@ interface NvsConfig {
     otaToken: string;
     assetUrl: string;
     assetToken: string;
+    tlsSkipVerify: boolean;
 }
 
 type NvsStep = 'config' | 'connecting' | 'flashing' | 'done' | 'error';
@@ -58,6 +61,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults })
         otaToken: '',
         assetUrl: '',
         assetToken: '',
+        tlsSkipVerify: false,
     });
 
     const [step, setStep] = useState<NvsStep>('config');
@@ -82,6 +86,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults })
                 otaToken: defaults?.otaToken ?? '',
                 assetUrl: defaults?.assetUrl ?? '',
                 assetToken: defaults?.assetToken ?? '',
+                tlsSkipVerify: defaults?.tlsSkipVerify ?? false,
             });
             setStep('config');
             setLog([]);
@@ -132,6 +137,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults })
                         ? [{ name: 'asset_token', encoding: 'string' as const, value: config.assetToken }]
                         : []),
                     { name: 'ww_threshold', encoding: 'u8', value: 75 },
+                    { name: 'tls_skip', encoding: 'u8', value: config.tlsSkipVerify ? 1 : 0 },
                 ],
             });
 
@@ -208,6 +214,9 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults })
 
     const set = (field: keyof NvsConfig) => (e: React.ChangeEvent<HTMLInputElement>) =>
         setConfig(prev => ({ ...prev, [field]: e.target.value }));
+
+    const setCheck = (field: keyof NvsConfig) => (e: React.ChangeEvent<HTMLInputElement>) =>
+        setConfig(prev => ({ ...prev, [field]: e.target.checked }));
 
     const canFlash = config.deviceId.trim() !== '' && config.wifiSsid.trim() !== '' && config.mqttBroker.trim() !== '';
 
@@ -373,6 +382,21 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults })
                             size="small"
                             fullWidth
                             disabled={step !== 'config'}
+                        />
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={config.tlsSkipVerify}
+                                    onChange={setCheck('tlsSkipVerify')}
+                                    disabled={step !== 'config'}
+                                    color="warning"
+                                />
+                            }
+                            label={
+                                <Typography variant="body2" color="warning.main">
+                                    {I18n.t('Disable TLS certificate validation (insecure)')}
+                                </Typography>
+                            }
                         />
 
                         {(step === 'connecting' || step === 'flashing') && (
