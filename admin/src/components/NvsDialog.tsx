@@ -393,7 +393,10 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults })
                                 />
                             }
                             label={
-                                <Typography variant="body2" color="warning.main">
+                                <Typography
+                                    variant="body2"
+                                    color="warning.main"
+                                >
                                     {I18n.t('Disable TLS certificate validation (insecure)')}
                                 </Typography>
                             }

@@ -583,7 +583,10 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                                         />
                                     }
                                     label={
-                                        <Typography variant="body2" color="warning.main">
+                                        <Typography
+                                            variant="body2"
+                                            color="warning.main"
+                                        >
                                             {I18n.t('Disable TLS certificate validation (insecure)')}
                                         </Typography>
                                     }
