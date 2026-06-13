@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.15.3 (2026-06-13)
 - Added: "Disable TLS certificate validation" checkbox in flash and NVS-rewrite dialogs — stored as NVS key `tls_skip`; default off; useful for satellites connecting to servers with self-signed certificates
 - Added: same option in the satellite defaults tab of the adapter settings
 

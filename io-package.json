@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.15.2",
+    "version": "0.15.3",
     "news": {
       "0.15.3": {
         "en": "Added: 'Disable TLS certificate validation' option in flash dialog, NVS-rewrite dialog, and satellite defaults — stored as NVS key `tls_skip` (u8); default off; for satellites connecting to servers with self-signed certificates",
@@ -93,19 +93,6 @@
         "pl": "Naprawiono: \"noticementSsml\" i \"noticementRephrase\" stany zostały po cichu zignorowane przez Hannah Core - proto- loader używa 'keepCase: true' więc nazwy pól muszą być wężem _ case na drucie; dodano wyraźne 'protoKey' mapowanie w 'satellites.ts'",
         "uk": "Виправлено: `announcementSsml` і `announcementRephrase` стани мовчазно ігнорували Hannah Core - proto-loader використовує `keepCase: true` так назви поля повинні бути змія case на дроті; додано явний `protoKey` на карті `satellites.ts`",
         "zh-cn": "固定:Hannah Core默不作声地忽略了`通知Ssml ' 和`通知重述 ' 状态——原装机使用`keepCase:',所以现场名称必须是铁丝网上的蛇 case;在`卫星.ts ' 中增加了明确的`protoKey ' 绘图"
-      },
-      "0.12.0": {
-        "en": "Added: `announcementRephrase` state per room — writes text to Hannah Core as `AgentSatelliteControl.announcement_rephrase`; Hannah LLM reformulates before TTS",
-        "de": "Hinzugefügt: `announcementRephrase` Zustand pro Zimmer — schreibt Text zu Hannah Core als `AgentSatelliteControl.announcement rephrase`; Hannah LLM reformiert vor TTS",
-        "ru": "Добавлено: ‘announcementRephrase’ state per room — пишет текст на Hannah Core как ‘AgentSatelliteControl.announcement rephrase’; Hannah LLM переформулирует перед TTS",
-        "pt": "Adicionado: `announcementRefrase` estado por sala — escreve texto para Hannah Core como `AgentSatelliteControl.announcement refrase`; Hannah LLM reformula antes de TTS",
-        "nl": "Toegevoegd: ",
-        "fr": "Ajouté: `annonceRephrase` état par chambre — écrit un texte à Hannah Core comme `AgentSatelliteControl.annoncement rephrase`; Hannah LLM reformule avant TTS",
-        "it": "Aggiunto: `announcementRephrase` state per stanza — scrive il testo a Hannah Core come `AgentSatelliteControl.announcement rephrase`; Hannah LLM riformula prima TTS",
-        "es": "Añadido: `announcementRephrase` state per room — escribe texto a Hannah Core como `AgentSatelliteControl.announcement rephrase`; Hannah LLM reformula ante TTS",
-        "pl": "Dodano: 'noticementRephrase' stan na pokój - pisze tekst do Hannah Core jako 'AgentSatelliteControl.declaration _ refrazse'; Hannah LLM przeformułowuje przed TTS",
-        "uk": "Додано: `announcementRephrase` State per room — записує текст до Hannah Core як `AgentSatelliteControl.announcement rephrase`; Hannah LLM реформи до TTS",
-        "zh-cn": "添加:`通知重述 ' 每个房间的状态——将文本写给Hannah Core,作为`AgentSatellite Control.announcment repeat';Hannah LLM在TTS之前重拟"
       }
     },
     "blockly": true,
