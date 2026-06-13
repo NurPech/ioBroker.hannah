@@ -77,6 +77,10 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: "Disable TLS certificate validation" checkbox in flash and NVS-rewrite dialogs — stored as NVS key `tls_skip`; default off; useful for satellites connecting to servers with self-signed certificates
+- Added: same option in the satellite defaults tab of the adapter settings
+
 ### 0.15.2 (2026-06-12)
 - Fixed: firmware download failed with "Invalid character in header content [Authorization]" when the configured firmware source token contained a trailing newline or whitespace — the token is now trimmed before being used as a Bearer header
 - Fixed: deleting a satellite left orphaned objects behind — the sensor tree (`satellites.sensors.<device>`, a separate object branch) and the room container (`satellites.rooms.<room>`, including its shared room-level states) were never removed; deletion now runs in the backend via a `deleteSatellite` command that removes the satellite tree, the sensor tree, and the room container when it becomes empty (no `device` children left)
