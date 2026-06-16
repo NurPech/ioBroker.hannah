@@ -172,7 +172,6 @@ class Hannah extends utils.Adapter {
                         s.temperature,
                         s.pressure,
                         s.humidity,
-                        s.gas_resistance,
                         s.iaq,
                         s.iaq_accuracy,
                         s.co2_equiv,

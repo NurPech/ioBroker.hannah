@@ -20,7 +20,6 @@ export class SensorWatcher {
      * @param temperature - Temperature in °C
      * @param pressure - Pressure in hPa
      * @param humidity - Relative humidity in %
-     * @param gasResistance - Gas resistance in Ω (0 if not available)
      * @param iaq - IAQ 0–500 (BSEC2); 0 when not available
      * @param iaqAccuracy - BSEC2 accuracy 0–3
      * @param co2Equiv - CO₂ equivalent ppm (BSEC2); 0 when not available
@@ -31,14 +30,13 @@ export class SensorWatcher {
         temperature: number,
         pressure: number,
         humidity: number,
-        gasResistance: number,
         iaq: number,
         iaqAccuracy: number,
         co2Equiv: number,
         vocEquiv: number,
     ): Promise<void> {
         try {
-            await this._ensureStates(device, gasResistance > 0, iaq > 0);
+            await this._ensureStates(device, iaq > 0);
             const ns = `satellites.sensors.${device}`;
             const updates: Promise<unknown>[] = [
                 this.adapter.setState(`${ns}.temperature`, { val: Math.round(temperature * 10) / 10, ack: true }),
@@ -47,11 +45,6 @@ export class SensorWatcher {
             if (humidity > 0) {
                 updates.push(
                     this.adapter.setState(`${ns}.humidity`, { val: Math.round(humidity * 10) / 10, ack: true }),
-                );
-            }
-            if (gasResistance > 0) {
-                updates.push(
-                    this.adapter.setState(`${ns}.gas_resistance`, { val: Math.round(gasResistance), ack: true }),
                 );
             }
             if (iaq > 0) {
@@ -87,7 +80,7 @@ export class SensorWatcher {
         this.ensuredDevices.delete(device);
     }
 
-    private async _ensureStates(device: string, hasGas: boolean, hasBsec: boolean): Promise<void> {
+    private async _ensureStates(device: string, hasBsec: boolean): Promise<void> {
         if (this.ensuredDevices.has(device)) {
             return;
         }
@@ -126,20 +119,6 @@ export class SensorWatcher {
             common: { name: 'Humidity', type: 'number', role: 'value.humidity', unit: '%', read: true, write: false },
             native: {},
         });
-        if (hasGas) {
-            await this.adapter.setObjectNotExistsAsync(`${ns}.gas_resistance`, {
-                type: 'state',
-                common: {
-                    name: 'Gas Resistance (VOC)',
-                    type: 'number',
-                    role: 'value',
-                    unit: 'Ω',
-                    read: true,
-                    write: false,
-                },
-                native: {},
-            });
-        }
         if (hasBsec) {
             await this.adapter.setObjectNotExistsAsync(`${ns}.iaq`, {
                 type: 'state',
