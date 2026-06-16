@@ -3,6 +3,19 @@
     "name": "hannah",
     "version": "0.15.3",
     "news": {
+      "0.16.0": {
+        "en": "Added: `ask` message command — sends a question via Hannah TTS to a room, intercepts the next resident utterance, and returns the spoken answer via `result.answer` in the callback\nAdded: Blockly block for the `ask` command with variable binding for the spoken answer",
+        "de": "Hinzugefügt: Nachrichtenbefehl `ask` — stellt eine Frage per Hannah-TTS in einem Raum, fängt die nächste Äußerung des Bewohners ab und gibt die gesprochene Antwort über `result.answer` im Callback zurück\nHinzugefügt: Blockly-Block für den `ask`-Befehl mit Variablenbindung für die gesprochene Antwort",
+        "es": "Añadido: comando de mensaje `ask` — envía una pregunta por Hannah TTS a una sala, intercepta la siguiente utterance del residente y devuelve la respuesta hablada mediante `result.answer` en el callback\nAñadido: bloque Blockly para el comando `ask` con vinculación de variable para la respuesta hablada",
+        "fr": "Ajouté : commande de message `ask` — envoie une question via Hannah TTS dans une pièce, intercepte la prochaine utterance du résident et renvoie la réponse parlée via `result.answer` dans le callback\nAjouté : bloc Blockly pour la commande `ask` avec liaison de variable pour la réponse parlée",
+        "it": "Aggiunto: comando messaggio `ask` — invia una domanda tramite Hannah TTS in una stanza, intercetta la prossima utterance del residente e restituisce la risposta parlata tramite `result.answer` nel callback\nAggiunto: blocco Blockly per il comando `ask` con associazione di variabile per la risposta parlata",
+        "nl": "Toegevoegd: berichtcommando `ask` — verstuurt een vraag via Hannah TTS naar een kamer, onderschept de volgende utterance van de bewoner en geeft het gesproken antwoord terug via `result.answer` in de callback\nToegevoegd: Blockly-blok voor het `ask`-commando met variabelekoppeling voor het gesproken antwoord",
+        "pl": "Dodano: polecenie wiadomości `ask` — wysyła pytanie przez Hannah TTS do pokoju, przechwytuje kolejną wypowiedź mieszkańca i zwraca mówioną odpowiedź przez `result.answer` w callbacku\nDodano: blok Blockly dla polecenia `ask` z powiązaniem zmiennej dla mówionej odpowiedzi",
+        "pt": "Adicionado: comando de mensagem `ask` — envia uma pergunta via Hannah TTS para uma sala, intercepta a próxima utterance do residente e devolve a resposta falada via `result.answer` no callback\nAdicionado: bloco Blockly para o comando `ask` com vinculação de variável para a resposta falada",
+        "ru": "Добавлено: команда сообщения `ask` — отправляет вопрос через Hannah TTS в комнату, перехватывает следующее высказывание жильца и возвращает произнесённый ответ через `result.answer` в callback\nДобавлено: блок Blockly для команды `ask` с привязкой переменной для произнесённого ответа",
+        "uk": "Додано: команда повідомлення `ask` — надсилає запитання через Hannah TTS до кімнати, перехоплює наступне висловлювання мешканця та повертає вимовлену відповідь через `result.answer` у callback\nДодано: блок Blockly для команди `ask` із прив'язкою змінної для вимовленої відповіді",
+        "zh-cn": "新增：`ask` 消息命令 — 通过 Hannah TTS 向房间发送问题，拦截居民的下一次语音，并通过回调中的 `result.answer` 返回语音答案\n新增：`ask` 命令的 Blockly 块，带有用于语音答案的变量绑定"
+      },
       "0.15.3": {
         "en": "Added: 'Disable TLS certificate validation' option in flash dialog, NVS-rewrite dialog, and satellite defaults — stored as NVS key `tls_skip` (u8); default off; for satellites connecting to servers with self-signed certificates",
         "de": "Hinzugefügt: Option 'TLS-Zertifikatsprüfung deaktivieren' in Flash-Dialog, NVS-Schreib-Dialog und Satellit-Standardeinstellungen — gespeichert als NVS-Schlüssel `tls_skip` (u8); standardmäßig deaktiviert; für Satelliten, die sich mit Servern mit selbst-signierten Zertifikaten verbinden",
