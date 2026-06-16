@@ -4,7 +4,17 @@
     "version": "0.16.0",
     "news": {
       "0.17.0": {
-        "en": "Added: IAQ, IAQ accuracy, CO₂ equivalent and VOC equivalent states under satellites.sensors.<device> — populated when satellite uses BME680 with BSEC2 library"
+        "en": "Added: IAQ, IAQ accuracy, CO₂ equivalent and VOC equivalent states under satellites.sensors.<device> — populated when satellite uses BME680 with BSEC2 library",
+        "de": "Hinzugefügt: IAQ-, IAQ-Genauigkeits-, CO₂-Äquivalent- und VOC-Äquivalent-States unter satellites.sensors.<device> — werden befüllt, wenn der Satellit einen BME680 mit BSEC2-Bibliothek verwendet",
+        "es": "Añadido: estados IAQ, precisión IAQ, equivalente de CO₂ y equivalente de VOC en satellites.sensors.<device> — se rellenan cuando el satélite usa un BME680 con la biblioteca BSEC2",
+        "fr": "Ajouté : états IAQ, précision IAQ, équivalent CO₂ et équivalent COV sous satellites.sensors.<device> — renseignés lorsque le satellite utilise un BME680 avec la bibliothèque BSEC2",
+        "it": "Aggiunto: stati IAQ, precisione IAQ, equivalente CO₂ e equivalente VOC sotto satellites.sensors.<device> — popolati quando il satellite usa un BME680 con la libreria BSEC2",
+        "nl": "Toegevoegd: IAQ-, IAQ-nauwkeurigheids-, CO₂-equivalent- en VOC-equivalentstaten onder satellites.sensors.<device> — worden gevuld wanneer de satelliet een BME680 met BSEC2-bibliotheek gebruikt",
+        "pl": "Dodano: stany IAQ, dokładność IAQ, ekwiwalent CO₂ i ekwiwalent VOC w satellites.sensors.<device> — wypełniane gdy satelita używa BME680 z biblioteką BSEC2",
+        "pt": "Adicionado: estados IAQ, precisão IAQ, equivalente de CO₂ e equivalente de VOC em satellites.sensors.<device> — preenchidos quando o satélite usa BME680 com a biblioteca BSEC2",
+        "ru": "Добавлено: состояния IAQ, точность IAQ, эквивалент CO₂ и эквивалент VOC в satellites.sensors.<device> — заполняются, когда спутник использует BME680 с библиотекой BSEC2",
+        "uk": "Додано: стани IAQ, точність IAQ, еквівалент CO₂ та еквівалент VOC під satellites.sensors.<device> — заповнюються, коли супутник використовує BME680 з бібліотекою BSEC2",
+        "zh-cn": "新增：satellites.sensors.<device> 下的 IAQ、IAQ 精度、CO₂ 当量和 VOC 当量状态 — 当卫星使用带有 BSEC2 库的 BME680 时填充"
       },
       "0.16.0": {
         "en": "Added: `ask` message command — sends a question via Hannah TTS to a room, intercepts the next resident utterance, and returns the spoken answer via `result.answer` in the callback\nAdded: Blockly block for the `ask` command with variable binding for the spoken answer",
