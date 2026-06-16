@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.17.0 (2026-06-16)
 - Added: IAQ, IAQ accuracy, CO₂ equivalent and VOC equivalent states under `satellites.sensors.<device>` — populated when satellite uses BME680 with BSEC2 (Refs #17)
 
 ### 0.16.0 (2026-06-16)
