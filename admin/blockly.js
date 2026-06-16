@@ -225,7 +225,10 @@ Blockly.JavaScript['hannah-ask'] = function (block) {
     const instance = block.getFieldValue('INSTANCE');
     const room = Blockly.JavaScript.valueToCode(block, 'ROOM', Blockly.JavaScript.ORDER_ATOMIC) || "'all'";
     const text = Blockly.JavaScript.valueToCode(block, 'TEXT', Blockly.JavaScript.ORDER_ATOMIC);
-    const varName = block.getField('VAR').getText();
+    const varId = block.getFieldValue('VAR');
+    const varName = Blockly.JavaScript.nameDB_
+        ? Blockly.JavaScript.nameDB_.getName(varId, Blockly.Variables.NAME_TYPE)
+        : (block.workspace.getVariableById(varId)?.name || 'answer');
     const statements = Blockly.JavaScript.statementToCode(block, 'DO');
 
     return `sendTo('hannah${instance}', 'ask', { room: ${room}, text: ${text} }, function(result) {\n    var ${varName} = result.answer;\n${statements}});\n`;
