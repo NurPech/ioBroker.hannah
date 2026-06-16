@@ -163,7 +163,7 @@ Blockly.JavaScript['hannah-announce'] = function (block) {
 Blockly.Words['hannah-ask'] = { en: 'Ask resident', de: 'Bewohner fragen' };
 Blockly.Words['hannah-ask_room'] = { en: 'Room', de: 'Raum' };
 Blockly.Words['hannah-ask_text'] = { en: 'Question', de: 'Frage' };
-Blockly.Words['hannah-ask_do'] = { en: 'with answer', de: 'mit Antwort' };
+Blockly.Words['hannah-ask_do'] = { en: 'with answer in', de: 'mit Antwort in' };
 Blockly.Words['hannah-ask_anyInstance'] = { en: 'All instances', de: 'Alle Instanzen' };
 Blockly.Words['hannah-ask_help'] = {
     en: 'https://github.com/NurPech/ioBroker.hannah',
@@ -209,7 +209,9 @@ Blockly.Blocks['hannah-ask'] = {
 
         this.appendValueInput('ROOM').appendField(Blockly.Translate('hannah-ask_room'));
         this.appendValueInput('TEXT').appendField(Blockly.Translate('hannah-ask_text'));
-        this.appendStatementInput('DO').appendField(Blockly.Translate('hannah-ask_do'));
+        this.appendStatementInput('DO')
+            .appendField(Blockly.Translate('hannah-ask_do'))
+            .appendField(new Blockly.FieldVariable('answer'), 'VAR');
 
         this.setInputsInline(false);
         this.setPreviousStatement(true, null);
@@ -223,7 +225,8 @@ Blockly.JavaScript['hannah-ask'] = function (block) {
     const instance = block.getFieldValue('INSTANCE');
     const room = Blockly.JavaScript.valueToCode(block, 'ROOM', Blockly.JavaScript.ORDER_ATOMIC) || "'all'";
     const text = Blockly.JavaScript.valueToCode(block, 'TEXT', Blockly.JavaScript.ORDER_ATOMIC);
+    const varName = Blockly.JavaScript.variableDB_.getName(block.getFieldValue('VAR'), Blockly.Variables.NAME_TYPE);
     const statements = Blockly.JavaScript.statementToCode(block, 'DO');
 
-    return `sendTo('hannah${instance}', 'ask', { room: ${room}, text: ${text} }, function(result) {\n    var answer = result.answer;\n${statements}});\n`;
+    return `sendTo('hannah${instance}', 'ask', { room: ${room}, text: ${text} }, function(result) {\n    var ${varName} = result.answer;\n${statements}});\n`;
 };
