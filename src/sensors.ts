@@ -57,8 +57,9 @@ export class SensorWatcher {
             }
             await Promise.all(updates);
             this.adapter.log.debug(
-                `[sensors] ${device}: T=${temperature.toFixed(1)}°C P=${pressure.toFixed(1)}hPa H=${humidity.toFixed(1)}%` +
-                (iaq > 0 ? ` IAQ=${iaq.toFixed(0)}(acc=${iaqAccuracy})` : ''),
+                `[sensors] ${device}: T=${temperature.toFixed(1)}°C P=${pressure.toFixed(1)}hPa H=${humidity.toFixed(1)}%${
+                    iaq > 0 ? ` IAQ=${iaq.toFixed(0)}(acc=${iaqAccuracy})` : ''
+                }`,
             );
         } catch (e) {
             this.adapter.log.error(`[sensors] handleSensorUpdate failed: ${(e as Error).message}`);
@@ -122,7 +123,14 @@ export class SensorWatcher {
         if (hasBsec) {
             await this.adapter.setObjectNotExistsAsync(`${ns}.iaq`, {
                 type: 'state',
-                common: { name: 'IAQ (Air Quality Index)', type: 'number', role: 'value', unit: 'IAQ', read: true, write: false },
+                common: {
+                    name: 'IAQ (Air Quality Index)',
+                    type: 'number',
+                    role: 'value',
+                    unit: 'IAQ',
+                    read: true,
+                    write: false,
+                },
                 native: {},
             });
             await this.adapter.setObjectNotExistsAsync(`${ns}.iaq_accuracy`, {
@@ -132,12 +140,26 @@ export class SensorWatcher {
             });
             await this.adapter.setObjectNotExistsAsync(`${ns}.co2_equiv`, {
                 type: 'state',
-                common: { name: 'CO₂ Equivalent', type: 'number', role: 'value.co2', unit: 'ppm', read: true, write: false },
+                common: {
+                    name: 'CO₂ Equivalent',
+                    type: 'number',
+                    role: 'value.co2',
+                    unit: 'ppm',
+                    read: true,
+                    write: false,
+                },
                 native: {},
             });
             await this.adapter.setObjectNotExistsAsync(`${ns}.voc_equiv`, {
                 type: 'state',
-                common: { name: 'Breath VOC Equivalent', type: 'number', role: 'value', unit: 'ppm', read: true, write: false },
+                common: {
+                    name: 'Breath VOC Equivalent',
+                    type: 'number',
+                    role: 'value',
+                    unit: 'ppm',
+                    read: true,
+                    write: false,
+                },
                 native: {},
             });
         }
