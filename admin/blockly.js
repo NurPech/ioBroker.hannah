@@ -160,7 +160,7 @@ Blockly.JavaScript['hannah-announce'] = function (block) {
 
 // --- Hannah ask ------------------------------------------------------------------
 
-Blockly.Words['hannah-ask'] = { en: 'Ask resident', de: 'Bewohner fragen' };
+Blockly.Words['hannah-ask'] = { en: 'Ask via Hannah', de: 'fragen per Hannah' };
 Blockly.Words['hannah-ask_room'] = { en: 'Room', de: 'Raum' };
 Blockly.Words['hannah-ask_text'] = { en: 'Question', de: 'Frage' };
 Blockly.Words['hannah-ask_do'] = { en: 'with answer in', de: 'mit Antwort in' };
