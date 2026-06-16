@@ -145,6 +145,13 @@ export class MessagesHandler {
         }
     }
 
+    /**
+     * Called when Hannah sends back a resident's spoken answer for a pending ask.
+     *
+     * @param cmd - callback command payload
+     * @param cmd.correlation_id - correlation id for the pending ask
+     * @param cmd.answer - resident's spoken answer
+     */
     public onResidentAnswered(cmd: { correlation_id: string; answer: string }): void {
         const { correlation_id, answer } = cmd;
         const cb = this._pending.get(correlation_id);
