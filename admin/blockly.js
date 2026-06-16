@@ -228,5 +228,5 @@ Blockly.JavaScript['hannah-ask'] = function (block) {
     const varName = block.getField('VAR').getText();
     const statements = Blockly.JavaScript.statementToCode(block, 'DO');
 
-    return `sendTo('hannah${instance}', 'ask', { room: ${room}, text: ${text} }, function(result) {\n    var ${varName} = result.answer;\n${statements}});\n`;
+    return `sendTo('hannah${instance}', 'ask', { room: ${room}, text: ${text} }, function(result) {\n    if (result.error) { console.warn('[hannah/ask] ' + result.error); return; }\n    var ${varName} = result.answer;\n${statements}});\n`;
 };
