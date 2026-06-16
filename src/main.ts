@@ -174,6 +174,8 @@ class Hannah extends utils.Adapter {
                         s.humidity,
                         s.gas_resistance,
                     );
+                } else if (which === 'resident_answered' && cmd.resident_answered) {
+                    this.messages?.onResidentAnswered(cmd.resident_answered);
                 }
             },
         });

@@ -339,10 +339,13 @@ message ProxyAck {
 
 // Hannah instructs the proxy to play TTS audio on a specific satellite.
 // Used for announcements and other server-initiated audio.
+// For streaming: Hannah sends multiple PlayAudioCommands with chunks of PCM.
+// is_last=true on the final chunk signals the proxy to send tts_end to the satellite.
 message PlayAudioCommand {
   string device_id   = 1;  // satellite device name (as registered via UDP or proxy)
   bytes  audio_pcm   = 2;  // raw PCM, 16-bit signed mono
   int32  sample_rate = 3;  // e.g. 24000 (Azure) or 16000 (Piper)
+  bool   is_last     = 4;  // true on the last chunk of a TTS response
 }
 
 // Sent by the proxy when a satellite has finished recording an utterance.
@@ -409,6 +412,7 @@ message EnrollVoiceprintRequest {
 message SatelliteRegistration {
   string device_id = 1;  // satellite device name, e.g. "sat-wohnzimmer"
   string room      = 2;  // room name as reported by satellite, e.g. "Wohnzimmer"
+  string address   = 3;  // IP of the UDP satellite as seen by the proxy, e.g. "192.168.8.42"
 }
 
 // ============================================================
@@ -424,6 +428,7 @@ message AgentMessage {
     AgentSatelliteControl satellite_control = 4;  // satellite control command
     AgentDeviceSnapshot   send_snapshot     = 5;  // initial snapshot with all states
     AgentResidentSnapshot send_residents    = 6;  // initial snapshot with all residents
+    AgentAskResident      ask_resident      = 7;  // ask Resident via Hannah
   }
 }
 
@@ -475,8 +480,9 @@ message AgentCommand {
     AgentSatelliteUpdate satellite_update = 4;  // a satellite registered or disconnected
     AgentTextAnswer      text_answer      = 5;  // Hannah's answer to a text command
     AgentFirmwareEvent   firmware_event   = 6;  // satellite firmware version update
-    AgentBleUpdate       ble_update       = 7;  // BLE tag location changed
-    AgentSensorUpdate    sensor_update    = 8;  // satellite sensor reading
+    AgentBleUpdate          ble_update          = 7;  // BLE tag location changed
+    AgentSensorUpdate       sensor_update       = 8;  // satellite sensor reading
+    AgentResidentAnswered   resident_answered   = 9;  // answer to an ask_resident request
   }
 }
 
@@ -568,6 +574,17 @@ message AgentResident {
 // a list with all known residents
 message AgentResidentSnapshot {
   repeated AgentResident residents = 1;
+}
+
+message AgentAskResident {
+  string correlation_id = 3;
+  string room           = 1;
+  string question       = 2;
+}
+
+message AgentResidentAnswered {
+  string correlation_id = 1;
+  string answer         = 2;
 }
 
 // Hannah notifies the adapter that a BLE tag's location has changed.

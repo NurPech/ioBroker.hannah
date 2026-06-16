@@ -157,3 +157,76 @@ Blockly.JavaScript['hannah-announce'] = function (block) {
 
     return `sendTo('hannah${instance}', 'announce', { rooms: ${rooms}, text: ${text} });\n`;
 };
+
+// --- Hannah ask ------------------------------------------------------------------
+
+Blockly.Words['hannah-ask'] = { en: 'Ask via Hannah', de: 'fragen per Hannah' };
+Blockly.Words['hannah-ask_room'] = { en: 'Room', de: 'Raum' };
+Blockly.Words['hannah-ask_text'] = { en: 'Question', de: 'Frage' };
+Blockly.Words['hannah-ask_do'] = { en: 'with answer in', de: 'mit Antwort in' };
+Blockly.Words['hannah-ask_anyInstance'] = { en: 'All instances', de: 'Alle Instanzen' };
+Blockly.Words['hannah-ask_help'] = {
+    en: 'https://github.com/NurPech/ioBroker.hannah',
+    de: 'https://github.com/NurPech/ioBroker.hannah',
+};
+
+Blockly.Sendto.blocks['hannah-ask'] =
+    '<block type="hannah-ask">' +
+    '  <field name="INSTANCE"></field>' +
+    '  <value name="ROOM">' +
+    '    <shadow type="text"><field name="TEXT">all</field></shadow>' +
+    '  </value>' +
+    '  <value name="TEXT">' +
+    '    <shadow type="text"><field name="TEXT"></field></shadow>' +
+    '  </value>' +
+    '</block>';
+
+Blockly.Blocks['hannah-ask'] = {
+    init: function () {
+        const options = [];
+
+        if (typeof main !== 'undefined' && main.instances) {
+            for (let i = 0; i < main.instances.length; i++) {
+                const m = main.instances[i].match(/^system.adapter.hannah.(\d+)$/);
+                if (m) {
+                    const n = parseInt(m[1], 10);
+                    options.push([`hannah.${n}`, `.${n}`]);
+                }
+            }
+        }
+
+        if (!options.length) {
+            for (let k = 0; k <= 4; k++) {
+                options.push([`hannah.${k}`, `.${k}`]);
+            }
+        }
+
+        options.unshift([Blockly.Translate('hannah-ask_anyInstance'), '']);
+
+        this.appendDummyInput('INSTANCE')
+            .appendField(Blockly.Translate('hannah-ask'))
+            .appendField(new Blockly.FieldDropdown(options), 'INSTANCE');
+
+        this.appendValueInput('ROOM').appendField(Blockly.Translate('hannah-ask_room'));
+        this.appendValueInput('TEXT').appendField(Blockly.Translate('hannah-ask_text'));
+        this.appendStatementInput('DO')
+            .appendField(Blockly.Translate('hannah-ask_do'))
+            .appendField(new Blockly.FieldVariable('answer'), 'VAR');
+
+        this.setInputsInline(false);
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour(Blockly.Sendto.HUE);
+        this.setHelpUrl(Blockly.Translate('hannah-ask_help'));
+    },
+};
+
+Blockly.JavaScript['hannah-ask'] = function (block) {
+    const instance = block.getFieldValue('INSTANCE');
+    const room = Blockly.JavaScript.valueToCode(block, 'ROOM', Blockly.JavaScript.ORDER_ATOMIC) || "'all'";
+    const text = Blockly.JavaScript.valueToCode(block, 'TEXT', Blockly.JavaScript.ORDER_ATOMIC);
+    const varName = block.getField('VAR').getText();
+    const statements = Blockly.JavaScript.statementToCode(block, 'DO');
+
+    return `sendTo('hannah${instance}', 'ask', { room: ${room}, text: ${text} }, function(result) {\n    if (result.error) { console.warn('[hannah/ask] ' + result.error); return; }\n    var ${varName} = result.answer;\n${statements}});\n`;
+};
