@@ -21,6 +21,10 @@ export class SensorWatcher {
      * @param pressure - Pressure in hPa
      * @param humidity - Relative humidity in %
      * @param gasResistance - Gas resistance in Ω (0 if not available)
+     * @param iaq - IAQ 0–500 (BSEC2); 0 when not available
+     * @param iaqAccuracy - BSEC2 accuracy 0–3
+     * @param co2Equiv - CO₂ equivalent ppm (BSEC2); 0 when not available
+     * @param vocEquiv - Breath VOC equivalent ppm (BSEC2); 0 when not available
      */
     async handleSensorUpdate(
         device: string,
@@ -28,9 +32,13 @@ export class SensorWatcher {
         pressure: number,
         humidity: number,
         gasResistance: number,
+        iaq: number,
+        iaqAccuracy: number,
+        co2Equiv: number,
+        vocEquiv: number,
     ): Promise<void> {
         try {
-            await this._ensureStates(device, gasResistance > 0);
+            await this._ensureStates(device, gasResistance > 0, iaq > 0);
             const ns = `satellites.sensors.${device}`;
             const updates: Promise<unknown>[] = [
                 this.adapter.setState(`${ns}.temperature`, { val: Math.round(temperature * 10) / 10, ack: true }),
@@ -46,9 +54,18 @@ export class SensorWatcher {
                     this.adapter.setState(`${ns}.gas_resistance`, { val: Math.round(gasResistance), ack: true }),
                 );
             }
+            if (iaq > 0) {
+                updates.push(
+                    this.adapter.setState(`${ns}.iaq`, { val: Math.round(iaq * 10) / 10, ack: true }),
+                    this.adapter.setState(`${ns}.iaq_accuracy`, { val: iaqAccuracy, ack: true }),
+                    this.adapter.setState(`${ns}.co2_equiv`, { val: Math.round(co2Equiv * 10) / 10, ack: true }),
+                    this.adapter.setState(`${ns}.voc_equiv`, { val: Math.round(vocEquiv * 1000) / 1000, ack: true }),
+                );
+            }
             await Promise.all(updates);
             this.adapter.log.debug(
-                `[sensors] ${device}: T=${temperature.toFixed(1)}°C P=${pressure.toFixed(1)}hPa H=${humidity.toFixed(1)}% Gas=${gasResistance.toFixed(0)}`,
+                `[sensors] ${device}: T=${temperature.toFixed(1)}°C P=${pressure.toFixed(1)}hPa H=${humidity.toFixed(1)}%` +
+                (iaq > 0 ? ` IAQ=${iaq.toFixed(0)}(acc=${iaqAccuracy})` : ''),
             );
         } catch (e) {
             this.adapter.log.error(`[sensors] handleSensorUpdate failed: ${(e as Error).message}`);
@@ -70,7 +87,7 @@ export class SensorWatcher {
         this.ensuredDevices.delete(device);
     }
 
-    private async _ensureStates(device: string, hasGas: boolean): Promise<void> {
+    private async _ensureStates(device: string, hasGas: boolean, hasBsec: boolean): Promise<void> {
         if (this.ensuredDevices.has(device)) {
             return;
         }
@@ -120,6 +137,28 @@ export class SensorWatcher {
                     read: true,
                     write: false,
                 },
+                native: {},
+            });
+        }
+        if (hasBsec) {
+            await this.adapter.setObjectNotExistsAsync(`${ns}.iaq`, {
+                type: 'state',
+                common: { name: 'IAQ (Air Quality Index)', type: 'number', role: 'value', unit: 'IAQ', read: true, write: false },
+                native: {},
+            });
+            await this.adapter.setObjectNotExistsAsync(`${ns}.iaq_accuracy`, {
+                type: 'state',
+                common: { name: 'IAQ Accuracy (0–3)', type: 'number', role: 'value', read: true, write: false },
+                native: {},
+            });
+            await this.adapter.setObjectNotExistsAsync(`${ns}.co2_equiv`, {
+                type: 'state',
+                common: { name: 'CO₂ Equivalent', type: 'number', role: 'value.co2', unit: 'ppm', read: true, write: false },
+                native: {},
+            });
+            await this.adapter.setObjectNotExistsAsync(`${ns}.voc_equiv`, {
+                type: 'state',
+                common: { name: 'Breath VOC Equivalent', type: 'number', role: 'value', unit: 'ppm', read: true, write: false },
                 native: {},
             });
         }

@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: IAQ, IAQ accuracy, CO₂ equivalent and VOC equivalent states under `satellites.sensors.<device>` — populated when satellite uses BME680 with BSEC2 (Refs #17)
+
 ### 0.16.0 (2026-06-16)
 - Added: `ask` command for `sendTo` — pose a question to a resident via Hannah TTS; the resident's spoken answer is returned as `{ answer: string }` in the `sendTo` callback; payload: `{ room?: string, text: string }`
 - Updated: proto — `AgentAskResident` gains `correlation_id`; new `AgentResidentAnswered` message and `resident_answered` variant in `AgentCommand` oneof
