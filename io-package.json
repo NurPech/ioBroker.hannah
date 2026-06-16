@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.15.3",
+    "version": "0.16.0",
     "news": {
       "0.16.0": {
         "en": "Added: `ask` message command — sends a question via Hannah TTS to a room, intercepts the next resident utterance, and returns the spoken answer via `result.answer` in the callback\nAdded: Blockly block for the `ask` command with variable binding for the spoken answer",
@@ -93,19 +93,6 @@
         "pl": "Naprawiono: brak obiektu kanału 'info' - sprawdzacz adaptera E3009; utworzony przed 'info.connection' stan w 'onReady'\nNaprawiono: obiekty pokoju satelitarnego były typu 'channel' - sprawdzacz adaptera E2003 (urządzenie za kanałem); zmienione na 'folder', więc urządzenia satelitarne pozostają pod nimi ważne\nNaprawiono: 'indicator.update' rola w 'update _ available' stan jest nieznany - zmieniony na 'indicators'\nNaprawiono: nazwy pomieszczeń i urządzeń zawierające spacje (np. \"Leonie Schlafzimmer\") produkowane w niepoprawnym stanie ID - 'sanitizeId ()' obecnie zastępuje nie- '[a- za- Z0- 9 _, -]' znaki z '_' w ścieżkach identyfikacyjnych; 'common.name' zachowuje oryginalną nazwę; 'satellite _ control' wiadomości gRPC używają oryginalnej nazwy pokoju poprzez mapę wsteczną",
         "uk": "Виправлено: `info``````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````\nВиправлено: об'єкти супутникової кімнати були типу \"канальний\" — перехідник E2003 (пристрій після каналу); змінено до `folder`, тому супутникові пристрої залишаються дійсними під ними\nВиправлено: роль `indicator.update``````update 14``````\nВиправлено: імена номерів та пристроїв, що містять пробіли (наприклад, «Leonie Schlafzimmer») видобуваються недійсними державними ID — `sanitizeId()’ тепер замінює не`[a-zA-Z0-9 ,-]’ символи з ` ``````` в ID шляхах; `common.name’ зберігає назву оригіналу; `satellite control` gRPC повідомлення використовують назву оригінального номеру через зворотну карту",
         "zh-cn": "固定 : 缺少“ info” 频道对象 —— 适配器检查器 E3009; 在“ ready” 中的“ info. connection”状态前创建\n固定:卫星室物体为 \" 频道 \" 类型——适配器检查器E2003(信道后装置);改为 \" 文件夹 \" ,因此卫星设备在其下仍然有效\n固定:`更新-可用 ' 状态上的`指标.update ' 角色不详——改为`指标 '\n固定:含有空格(如\"Leonie Schlafzimer\")的房间和设备名称产生无效的状态ID——`sanitizeId()'现在将非`[a-zA-Z0-9 ,-]'字符在ID路径中替换为`` `';`common.name'保留原名;`satellite control' gRPC消息通过反向地图使用原房间名称"
-      },
-      "0.12.1": {
-        "en": "Fixed: `announcementSsml` and `announcementRephrase` states were silently ignored by Hannah Core — proto-loader uses `keepCase: true` so field names must be snake_case on the wire; added explicit `protoKey` mapping in `satellites.ts`",
-        "de": "Behoben: `announcementSsml` und `announcementRephrase` Zustände wurden still ignoriert von Hannah Core — proto-loader verwendet `keepCase: true` so Feldnamen müssen snake case auf dem Draht sein; hinzugefügt explizit `protoKey` Mapping in `satellites.ts`",
-        "ru": "Исправлено: государства «announcementSsml» и «announcementRephrase» были молча проигнорированы Hannah Core — прото-загрузчик использует «keepCase: true», поэтому имена полей должны быть змеиными",
-        "pt": "Corrigido: `anúncioSsml' e `anúncioRefrase' estados foram silenciosamente ignorados por Hannah Core — proto-loader usa `keepCase: true` então os nomes dos campos devem ser snake case no fio; adicionado explicitamente `protoKey` mapeamento em `satellites.ts`",
-        "nl": "Vast: ",
-        "fr": "Correction : les états `annoncesSsml` et `annoncesRephrase` ont été silencieusement ignorés par Hannah Core - proto-loader utilise `keepCase: true` donc les noms de champ doivent être serpent case sur le fil; ajouté explicitement `protoKey` cartographie dans `satellites.ts`",
-        "it": "Fisso: `annuncioSsml` e `annuncioRephrase` stati sono stati silenziosamente ignorati da Hannah Core — proto-loader utilizza `keepCase: true` in modo che i nomi di campo devono essere serpente case sul filo; aggiunto esplicito `protoKey` mappatura in `satellites.ts`",
-        "es": "Corregido: `announcementSsml` y `announcementRephrase ` states were silently ignore by Hannah Core — proto-loader uses `keepCase: true` so field names must be serpiente case on the wire; added explicit `protoKey` mapping in `satellites.ts`",
-        "pl": "Naprawiono: \"noticementSsml\" i \"noticementRephrase\" stany zostały po cichu zignorowane przez Hannah Core - proto- loader używa 'keepCase: true' więc nazwy pól muszą być wężem _ case na drucie; dodano wyraźne 'protoKey' mapowanie w 'satellites.ts'",
-        "uk": "Виправлено: `announcementSsml` і `announcementRephrase` стани мовчазно ігнорували Hannah Core - proto-loader використовує `keepCase: true` так назви поля повинні бути змія case на дроті; додано явний `protoKey` на карті `satellites.ts`",
-        "zh-cn": "固定:Hannah Core默不作声地忽略了`通知Ssml ' 和`通知重述 ' 状态——原装机使用`keepCase:',所以现场名称必须是铁丝网上的蛇 case;在`卫星.ts ' 中增加了明确的`protoKey ' 绘图"
       }
     },
     "blockly": true,
