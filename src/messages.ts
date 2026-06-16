@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type * as utils from '@iobroker/adapter-core';
 import type { AgentMessageSender } from './grpc-client';
 
@@ -21,6 +22,11 @@ interface AnnouncePayload {
     text?: string;
 }
 
+interface AskPayload {
+    room?: string;
+    text?: string;
+}
+
 /** Function that sends a notification to Hannah Core via unary gRPC and returns the acknowledgement. */
 export type NotifyFn = (
     /** Notification text */
@@ -36,6 +42,7 @@ export class MessagesHandler {
     private adapter: utils.AdapterInstance;
     private notify: NotifyFn;
     private send: AgentMessageSender;
+    private readonly _pending = new Map<string, { from: string; command: string; cb: ioBroker.MessageCallbackInfo }>();
 
     /**
      * @param adapter - ioBroker adapter instance
@@ -120,7 +127,34 @@ export class MessagesHandler {
             if (obj.callback) {
                 this.adapter.sendTo(obj.from, obj.command, { sent: true }, obj.callback);
             }
+        } else if (obj.command === 'ask') {
+            const { room, text } = (obj.message ?? {}) as AskPayload;
+            if (!text) {
+                if (obj.callback) {
+                    this.adapter.sendTo(obj.from, obj.command, { sent: false, error: 'no payload' }, obj.callback);
+                }
+                return;
+            }
+            const correlationId = randomUUID();
+            if (obj.callback) {
+                this._pending.set(correlationId, { from: obj.from, command: obj.command, cb: obj.callback });
+            }
+            const roomValue = room || 'all';
+            this.send({ ask_resident: { correlation_id: correlationId, room: roomValue, question: text } });
+            this.adapter.log.debug(`[messages] ask corr=${correlationId} room=${roomValue} text=${text}`);
         }
+    }
+
+    public onResidentAnswered(cmd: { correlation_id: string; answer: string }): void {
+        const { correlation_id, answer } = cmd;
+        const cb = this._pending.get(correlation_id);
+        if (!cb) {
+            this.adapter.log.warn(`[messages] resident_answered: unknown correlation_id ${correlation_id}`);
+            return;
+        }
+        this._pending.delete(correlation_id);
+        this.adapter.log.debug(`[messages] resident_answered corr=${correlation_id} answer=${answer}`);
+        this.adapter.sendTo(cb.from, cb.command, { answer }, cb.cb);
     }
 
     private extractText(notification: NotificationMessage | undefined): string | null {
