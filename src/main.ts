@@ -172,7 +172,10 @@ class Hannah extends utils.Adapter {
                         s.temperature,
                         s.pressure,
                         s.humidity,
-                        s.gas_resistance,
+                        s.iaq,
+                        s.iaq_accuracy,
+                        s.co2_equiv,
+                        s.voc_equiv,
                     );
                 } else if (which === 'resident_answered' && cmd.resident_answered) {
                     this.messages?.onResidentAnswered(cmd.resident_answered);

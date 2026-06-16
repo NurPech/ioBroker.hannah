@@ -600,12 +600,18 @@ message AgentBleUpdate {
 // Hannah notifies the adapter of a satellite's sensor reading.
 // The adapter creates/updates states under hannah.<instance>.satellites.<device>.sensors.*.
 // gas_resistance is omitted (0.0) when not available (BMP280+AHT20 hardware).
+// iaq/co2_equiv/voc_equiv are omitted (0.0) when BSEC2 is not calibrated yet.
 message AgentSensorUpdate {
+  reserved 5;
+  reserved "gas_resistance";  // removed: BSEC2 replaces raw VOC resistance
   string device          = 1;  // satellite device ID
   float  temperature     = 2;  // °C
   float  pressure        = 3;  // hPa
   float  humidity        = 4;  // % relative humidity (0 when not available)
-  float  gas_resistance  = 5;  // Ω VOC raw resistance (0 when not available)
+  float  iaq             = 6;  // IAQ 0–500 (BSEC2); 0 when not calibrated
+  uint32 iaq_accuracy    = 7;  // 0=uncertain 1=low 2=medium 3=high
+  float  co2_equiv       = 8;  // CO₂ equivalent ppm (BSEC2); 0 when not available
+  float  voc_equiv       = 9;  // breath VOC equivalent ppm (BSEC2); 0 when not available
 }
 
 // ============================================================

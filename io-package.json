@@ -3,6 +3,9 @@
     "name": "hannah",
     "version": "0.16.0",
     "news": {
+      "0.17.0": {
+        "en": "Added: IAQ, IAQ accuracy, CO₂ equivalent and VOC equivalent states under satellites.sensors.<device> — populated when satellite uses BME680 with BSEC2 library"
+      },
       "0.16.0": {
         "en": "Added: `ask` message command — sends a question via Hannah TTS to a room, intercepts the next resident utterance, and returns the spoken answer via `result.answer` in the callback\nAdded: Blockly block for the `ask` command with variable binding for the spoken answer",
         "de": "Hinzugefügt: Nachrichtenbefehl `ask` — stellt eine Frage per Hannah-TTS in einem Raum, fängt die nächste Äußerung des Bewohners ab und gibt die gesprochene Antwort über `result.answer` im Callback zurück\nHinzugefügt: Blockly-Block für den `ask`-Befehl mit Variablenbindung für die gesprochene Antwort",
