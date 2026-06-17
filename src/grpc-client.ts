@@ -162,11 +162,7 @@ export class GrpcClient {
      * @param displayName - Human-readable device name
      * @param roomId - Room the satellite will be assigned to
      */
-    provisionSatellite(
-        seed: string,
-        displayName: string,
-        roomId: string,
-    ): Promise<{ ok: boolean; message?: string }> {
+    provisionSatellite(seed: string, displayName: string, roomId: string): Promise<{ ok: boolean; message?: string }> {
         return new Promise((resolve, reject) => {
             if (!this.client) {
                 reject(new Error('not connected'));
