@@ -37,7 +37,7 @@ export class SatelliteWatcher {
      * room-level states (dnd, announcement, …) — is removed too, so empty
      * rooms don't linger in the object database forever.
      *
-     * @param deviceId - Satellite device ID (raw, unsanitized)
+     * @param objectKey - Satellite device ID (raw, unsanitized)
      * @param room - Room the satellite is assigned to (raw name)
      * @returns true if the (now empty) room container was also removed
      */
@@ -398,9 +398,7 @@ export class SatelliteWatcher {
     async markUnknownOffline(
         knownSatellites: Array<{ device_id: string; room: string; serial?: string }>,
     ): Promise<void> {
-        const known = new Set(
-            knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.serial || s.device_id)}`),
-        );;
+        const known = new Set(knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.serial || s.device_id)}`));
         const objects = await this.adapter.getForeignObjectsAsync(
             `${this.adapter.namespace}.satellites.rooms.*.*`,
             'device',

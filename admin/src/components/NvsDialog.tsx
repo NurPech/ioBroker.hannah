@@ -129,7 +129,9 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults, s
                     });
                     addLog(I18n.t('Satellite registered.'));
                 } catch (provisionErr: any) {
-                    addLog(`${I18n.t('Warning: could not provision satellite:')} ${provisionErr?.message ?? provisionErr}`);
+                    addLog(
+                        `${I18n.t('Warning: could not provision satellite:')} ${provisionErr?.message ?? provisionErr}`,
+                    );
                 }
             }
 
