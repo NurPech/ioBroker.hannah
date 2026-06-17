@@ -77,6 +77,12 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: Satellite Identity (Refs #52) — paired satellites now use their eFuse-MAC-based hardware serial as stable ioBroker object key (`satellites.rooms.<room>.<serial>.*`) instead of the mutable device_id; unpaired/UDP satellites fall back to device_id as before
+- Added: `provisionSatellite` sendTo command — generates a pairing seed in Hannah Core before flashing so the satellite can auto-pair on first connect
+- Added: NVS flash dialog now registers the satellite in Hannah Core (via `provisionSatellite`) and writes the pairing seed to NVS so the satellite links its hardware serial to the pre-configured identity on first boot
+- Updated: proto — `Satellite.serial` (field 4), `SatelliteRegistration.serial/seed` (fields 4+5), `AgentSatelliteUpdate.serial` (field 7), `ProvisionSatellite` RPC + `ProvisionSatelliteRequest` message
+
 ### 0.17.0 (2026-06-16)
 - Added: IAQ, IAQ accuracy, CO₂ equivalent and VOC equivalent states under `satellites.sensors.<device>` — populated when satellite uses BME680 with BSEC2 (Refs #17)
 

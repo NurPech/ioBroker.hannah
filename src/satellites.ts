@@ -15,8 +15,10 @@ export class SatelliteWatcher {
     private adapter: utils.AdapterInstance;
     private send: AgentMessageSender;
     private getGrpc: () => GrpcClient | null;
-    private deviceRooms: Map<string, string> = new Map();
+    private deviceRooms: Map<string, string> = new Map(); // deviceId.lower → room
     private roomNames: Map<string, string> = new Map(); // sanitizeId(room).toLowerCase() → original room
+    private deviceToObjectKey: Map<string, string> = new Map(); // deviceId.lower → objectKey (serial || deviceId)
+    private objectKeyToDeviceId: Map<string, string> = new Map(); // objectKey.lower → deviceId
 
     /**
      * @param adapter - ioBroker adapter instance
@@ -39,12 +41,16 @@ export class SatelliteWatcher {
      * @param room - Room the satellite is assigned to (raw name)
      * @returns true if the (now empty) room container was also removed
      */
-    async deleteSatellite(deviceId: string, room: string): Promise<boolean> {
+    async deleteSatellite(objectKey: string, room: string): Promise<boolean> {
         const roomBase = `satellites.rooms.${sanitizeId(room)}`;
-        const satBase = `${roomBase}.${sanitizeId(deviceId)}`;
+        const satBase = `${roomBase}.${sanitizeId(objectKey)}`;
 
         await this.adapter.delObjectAsync(satBase, { recursive: true });
+        // objectKey may be a serial — resolve to the actual deviceId for map cleanup
+        const deviceId = this.objectKeyToDeviceId.get(objectKey.toLowerCase()) ?? objectKey;
         this.deviceRooms.delete(deviceId.toLowerCase());
+        this.deviceToObjectKey.delete(deviceId.toLowerCase());
+        this.objectKeyToDeviceId.delete(objectKey.toLowerCase());
 
         // Remove the room container only if no satellite (device) remains in it.
         // Room-level states are not of type 'device', so they don't count.
@@ -62,12 +68,13 @@ export class SatelliteWatcher {
      * Called when Hannah pushes a satellite registered/gone event, or on
      * initial connect when existing satellites are fetched via GetSatellites.
      *
-     * @param deviceId - Satellite device ID
+     * @param deviceId - Satellite device ID (human-readable, used as display name)
      * @param room - Room the satellite is assigned to
      * @param address - UDP address (IP:port); IP is stored as satellite state
      * @param online - true = registered, false = gone
      * @param volume - Current volume level (0–100), if reported
      * @param mute - Current mute state, if reported
+     * @param serial - eFuse-MAC-based hardware serial; when present, used as stable ioBroker object key
      */
     async handleSatelliteUpdate(
         deviceId: string,
@@ -76,43 +83,57 @@ export class SatelliteWatcher {
         online: boolean,
         volume?: number,
         mute?: boolean,
+        serial?: string,
     ): Promise<void> {
+        // objectKey is the stable ioBroker path segment: serial when paired, deviceId otherwise
+        const objectKey = serial || deviceId;
+
         if (!room && !online) {
             // Gone event without room info — find and clear the satellite's online states
             this.adapter.log.info(`[satellites] Satellite gone: ${deviceId}`);
-            await this._setSatelliteOnline(deviceId, '', false);
+            const storedKey = this.deviceToObjectKey.get(deviceId.toLowerCase()) ?? deviceId;
+            await this._setSatelliteOnline(storedKey, '', false);
             return;
         }
         if (online) {
             this.deviceRooms.set(deviceId.toLowerCase(), room);
+            this.deviceToObjectKey.set(deviceId.toLowerCase(), objectKey);
+            this.objectKeyToDeviceId.set(objectKey.toLowerCase(), deviceId);
             this.roomNames.set(sanitizeId(room).toLowerCase(), room);
         } else {
+            const prevKey = this.deviceToObjectKey.get(deviceId.toLowerCase());
             this.deviceRooms.delete(deviceId.toLowerCase());
+            this.deviceToObjectKey.delete(deviceId.toLowerCase());
+            if (prevKey) {
+                this.objectKeyToDeviceId.delete(prevKey.toLowerCase());
+            }
         }
         await this._ensureRoomStates(room);
-        await this._ensureSatelliteStates(deviceId, room);
-        await this._setSatelliteOnline(deviceId, room, online);
+        await this._ensureSatelliteStates(objectKey, room, deviceId);
+        await this._setSatelliteOnline(objectKey, room, online);
         if (online && address) {
             const ip = address.split(':')[0];
-            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.address`, {
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.address`, {
                 val: ip,
                 ack: true,
             });
         }
         if (volume !== undefined) {
-            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.volume`, {
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.volume`, {
                 val: volume,
                 ack: true,
             });
         }
         if (mute !== undefined) {
-            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.mute`, {
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.mute`, {
                 val: mute,
                 ack: true,
             });
         }
         if (online) {
-            this.adapter.log.info(`[satellites] Satellite online: ${deviceId} in room '${room}'`);
+            this.adapter.log.info(
+                `[satellites] Satellite online: ${deviceId}${serial ? ` (${serial})` : ''} in room '${room}'`,
+            );
         } else {
             this.adapter.log.info(`[satellites] Satellite offline: ${deviceId} in room '${room}'`);
         }
@@ -132,7 +153,8 @@ export class SatelliteWatcher {
             this.adapter.log.debug(`[satellites] firmware event for unknown device ${deviceId} — ignored`);
             return;
         }
-        const base = `satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}`;
+        const objectKey = this.deviceToObjectKey.get(deviceId.toLowerCase()) ?? deviceId;
+        const base = `satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}`;
         await this.adapter.setState(`${base}.firmware_version`, { val: version, ack: true });
         if (updateAvailable !== undefined) {
             await this.adapter.setState(`${base}.update_available`, { val: updateAvailable, ack: true });
@@ -160,22 +182,28 @@ export class SatelliteWatcher {
             ),
         );
         if (perSatMatch) {
-            const [, roomId, deviceId, key] = perSatMatch;
+            const [, roomId, objectKeyId, key] = perSatMatch;
             const originalRoom = this.roomNames.get(roomId.toLowerCase()) ?? roomId;
+            // objectKeyId may be a serial — resolve to actual device_id for Core RPCs
+            const actualDeviceId = this.objectKeyToDeviceId.get(objectKeyId.toLowerCase()) ?? objectKeyId;
             if (key === 'update_now' && state.val === true) {
                 void this.adapter.setState(id, { val: false, ack: true });
                 void this.getGrpc()
-                    ?.triggerFirmwareUpdate(deviceId)
+                    ?.triggerFirmwareUpdate(actualDeviceId)
                     .then(res => {
-                        this.adapter.log.info(`[satellites] TriggerFirmwareUpdate ${deviceId}: ${res.message ?? 'ok'}`);
+                        this.adapter.log.info(
+                            `[satellites] TriggerFirmwareUpdate ${actualDeviceId}: ${res.message ?? 'ok'}`,
+                        );
                     })
                     .catch(err => {
-                        this.adapter.log.warn(`[satellites] TriggerFirmwareUpdate ${deviceId} failed: ${err.message}`);
+                        this.adapter.log.warn(
+                            `[satellites] TriggerFirmwareUpdate ${actualDeviceId} failed: ${err.message}`,
+                        );
                     });
             } else if (key === 'volume' || key === 'mute') {
-                this.send({ satellite_control: { room: originalRoom, device_id: deviceId, [key]: state.val } });
+                this.send({ satellite_control: { room: originalRoom, device_id: actualDeviceId, [key]: state.val } });
                 this.adapter.log.debug(
-                    `[satellites] satellite_control device='${deviceId}' room='${originalRoom}' ${key}=${state.val}`,
+                    `[satellites] satellite_control device='${actualDeviceId}' room='${originalRoom}' ${key}=${state.val}`,
                 );
             }
             return true;
@@ -265,11 +293,11 @@ export class SatelliteWatcher {
         }
     }
 
-    private async _ensureSatelliteStates(deviceId: string, room: string): Promise<void> {
-        const base = `satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}`;
+    private async _ensureSatelliteStates(objectKey: string, room: string, displayName: string): Promise<void> {
+        const base = `satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}`;
         await this.adapter.setObjectNotExistsAsync(base, {
             type: 'device',
-            common: { name: `Satellite ${deviceId}` },
+            common: { name: `Satellite ${displayName}` },
             native: {},
         });
         await this.adapter.setObjectNotExistsAsync(`${base}.online`, {
@@ -367,8 +395,12 @@ export class SatelliteWatcher {
      *
      * @param knownSatellites - Satellites currently reported by Hannah Core
      */
-    async markUnknownOffline(knownSatellites: Array<{ device_id: string; room: string }>): Promise<void> {
-        const known = new Set(knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.device_id)}`));
+    async markUnknownOffline(
+        knownSatellites: Array<{ device_id: string; room: string; serial?: string }>,
+    ): Promise<void> {
+        const known = new Set(
+            knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.serial || s.device_id)}`),
+        );;
         const objects = await this.adapter.getForeignObjectsAsync(
             `${this.adapter.namespace}.satellites.rooms.*.*`,
             'device',
@@ -389,11 +421,11 @@ export class SatelliteWatcher {
         }
     }
 
-    private async _setSatelliteOnline(deviceId: string, room: string, online: boolean): Promise<void> {
+    private async _setSatelliteOnline(objectKey: string, room: string, online: boolean): Promise<void> {
         if (!room) {
             return;
         }
-        await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(deviceId)}.online`, {
+        await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.online`, {
             val: online,
             ack: true,
         });

@@ -127,7 +127,15 @@ class Hannah extends utils.Adapter {
                 // Fetch existing satellites and create states
                 const sats = await this.grpc!.getSatellites();
                 for (const sat of sats) {
-                    await this.satellites!.handleSatelliteUpdate(sat.device_id, sat.room, sat.address, true);
+                    await this.satellites!.handleSatelliteUpdate(
+                        sat.device_id,
+                        sat.room,
+                        sat.address,
+                        true,
+                        undefined,
+                        undefined,
+                        sat.serial || undefined,
+                    );
                 }
                 await this.satellites!.markUnknownOffline(sats);
             },
@@ -152,6 +160,7 @@ class Hannah extends utils.Adapter {
                         s.online,
                         s.volume ?? undefined,
                         s.mute ?? undefined,
+                        s.serial || undefined,
                     );
                 } else if (which === 'watch_more' && cmd.watch_more?.state_ids) {
                     void this.states?.watchMore(cmd.watch_more.state_ids);
@@ -276,6 +285,37 @@ class Hannah extends utils.Adapter {
                         this.sendTo(obj.from, obj.command, { error: err.message }, obj.callback);
                     }
                 });
+            return;
+        }
+        if (obj.command === 'provisionSatellite') {
+            const params = (obj.message ?? {}) as { seed?: string; displayName?: string; roomId?: string };
+            const { seed, displayName, roomId } = params;
+            if (!seed || !displayName || !roomId) {
+                if (obj.callback) {
+                    this.sendTo(
+                        obj.from,
+                        obj.command,
+                        { error: 'seed, displayName and roomId required' },
+                        obj.callback,
+                    );
+                }
+                return;
+            }
+            this.log.info(`[satellites] Provisioning satellite '${displayName}' in room '${roomId}'`);
+            void (async (): Promise<void> => {
+                try {
+                    const result = await this.grpc!.provisionSatellite(seed, displayName, roomId);
+                    this.log.info(`[satellites] Provisioned '${displayName}': ${result.message ?? 'ok'}`);
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, { ok: result.ok, message: result.message }, obj.callback);
+                    }
+                } catch (err) {
+                    this.log.warn(`[satellites] provisionSatellite failed: ${(err as Error).message}`);
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, { error: (err as Error).message }, obj.callback);
+                    }
+                }
+            })();
             return;
         }
         if (obj.command === 'deleteSatellite') {

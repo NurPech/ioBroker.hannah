@@ -14,6 +14,7 @@ import Typography from '@mui/material/Typography';
 import { ESPLoader, Transport, UsbJtagSerialReset } from 'esptool-js';
 import { encodeNVS } from '@m1kad0/esp-nvs-utils';
 import { I18n } from '@iobroker/adapter-react-v5';
+import type { AdminConnection } from '@iobroker/adapter-react-v5';
 import type { SatelliteDefaults } from './settings';
 
 interface NvsConfig {
@@ -41,12 +42,14 @@ interface Props {
     deviceId: string;
     room: string;
     defaults?: SatelliteDefaults;
+    socket?: AdminConnection;
+    adapterNamespace?: string;
 }
 
 const NVS_OFFSET = 0x9000;
 const NVS_SIZE = 0x5000;
 
-const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults }) => {
+const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults, socket, adapterNamespace }) => {
     const [config, setConfig] = useState<NvsConfig>({
         deviceId: '',
         room: '',
@@ -114,6 +117,22 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults })
         setErrorMsg('');
 
         try {
+            // Generate pairing seed and register the satellite in Hannah before flashing
+            const seed = crypto.randomUUID();
+            if (socket && adapterNamespace) {
+                addLog(I18n.t('Registering satellite with Hannah Core...'));
+                try {
+                    await (socket as any).sendTo(adapterNamespace, 'provisionSatellite', {
+                        seed,
+                        displayName: config.deviceId,
+                        roomId: config.room,
+                    });
+                    addLog(I18n.t('Satellite registered.'));
+                } catch (provisionErr: any) {
+                    addLog(`${I18n.t('Warning: could not provision satellite:')} ${provisionErr?.message ?? provisionErr}`);
+                }
+            }
+
             addLog(I18n.t('Generating NVS partition...'));
             const nvsData = encodeNVS({
                 hannah: [
@@ -136,6 +155,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults })
                     ...(config.assetToken
                         ? [{ name: 'asset_token', encoding: 'string' as const, value: config.assetToken }]
                         : []),
+                    { name: 'seed', encoding: 'string', value: seed },
                     { name: 'ww_threshold', encoding: 'u8', value: 75 },
                     { name: 'tls_skip', encoding: 'u8', value: config.tlsSkipVerify ? 1 : 0 },
                 ],
