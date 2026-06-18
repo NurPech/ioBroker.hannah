@@ -166,7 +166,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
         // becomes empty. deviceName is the raw device ID (the sensor path is not
         // sanitized); room is the raw room name.
         await (socket as any).sendTo(adapterNamespace, 'deleteSatellite', {
-            deviceId: sat.deviceName,
+            deviceId: sat.deviceId,
             room: sat.room,
         });
         setConfirmDeleteId(null);
@@ -192,6 +192,8 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                 deviceId={nvsTarget?.deviceId ?? ''}
                 room={nvsTarget?.room ?? ''}
                 defaults={satelliteDefaults}
+                socket={socket}
+                adapterNamespace={adapterNamespace}
             />
             <Typography
                 variant="h5"
