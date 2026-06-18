@@ -292,11 +292,11 @@ export class SatelliteWatcher {
         const base = `satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}`;
         await this.adapter.setObjectNotExistsAsync(base, {
             type: 'device',
-            common: { name: `Satellite ${displayName}` },
+            common: { name: `${displayName}` },
             native: {},
         });
         await this.adapter.extendObject(base, {
-            common: { name: `Satellite ${displayName}` },
+            common: { name: `${displayName}` },
         });
         await this.adapter.setObjectNotExistsAsync(`${base}.online`, {
             type: 'state',

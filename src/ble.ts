@@ -26,6 +26,7 @@ export class BleWatcher {
      * @param rssi - Last known RSSI in dBm; 0 when room is empty
      */
     async handleBleUpdate(label: string, mac: string, room: string, satellite: string, rssi: number): Promise<void> {
+        await this.ensureBleFolder();
         await this._ensureStates(label, mac);
         await Promise.all([
             this.adapter.setState(`ble.${label}.room`, { val: room || null, ack: true }),
@@ -60,6 +61,14 @@ export class BleWatcher {
         await this.adapter.setObjectNotExistsAsync(`${ns}.rssi`, {
             type: 'state',
             common: { name: 'RSSI', type: 'number', role: 'value', unit: 'dBm', read: true, write: false, def: null },
+            native: {},
+        });
+    }
+
+    private async ensureBleFolder(): Promise<void> {
+        await this.adapter.setObjectNotExistsAsync('ble', {
+            type: 'folder',
+            common: { name: 'BLE-Tags' },
             native: {},
         });
     }
