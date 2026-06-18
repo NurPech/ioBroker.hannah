@@ -292,12 +292,7 @@ class Hannah extends utils.Adapter {
             const { seed, displayName, roomId } = params;
             if (!seed || !displayName) {
                 if (obj.callback) {
-                    this.sendTo(
-                        obj.from,
-                        obj.command,
-                        { error: 'seed and displayName required' },
-                        obj.callback,
-                    );
+                    this.sendTo(obj.from, obj.command, { error: 'seed and displayName required' }, obj.callback);
                 }
                 return;
             }
