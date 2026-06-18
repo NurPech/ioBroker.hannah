@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.20.0 (2026-06-18)
 - Changed: `StateWatcher` sends enum ID segment as `room` (e.g. `wohnzimmer`) and all `common.name` languages as `room_names` map — language-neutral object keys (Refs #58)
 - Changed: satellite state paths use room ID from `AgentSatelliteUpdate.room` → `satellites.rooms.wohnzimmer` instead of `satellites.rooms.Wohnzimmer` (Refs #58)
 
