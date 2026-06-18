@@ -77,6 +77,11 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Changed: `handleSatelliteUpdate` accepts optional `displayName` parameter; uses it (falling back to `deviceId`) for `common.name` in ioBroker (Refs #52)
+- Changed: `_ensureSatelliteStates` calls `extendObject` after `setObjectNotExistsAsync` so renames are applied to already-existing objects (Refs #52)
+- Updated: proto — `AgentSatelliteUpdate.display_name` (field 8), `Satellite.display_name` (field 5) — Core now sends the provisioned human-readable name to the adapter (Refs #52)
+
 ### 0.18.0 (2026-06-18)
 - Added: Satellite Identity (Refs #52) — paired satellites now use their eFuse-MAC-based hardware serial as stable ioBroker object key (`satellites.rooms.<room>.<serial>.*`) instead of the mutable device_id; unpaired/UDP satellites fall back to device_id as before
 - Added: `provisionSatellite` sendTo command — generates a pairing seed in Hannah Core before flashing so the satellite can auto-pair on first connect
