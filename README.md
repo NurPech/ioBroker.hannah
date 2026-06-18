@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.19.1 (2026-06-18)
 - Fixed: Added missing 'ble' folder to resolve E3009.
 
 ### 0.19.0 (2026-06-18)
