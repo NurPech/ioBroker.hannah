@@ -135,6 +135,7 @@ class Hannah extends utils.Adapter {
                         undefined,
                         undefined,
                         sat.serial || undefined,
+                        sat.display_name || undefined,
                     );
                 }
                 await this.satellites!.markUnknownOffline(sats);
@@ -161,6 +162,7 @@ class Hannah extends utils.Adapter {
                         s.volume ?? undefined,
                         s.mute ?? undefined,
                         s.serial || undefined,
+                        s.display_name || undefined,
                     );
                 } else if (which === 'watch_more' && cmd.watch_more?.state_ids) {
                     void this.states?.watchMore(cmd.watch_more.state_ids);
