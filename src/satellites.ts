@@ -75,6 +75,7 @@ export class SatelliteWatcher {
      * @param volume - Current volume level (0–100), if reported
      * @param mute - Current mute state, if reported
      * @param serial - eFuse-MAC-based hardware serial; when present, used as stable ioBroker object key
+     * @param displayName - Optional satellite display name (for object naming); falls back to deviceId if not provided
      */
     async handleSatelliteUpdate(
         deviceId: string,
@@ -84,6 +85,7 @@ export class SatelliteWatcher {
         volume?: number,
         mute?: boolean,
         serial?: string,
+        displayName?: string,
     ): Promise<void> {
         // objectKey is the stable ioBroker path segment: serial when paired, deviceId otherwise
         const objectKey = serial || deviceId;
@@ -109,7 +111,7 @@ export class SatelliteWatcher {
             }
         }
         await this._ensureRoomStates(room);
-        await this._ensureSatelliteStates(objectKey, room, deviceId);
+        await this._ensureSatelliteStates(objectKey, room, displayName || deviceId);
         await this._setSatelliteOnline(objectKey, room, online);
         if (online && address) {
             const ip = address.split(':')[0];
@@ -299,6 +301,9 @@ export class SatelliteWatcher {
             type: 'device',
             common: { name: `Satellite ${displayName}` },
             native: {},
+        });
+        await this.adapter.extendObject(base, {
+            common: { name: `Satellite ${displayName}` },
         });
         await this.adapter.setObjectNotExistsAsync(`${base}.online`, {
             type: 'state',

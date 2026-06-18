@@ -137,7 +137,9 @@ export class GrpcClient {
      * Fetch the current list of registered satellites from Hannah Core.
      * Returns an array of satellite objects or an empty array on error.
      */
-    getSatellites(): Promise<Array<{ device_id: string; room: string; address: string; serial?: string }>> {
+    getSatellites(): Promise<
+        Array<{ device_id: string; room: string; address: string; serial?: string; display_name?: string }>
+    > {
         return new Promise(resolve => {
             if (!this.client) {
                 resolve([]);
