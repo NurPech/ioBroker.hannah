@@ -11,6 +11,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import LinearProgress from '@mui/material/LinearProgress';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { ESPLoader, Transport, UsbJtagSerialReset } from 'esptool-js';
@@ -90,6 +91,7 @@ const buildConfigFromDefaults = (defaults?: SatelliteDefaults): FlashConfig => (
 const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace, defaults }) => {
     const [config, setConfig] = useState<FlashConfig>(() => buildConfigFromDefaults(defaults));
     const [configExpanded, setConfigExpanded] = useState(false);
+    const [rooms, setRooms] = useState<{ id: string; label: string }[]>([]);
 
     const [step, setStep] = useState<FlashStep>('config');
     const [log, setLog] = useState<string[]>([]);
@@ -111,6 +113,18 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
             setProgress(0);
             setErrorMsg('');
             setFirmwareVersion('');
+            void (socket as any).getForeignObjects('enum.rooms.*').then((objs: Record<string, any>) => {
+                const list = Object.entries(objs)
+                    .filter(([id]) => id !== 'enum.rooms')
+                    .map(([id, obj]) => {
+                        const name = obj?.common?.name;
+                        const label =
+                            typeof name === 'string' ? name : (name?.de ?? name?.en ?? id.split('.').pop() ?? id);
+                        return { id: id.split('.').pop() ?? id, label };
+                    })
+                    .sort((a, b) => a.label.localeCompare(b.label));
+                setRooms(list);
+            });
         }
     }, [open]); // deps intentionally omitted: reset only on open, not on defaults change
 
@@ -203,14 +217,29 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
             );
             setFirmwareVersion(fw.version ?? '');
 
-            // 2. Generate NVS partition
+            // 2. Generate pairing seed and register satellite in Hannah Core
+            const seed = crypto.randomUUID();
+            addLog(I18n.t('Registering satellite with Hannah Core...'));
+            try {
+                await (socket as any).sendTo(adapterNamespace, 'provisionSatellite', {
+                    seed,
+                    displayName: config.deviceId,
+                    roomId: config.room,
+                });
+                addLog(I18n.t('Satellite registered.'));
+            } catch (provisionErr: any) {
+                addLog(
+                    `${I18n.t('Warning: could not provision satellite:')} ${provisionErr?.message ?? provisionErr}`,
+                );
+            }
+
+            // 3. Generate NVS partition
             addLog(I18n.t('Generating NVS partition...'));
             const nvsData = encodeNVS({
                 hannah: [
                     { name: 'wifi_ssid', encoding: 'string', value: config.wifiSsid },
                     { name: 'wifi_pass', encoding: 'string', value: config.wifiPass },
                     { name: 'device_id', encoding: 'string', value: config.deviceId },
-                    { name: 'room', encoding: 'string', value: config.room },
                     { name: 'mqtt_broker', encoding: 'string', value: config.mqttBroker },
                     { name: 'mqtt_port', encoding: 'u16', value: parseInt(config.mqttPort, 10) || 1883 },
                     { name: 'mqtt_user', encoding: 'string', value: config.mqttUser },
@@ -226,6 +255,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                     ...(config.assetToken
                         ? [{ name: 'asset_token', encoding: 'string' as const, value: config.assetToken }]
                         : []),
+                    { name: 'seed', encoding: 'string', value: seed },
                     { name: 'ww_threshold', encoding: 'u8', value: 75 },
                     { name: 'tls_skip', encoding: 'u8', value: config.tlsSkipVerify ? 1 : 0 },
                 ],
@@ -237,7 +267,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
             nvsPartition.set(nvsData.slice(0, NVS_SIZE));
             addLog(`${I18n.t('NVS partition generated')} (${nvsData.byteLength} ${I18n.t('bytes')})`);
 
-            // 3. Connect to ESP via WebSerial
+            // 4. Connect to ESP via WebSerial
             addLog(I18n.t('Opening WebSerial...'));
             const serial = (navigator as any).serial;
             if (!serial) {
@@ -269,7 +299,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
             const chipName = await esploader.main();
             addLog(`${I18n.t('Connected:')} ${chipName}`);
 
-            // 4. Build file array: firmware files + NVS
+            // 5. Build file array: firmware files + NVS
             setStep('flashing');
             const totalFiles = fw.files.length + 1;
             let filesDone = 0;
@@ -392,15 +422,24 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                                 required
                             />
                             <TextField
+                                select
                                 label={I18n.t('Room')}
                                 value={config.room}
                                 onChange={set('room')}
                                 size="small"
                                 fullWidth
-                                placeholder="Wohnzimmer"
                                 disabled={step !== 'config'}
                                 required
-                            />
+                            >
+                                {rooms.map(r => (
+                                    <MenuItem
+                                        key={r.id}
+                                        value={r.id}
+                                    >
+                                        {r.label}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
                         </Box>
 
                         <Divider />
