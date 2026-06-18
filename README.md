@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.21.0 (2026-06-18)
 - Changed: `NvsDialog` — removed `room` field; re-flashing NVS no longer requires room selection; `provisionSatellite` call no longer passes `roomId` (Refs #35)
 - Changed: `FlashDialog` — room free-text field replaced with dropdown populated from `enum.rooms.*`; `provisionSatellite` now called before flash with `seed` + `roomId`; `seed` written to NVS partition (Refs #35)
 - Changed: `provisionSatellite` sendTo handler — `roomId` is now optional; enables seed-only re-provisioning without changing the satellite's room assignment (Refs #35)

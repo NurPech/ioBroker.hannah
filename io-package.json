@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.20.0",
+    "version": "0.21.0",
     "news": {
       "0.21.0": {
         "en": "Changed: NvsDialog — removed room field; re-flashing NVS no longer requires room selection; RoomManager is the sole authority\nChanged: FlashDialog — room free-text field replaced with ioBroker enum.rooms dropdown; provisionSatellite now called before flash with seed and roomId; seed written to NVS\nChanged: provisionSatellite sendTo handler — roomId is now optional to support seed-only re-provisioning without changing room assignment",
@@ -93,19 +93,6 @@
         "ru": "Добавлено: команда сообщения `ask` — отправляет вопрос через Hannah TTS в комнату, перехватывает следующее высказывание жильца и возвращает произнесённый ответ через `result.answer` в callback\nДобавлено: блок Blockly для команды `ask` с привязкой переменной для произнесённого ответа",
         "uk": "Додано: команда повідомлення `ask` — надсилає запитання через Hannah TTS до кімнати, перехоплює наступне висловлювання мешканця та повертає вимовлену відповідь через `result.answer` у callback\nДодано: блок Blockly для команди `ask` із прив'язкою змінної для вимовленої відповіді",
         "zh-cn": "新增：`ask` 消息命令 — 通过 Hannah TTS 向房间发送问题，拦截居民的下一次语音，并通过回调中的 `result.answer` 返回语音答案\n新增：`ask` 命令的 Blockly 块，带有用于语音答案的变量绑定"
-      },
-      "0.15.3": {
-        "en": "Added: 'Disable TLS certificate validation' option in flash dialog, NVS-rewrite dialog, and satellite defaults — stored as NVS key `tls_skip` (u8); default off; for satellites connecting to servers with self-signed certificates",
-        "de": "Hinzugefügt: Option 'TLS-Zertifikatsprüfung deaktivieren' in Flash-Dialog, NVS-Schreib-Dialog und Satellit-Standardeinstellungen — gespeichert als NVS-Schlüssel `tls_skip` (u8); standardmäßig deaktiviert; für Satelliten, die sich mit Servern mit selbst-signierten Zertifikaten verbinden",
-        "es": "Añadido: opción 'Deshabilitar validación de certificado TLS' en el diálogo de flash, el diálogo de reescritura NVS y los valores predeterminados del satélite — almacenado como clave NVS `tls_skip` (u8); desactivado por defecto; para satélites que se conectan a servidores con certificados autofirmados",
-        "fr": "Ajouté : option 'Désactiver la validation du certificat TLS' dans le dialogue de flash, le dialogue de réécriture NVS et les paramètres par défaut du satellite — stocké comme clé NVS `tls_skip` (u8) ; désactivé par défaut ; pour les satellites se connectant à des serveurs avec des certificats auto-signés",
-        "it": "Aggiunto: opzione 'Disabilita validazione certificato TLS' nel dialogo di flash, nel dialogo di riscrittura NVS e nelle impostazioni predefinite del satellite — memorizzato come chiave NVS `tls_skip` (u8); disabilitato per impostazione predefinita; per satelliti che si connettono a server con certificati auto-firmati",
-        "nl": "Toegevoegd: optie 'TLS-certificaatvalidatie uitschakelen' in het flash-dialoogvenster, het NVS-herschrijf dialoogvenster en de satelliet-standaardinstellingen — opgeslagen als NVS-sleutel `tls_skip` (u8); standaard uitgeschakeld; voor satellieten die verbinding maken met servers met zelfondertekende certificaten",
-        "pl": "Dodano: opcja 'Wyłącz walidację certyfikatu TLS' w oknie dialogowym flash, oknie dialogowym nadpisywania NVS i domyślnych ustawieniach satelity — przechowywana jako klucz NVS `tls_skip` (u8); domyślnie wyłączona; dla satelitów łączących się z serwerami z certyfikatami z podpisem własnym",
-        "pt": "Adicionado: opção 'Desativar validação de certificado TLS' no diálogo de flash, no diálogo de reescrita NVS e nas predefinições do satélite — armazenada como chave NVS `tls_skip` (u8); desativada por padrão; para satélites que se ligam a servidores com certificados auto-assinados",
-        "ru": "Добавлено: опция 'Отключить проверку TLS-сертификата' в диалоге прошивки, диалоге перезаписи NVS и настройках по умолчанию спутника — сохраняется как ключ NVS `tls_skip` (u8); по умолчанию отключена; для спутников, подключающихся к серверам с самоподписанными сертификатами",
-        "uk": "Додано: опція 'Вимкнути перевірку TLS-сертифіката' в діалозі прошивки, діалозі перезапису NVS та налаштуваннях за замовчуванням супутника — зберігається як ключ NVS `tls_skip` (u8); за замовчуванням вимкнена; для супутників, що підключаються до серверів із самопідписаними сертифікатами",
-        "zh-cn": "新增：'禁用 TLS 证书验证'选项，位于烧录对话框、NVS 重写对话框和卫星默认设置中 — 以 NVS 键 `tls_skip`（u8）存储；默认关闭；适用于连接到使用自签名证书的服务器的卫星"
       }
     },
     "blockly": true,
