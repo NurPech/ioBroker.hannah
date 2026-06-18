@@ -18,7 +18,7 @@ import type { AdminConnection } from '@iobroker/adapter-react-v5';
 import type { SatelliteDefaults } from './settings';
 
 interface NvsConfig {
-    deviceId: string;
+    displayName: string;
     room: string;
     wifiSsid: string;
     wifiPass: string;
@@ -40,6 +40,7 @@ interface Props {
     open: boolean;
     onClose: () => void;
     deviceId: string;
+    displayName?: string;
     room: string;
     defaults?: SatelliteDefaults;
     socket?: AdminConnection;
@@ -49,9 +50,9 @@ interface Props {
 const NVS_OFFSET = 0x9000;
 const NVS_SIZE = 0x5000;
 
-const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults, socket, adapterNamespace }) => {
+const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, room, defaults, socket, adapterNamespace }) => {
     const [config, setConfig] = useState<NvsConfig>({
-        deviceId: '',
+        displayName: '',
         room: '',
         wifiSsid: '',
         wifiPass: '',
@@ -76,7 +77,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults, s
     useEffect(() => {
         if (open) {
             setConfig({
-                deviceId,
+                displayName: displayName || deviceId,
                 room,
                 wifiSsid: defaults?.wifiSsid ?? '',
                 wifiPass: defaults?.wifiPass ?? '',
@@ -124,7 +125,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults, s
                 try {
                     await (socket as any).sendTo(adapterNamespace, 'provisionSatellite', {
                         seed,
-                        displayName: config.deviceId,
+                        displayName: config.displayName,
                         roomId: config.room,
                     });
                     addLog(I18n.t('Satellite registered.'));
@@ -140,7 +141,6 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults, s
                 hannah: [
                     { name: 'wifi_ssid', encoding: 'string', value: config.wifiSsid },
                     { name: 'wifi_pass', encoding: 'string', value: config.wifiPass },
-                    { name: 'device_id', encoding: 'string', value: config.deviceId },
                     { name: 'room', encoding: 'string', value: config.room },
                     { name: 'mqtt_broker', encoding: 'string', value: config.mqttBroker },
                     { name: 'mqtt_port', encoding: 'u16', value: parseInt(config.mqttPort, 10) || 1883 },
@@ -240,7 +240,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults, s
     const setCheck = (field: keyof NvsConfig) => (e: React.ChangeEvent<HTMLInputElement>) =>
         setConfig(prev => ({ ...prev, [field]: e.target.checked }));
 
-    const canFlash = config.deviceId.trim() !== '' && config.wifiSsid.trim() !== '' && config.mqttBroker.trim() !== '';
+    const canFlash = config.displayName.trim() !== '' && config.wifiSsid.trim() !== '' && config.mqttBroker.trim() !== '';
 
     return (
         <Dialog
@@ -257,9 +257,9 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, room, defaults, s
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                         <Box sx={{ display: 'flex', gap: 2 }}>
                             <TextField
-                                label="Device ID"
-                                value={config.deviceId}
-                                onChange={set('deviceId')}
+                                label={I18n.t('Display Name')}
+                                value={config.displayName}
+                                onChange={set('displayName')}
                                 size="small"
                                 fullWidth
                                 disabled={step !== 'config'}

@@ -17,6 +17,8 @@
     "Default values pre-filled when flashing a new satellite or rewriting its NVS. Can be overridden per device.": "I valori predefiniti sono precompilati quando si lampeggia un nuovo satellite o si riscrive il suo NVS. Può essere sovrascritto per dispositivo.",
     "Delete?": "Eliminare?",
     "Device Discovery": "Rilevamento del dispositivo",
+    "Disable TLS certificate validation (insecure)": "Disattiva la convalida del certificato TLS (non sicuro)",
+    "Display Name": "Nome da visualizzare",
     "Error:": "Errore:",
     "Extra State Prefixes": "Prefissi di stato aggiuntivi",
     "Firmware loaded:": "Firmware caricato:",

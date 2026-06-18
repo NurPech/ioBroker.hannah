@@ -81,6 +81,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
 - Changed: `handleSatelliteUpdate` accepts optional `displayName` parameter; uses it (falling back to `deviceId`) for `common.name` in ioBroker (Refs #52)
 - Changed: `_ensureSatelliteStates` calls `extendObject` after `setObjectNotExistsAsync` so renames are applied to already-existing objects (Refs #52)
 - Updated: proto — `AgentSatelliteUpdate.display_name` (field 8), `Satellite.display_name` (field 5) — Core now sends the provisioned human-readable name to the adapter (Refs #52)
+- Changed: `device_id` is now always the eFuse MAC — `serial` field removed from adapter API; `handleSatelliteUpdate`, `getSatellites` return type, and `markUnknownOffline` no longer reference serial (Refs #54)
+- Updated: proto — `serial` fields removed from `Satellite`, `SatelliteRegistration`, `AgentSatelliteUpdate`; field numbers 4/7 reserved (Refs #54)
+- Changed: NvsDialog — removed `device_id` NVS write (eFuse MAC is now computed on device); renamed "Device ID" field to "Display Name"; Display Name is sent to Hannah Core via `provisionSatellite` only (Refs #54)
 
 ### 0.18.0 (2026-06-18)
 - Added: Satellite Identity (Refs #52) — paired satellites now use their eFuse-MAC-based hardware serial as stable ioBroker object key (`satellites.rooms.<room>.<serial>.*`) instead of the mutable device_id; unpaired/UDP satellites fall back to device_id as before

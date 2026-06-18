@@ -17,6 +17,8 @@
     "Default values pre-filled when flashing a new satellite or rewriting its NVS. Can be overridden per device.": "刷新新卫星或重写其 NVS 时预先填充默认值。可以按设备覆盖。",
     "Delete?": "删除？",
     "Device Discovery": "设备发现",
+    "Disable TLS certificate validation (insecure)": "禁用 TLS 证书验证（不安全）",
+    "Display Name": "显示名称",
     "Error:": "错误：",
     "Extra State Prefixes": "额外的状态前缀",
     "Firmware loaded:": "固件加载：",

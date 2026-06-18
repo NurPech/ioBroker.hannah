@@ -17,6 +17,8 @@
     "Default values pre-filled when flashing a new satellite or rewriting its NVS. Can be overridden per device.": "Значения по умолчанию заполняются заранее при прошивке нового спутника или перезаписи его НВС. Может быть переопределено для каждого устройства.",
     "Delete?": "Удалить?",
     "Device Discovery": "Обнаружение устройств",
+    "Disable TLS certificate validation (insecure)": "Отключить проверку сертификата TLS (небезопасно)",
+    "Display Name": "Отображаемое имя",
     "Error:": "Ошибка:",
     "Extra State Prefixes": "Дополнительные префиксы состояний",
     "Firmware loaded:": "Прошивка загружена:",

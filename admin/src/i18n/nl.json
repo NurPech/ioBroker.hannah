@@ -17,6 +17,8 @@
     "Default values pre-filled when flashing a new satellite or rewriting its NVS. Can be overridden per device.": "Standaardwaarden vooraf ingevuld bij het flashen van een nieuwe satelliet of het herschrijven van de NVS. Kan per apparaat worden overschreven.",
     "Delete?": "Verwijderen?",
     "Device Discovery": "Apparaatdetectie",
+    "Disable TLS certificate validation (insecure)": "TLS-certificaatvalidatie uitschakelen (onveilig)",
+    "Display Name": "Weergavenaam",
     "Error:": "Fout:",
     "Extra State Prefixes": "Extra staatsvoorvoegsels",
     "Firmware loaded:": "Firmware geladen:",
