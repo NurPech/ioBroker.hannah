@@ -191,7 +191,6 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                 onClose={() => setNvsTarget(null)}
                 deviceId={nvsTarget?.deviceId ?? ''}
                 displayName={nvsTarget?.displayName ?? ''}
-                room={nvsTarget?.room ?? ''}
                 defaults={satelliteDefaults}
                 socket={socket}
                 adapterNamespace={adapterNamespace}

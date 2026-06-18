@@ -19,7 +19,6 @@ import type { SatelliteDefaults } from './settings';
 
 interface NvsConfig {
     displayName: string;
-    room: string;
     wifiSsid: string;
     wifiPass: string;
     mqttBroker: string;
@@ -41,7 +40,6 @@ interface Props {
     onClose: () => void;
     deviceId: string;
     displayName?: string;
-    room: string;
     defaults?: SatelliteDefaults;
     socket?: AdminConnection;
     adapterNamespace?: string;
@@ -50,10 +48,9 @@ interface Props {
 const NVS_OFFSET = 0x9000;
 const NVS_SIZE = 0x5000;
 
-const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, room, defaults, socket, adapterNamespace }) => {
+const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defaults, socket, adapterNamespace }) => {
     const [config, setConfig] = useState<NvsConfig>({
         displayName: '',
-        room: '',
         wifiSsid: '',
         wifiPass: '',
         mqttBroker: '',
@@ -78,7 +75,6 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, room
         if (open) {
             setConfig({
                 displayName: displayName || deviceId,
-                room,
                 wifiSsid: defaults?.wifiSsid ?? '',
                 wifiPass: defaults?.wifiPass ?? '',
                 mqttBroker: defaults?.mqttBroker ?? '',
@@ -97,7 +93,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, room
             setProgress(0);
             setErrorMsg('');
         }
-    }, [open, deviceId, room, defaults]);
+    }, [open, deviceId, defaults]);
 
     const addLog = (line: string): void => {
         setLog(prev => {
@@ -126,7 +122,6 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, room
                     await (socket as any).sendTo(adapterNamespace, 'provisionSatellite', {
                         seed,
                         displayName: config.displayName,
-                        roomId: config.room,
                     });
                     addLog(I18n.t('Satellite registered.'));
                 } catch (provisionErr: any) {
@@ -141,7 +136,6 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, room
                 hannah: [
                     { name: 'wifi_ssid', encoding: 'string', value: config.wifiSsid },
                     { name: 'wifi_pass', encoding: 'string', value: config.wifiPass },
-                    { name: 'room', encoding: 'string', value: config.room },
                     { name: 'mqtt_broker', encoding: 'string', value: config.mqttBroker },
                     { name: 'mqtt_port', encoding: 'u16', value: parseInt(config.mqttPort, 10) || 1883 },
                     { name: 'mqtt_user', encoding: 'string', value: config.mqttUser },
@@ -255,25 +249,15 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, room
             <DialogContent>
                 {(step === 'config' || step === 'connecting' || step === 'flashing') && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            <TextField
-                                label={I18n.t('Display Name')}
-                                value={config.displayName}
-                                onChange={set('displayName')}
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                                required
-                            />
-                            <TextField
-                                label={I18n.t('Room')}
-                                value={config.room}
-                                onChange={set('room')}
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                            />
-                        </Box>
+                        <TextField
+                            label={I18n.t('Display Name')}
+                            value={config.displayName}
+                            onChange={set('displayName')}
+                            size="small"
+                            fullWidth
+                            disabled={step !== 'config'}
+                            required
+                        />
 
                         <Divider />
                         <Typography

@@ -290,18 +290,20 @@ class Hannah extends utils.Adapter {
         if (obj.command === 'provisionSatellite') {
             const params = (obj.message ?? {}) as { seed?: string; displayName?: string; roomId?: string };
             const { seed, displayName, roomId } = params;
-            if (!seed || !displayName || !roomId) {
+            if (!seed || !displayName) {
                 if (obj.callback) {
                     this.sendTo(
                         obj.from,
                         obj.command,
-                        { error: 'seed, displayName and roomId required' },
+                        { error: 'seed and displayName required' },
                         obj.callback,
                     );
                 }
                 return;
             }
-            this.log.info(`[satellites] Provisioning satellite '${displayName}' in room '${roomId}'`);
+            this.log.info(
+                `[satellites] Provisioning satellite '${displayName}'${roomId ? ` in room '${roomId}'` : ''}`,
+            );
             void (async (): Promise<void> => {
                 try {
                     const result = await this.grpc!.provisionSatellite(seed, displayName, roomId);
