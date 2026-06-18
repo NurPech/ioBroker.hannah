@@ -3,6 +3,19 @@
     "name": "hannah",
     "version": "0.19.0",
     "news": {
+      "0.19.1": {
+        "en": "Fixed: Added missing 'ble' folder to resolve E3009.",
+        "de": "Behoben: Fehlender 'ble'-Ordner hinzugefügt, um E3009 zu beheben.",
+        "es": "Corregido: Se agregó la carpeta 'ble' faltante para resolver E3009.",
+        "fr": "Corrigé : Ajout du dossier 'ble' manquant pour résoudre l'erreur E3009.",
+        "it": "Corretto: Aggiunta la cartella 'ble' mancante per risolvere E3009.",
+        "nl": "Opgelost: Ontbrekende 'ble'-map toegevoegd om E3009 op te lossen.",
+        "pl": "Naprawiono: Dodano brakujący folder 'ble' w celu rozwiązania E3009.",
+        "pt": "Corrigido: Adicionada a pasta 'ble' ausente para resolver o E3009.",
+        "ru": "Исправлено: Добавлена отсутствующая папка 'ble' для решения проблемы E3009.",
+        "uk": "Виправлено: Додано відсутню папку 'ble' для вирішення проблеми E3009.",
+        "zh-cn": "修复：添加缺失的 'ble' 文件夹以解决 E3009。"
+      },
       "0.19.0": {
         "en": "Changed: satellite device_id is now always the eFuse MAC — serial field removed from protocol and adapter API\nChanged: NVS flash dialog no longer writes device_id to NVS; 'Display Name' is sent to Hannah Core via provisionSatellite instead\nAdded: satellite display name support — Hannah Core sends human-readable names used as common.name in ioBroker objects",
         "de": "Geändert: Satelliten-device_id wird jetzt immer vom eFuse-MAC abgeleitet — Serial-Feld aus Protokoll und Adapter-API entfernt\nGeändert: NVS-Flash-Dialog schreibt keine device_id mehr ins NVS; 'Anzeigename' wird stattdessen per provisionSatellite an Hannah Core gesendet\nHinzugefügt: Unterstützung für Satelliten-Anzeigenamen — Hannah Core sendet lesbare Namen, die als common.name in ioBroker-Objekten verwendet werden",

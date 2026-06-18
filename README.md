@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: Added missing 'ble' folder to resolve E3009.
+
 ### 0.19.0 (2026-06-18)
 - Changed: `handleSatelliteUpdate` accepts optional `displayName` parameter; uses it (falling back to `deviceId`) for `common.name` in ioBroker (Refs #52)
 - Changed: `_ensureSatelliteStates` calls `extendObject` after `setObjectNotExistsAsync` so renames are applied to already-existing objects (Refs #52)
