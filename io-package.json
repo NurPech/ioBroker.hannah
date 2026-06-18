@@ -3,6 +3,19 @@
     "name": "hannah",
     "version": "0.19.1",
     "news": {
+      "0.20.0": {
+        "en": "Changed: StateWatcher sends room enum ID segment (e.g. wohnzimmer) and all display name languages as room_names — language-neutral ioBroker object keys\nChanged: satellite state paths use room ID: satellites.rooms.wohnzimmer instead of satellites.rooms.Wohnzimmer",
+        "de": "Geändert: StateWatcher sendet Raum-Enum-ID (z.B. wohnzimmer) und alle Anzeigenamen-Sprachen als room_names — sprachneutrale ioBroker-Objektschlüssel\nGeändert: Satellit-Zustandspfade verwenden Raum-ID: satellites.rooms.wohnzimmer statt satellites.rooms.Wohnzimmer",
+        "es": "Modificado: StateWatcher envía el ID de enum de sala (p.ej. wohnzimmer) y todos los idiomas del nombre de visualización como room_names — claves de objeto ioBroker neutras al idioma\nModificado: las rutas de estado del satélite usan el ID de sala: satellites.rooms.wohnzimmer en lugar de satellites.rooms.Wohnzimmer",
+        "fr": "Modifié : StateWatcher envoie l'ID d'énumération de pièce (ex. wohnzimmer) et toutes les langues du nom d'affichage en tant que room_names — clés d'objet ioBroker neutres vis-à-vis de la langue\nModifié : les chemins d'état du satellite utilisent l'ID de pièce : satellites.rooms.wohnzimmer au lieu de satellites.rooms.Wohnzimmer",
+        "it": "Modificato: StateWatcher invia l'ID enum della stanza (es. wohnzimmer) e tutte le lingue del nome di visualizzazione come room_names — chiavi oggetto ioBroker neutrali rispetto alla lingua\nModificato: i percorsi di stato del satellite usano l'ID stanza: satellites.rooms.wohnzimmer invece di satellites.rooms.Wohnzimmer",
+        "nl": "Gewijzigd: StateWatcher stuurt het kamer enum ID (bijv. wohnzimmer) en alle displaynaam-talen als room_names — taalneutrale ioBroker-objectsleutels\nGewijzigd: satelliet-statuspaden gebruiken kamer-ID: satellites.rooms.wohnzimmer in plaats van satellites.rooms.Wohnzimmer",
+        "pl": "Zmieniono: StateWatcher wysyła ID enum pomieszczenia (np. wohnzimmer) i wszystkie języki nazwy wyświetlanej jako room_names — neutralne językowo klucze obiektów ioBroker\nZmieniono: ścieżki stanów satelity używają ID pomieszczenia: satellites.rooms.wohnzimmer zamiast satellites.rooms.Wohnzimmer",
+        "pt": "Alterado: StateWatcher envia o ID de enum de sala (ex. wohnzimmer) e todos os idiomas do nome de exibição como room_names — chaves de objeto ioBroker neutras em relação ao idioma\nAlterado: os caminhos de estado do satélite usam o ID de sala: satellites.rooms.wohnzimmer em vez de satellites.rooms.Wohnzimmer",
+        "ru": "Изменено: StateWatcher отправляет ID перечисления комнаты (напр. wohnzimmer) и все языки отображаемого имени как room_names — языково-нейтральные ключи объектов ioBroker\nИзменено: пути состояний спутника используют ID комнаты: satellites.rooms.wohnzimmer вместо satellites.rooms.Wohnzimmer",
+        "uk": "Змінено: StateWatcher надсилає ID перерахування кімнати (напр. wohnzimmer) і всі мови відображуваного імені як room_names — мовно-нейтральні ключі об'єктів ioBroker\nЗмінено: шляхи станів супутника використовують ID кімнати: satellites.rooms.wohnzimmer замість satellites.rooms.Wohnzimmer",
+        "zh-cn": "更改：StateWatcher 发送房间枚举 ID（如 wohnzimmer）和所有显示名称语言作为 room_names — 语言无关的 ioBroker 对象键\n更改：卫星状态路径使用房间 ID：satellites.rooms.wohnzimmer 而非 satellites.rooms.Wohnzimmer"
+      },
       "0.19.1": {
         "en": "Fixed: Added missing 'ble' folder to resolve E3009.",
         "de": "Behoben: Fehlender 'ble'-Ordner hinzugefügt, um E3009 zu beheben.",

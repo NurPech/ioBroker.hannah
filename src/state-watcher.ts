@@ -9,7 +9,8 @@ type AgentStateValue = {
 type AgentDevice = {
     state_id: string;
     floor: string;
-    room: string;
+    room: string; // room_id: enum ID segment, e.g. "wohnzimmer"
+    room_names: { [key: string]: string }; // all display names, e.g. {de: "Wohnzimmer", en: "Living Room"}
     device: string;
     device_type: string;
     functions: string[];
@@ -204,6 +205,7 @@ export class StateWatcher {
                         state_id: id,
                         floor: meta.floor,
                         room: meta.room,
+                        room_names: meta.room_names,
                         device: meta.device,
                         device_type: meta.type,
                         functions: meta.functions,
@@ -229,7 +231,14 @@ export class StateWatcher {
         stateId: string,
         allRooms: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
         allFunctions: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
-    ): Promise<{ room: string; device: string; type: string; floor: string; functions: string[] }> {
+    ): Promise<{
+        room: string;
+        room_names: { [key: string]: string };
+        device: string;
+        type: string;
+        floor: string;
+        functions: string[];
+    }> {
         const deviceId = stateId.split('.').slice(0, -1).join('.');
 
         const [stateObj, deviceObj] = await Promise.all([
@@ -280,7 +289,20 @@ export class StateWatcher {
             );
         }
 
-        const room = roomObj ? String(roomObj.common?.name?.de ?? roomObj.common?.name ?? roomObj._id) : undefined;
+        const roomId = roomObj ? (roomObj._id.split('.').pop() ?? '') : '';
+        const roomNamesRaw = roomObj?.common?.name;
+        const roomNames: { [key: string]: string } = {};
+        if (roomNamesRaw) {
+            if (typeof roomNamesRaw === 'string') {
+                roomNames.de = roomNamesRaw;
+            } else if (typeof roomNamesRaw === 'object') {
+                for (const [lang, val] of Object.entries(roomNamesRaw)) {
+                    if (typeof val === 'string') {
+                        roomNames[lang] = val;
+                    }
+                }
+            }
+        }
 
         const matchingFunctionObjs = Object.values(allFunctions.result).filter(
             (obj: any) => obj?._id?.startsWith('enum.functions.') && obj.common?.members?.includes(stateId),
@@ -359,7 +381,8 @@ export class StateWatcher {
         };
 
         return {
-            room: room ?? '',
+            room: roomId,
+            room_names: roomNames,
             device:
                 readableName(deviceObj?.common?.name) ??
                 readableName(stateObj?.common?.name) ??
