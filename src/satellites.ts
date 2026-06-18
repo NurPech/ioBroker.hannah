@@ -17,7 +17,7 @@ export class SatelliteWatcher {
     private getGrpc: () => GrpcClient | null;
     private deviceRooms: Map<string, string> = new Map(); // deviceId.lower → room
     private roomNames: Map<string, string> = new Map(); // sanitizeId(room).toLowerCase() → original room
-    private deviceToObjectKey: Map<string, string> = new Map(); // deviceId.lower → objectKey (serial || deviceId)
+    private deviceToObjectKey: Map<string, string> = new Map(); // deviceId.lower → objectKey (== deviceId since v0.34)
     private objectKeyToDeviceId: Map<string, string> = new Map(); // objectKey.lower → deviceId
 
     /**
@@ -46,7 +46,6 @@ export class SatelliteWatcher {
         const satBase = `${roomBase}.${sanitizeId(objectKey)}`;
 
         await this.adapter.delObjectAsync(satBase, { recursive: true });
-        // objectKey may be a serial — resolve to the actual deviceId for map cleanup
         const deviceId = this.objectKeyToDeviceId.get(objectKey.toLowerCase()) ?? objectKey;
         this.deviceRooms.delete(deviceId.toLowerCase());
         this.deviceToObjectKey.delete(deviceId.toLowerCase());
@@ -74,7 +73,6 @@ export class SatelliteWatcher {
      * @param online - true = registered, false = gone
      * @param volume - Current volume level (0–100), if reported
      * @param mute - Current mute state, if reported
-     * @param serial - eFuse-MAC-based hardware serial; when present, used as stable ioBroker object key
      * @param displayName - Optional satellite display name (for object naming); falls back to deviceId if not provided
      */
     async handleSatelliteUpdate(
@@ -84,11 +82,9 @@ export class SatelliteWatcher {
         online: boolean,
         volume?: number,
         mute?: boolean,
-        serial?: string,
         displayName?: string,
     ): Promise<void> {
-        // objectKey is the stable ioBroker path segment: serial when paired, deviceId otherwise
-        const objectKey = serial || deviceId;
+        const objectKey = deviceId;
 
         if (!room && !online) {
             // Gone event without room info — find and clear the satellite's online states
@@ -133,9 +129,7 @@ export class SatelliteWatcher {
             });
         }
         if (online) {
-            this.adapter.log.info(
-                `[satellites] Satellite online: ${deviceId}${serial ? ` (${serial})` : ''} in room '${room}'`,
-            );
+            this.adapter.log.info(`[satellites] Satellite online: ${deviceId} in room '${room}'`);
         } else {
             this.adapter.log.info(`[satellites] Satellite offline: ${deviceId} in room '${room}'`);
         }
@@ -186,7 +180,6 @@ export class SatelliteWatcher {
         if (perSatMatch) {
             const [, roomId, objectKeyId, key] = perSatMatch;
             const originalRoom = this.roomNames.get(roomId.toLowerCase()) ?? roomId;
-            // objectKeyId may be a serial — resolve to actual device_id for Core RPCs
             const actualDeviceId = this.objectKeyToDeviceId.get(objectKeyId.toLowerCase()) ?? objectKeyId;
             if (key === 'update_now' && state.val === true) {
                 void this.adapter.setState(id, { val: false, ack: true });
@@ -400,10 +393,8 @@ export class SatelliteWatcher {
      *
      * @param knownSatellites - Satellites currently reported by Hannah Core
      */
-    async markUnknownOffline(
-        knownSatellites: Array<{ device_id: string; room: string; serial?: string }>,
-    ): Promise<void> {
-        const known = new Set(knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.serial || s.device_id)}`));
+    async markUnknownOffline(knownSatellites: Array<{ device_id: string; room: string }>): Promise<void> {
+        const known = new Set(knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.device_id)}`));
         const objects = await this.adapter.getForeignObjectsAsync(
             `${this.adapter.namespace}.satellites.rooms.*.*`,
             'device',

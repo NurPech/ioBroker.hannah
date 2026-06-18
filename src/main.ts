@@ -134,7 +134,6 @@ class Hannah extends utils.Adapter {
                         true,
                         undefined,
                         undefined,
-                        sat.serial || undefined,
                         sat.display_name || undefined,
                     );
                 }
@@ -161,7 +160,6 @@ class Hannah extends utils.Adapter {
                         s.online,
                         s.volume ?? undefined,
                         s.mute ?? undefined,
-                        s.serial || undefined,
                         s.display_name || undefined,
                     );
                 } else if (which === 'watch_more' && cmd.watch_more?.state_ids) {

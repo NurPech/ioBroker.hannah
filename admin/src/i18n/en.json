@@ -68,6 +68,7 @@
     "done": "done",
     "Flash complete.": "Flash complete.",
     "Error:": "Error:",
+    "Display Name": "Display Name",
     "Rewrite NVS": "Rewrite NVS",
     "Writing NVS partition...": "Writing NVS partition...",
     "NVS written.": "NVS written.",

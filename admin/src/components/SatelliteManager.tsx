@@ -83,7 +83,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
     const [objectsCache, setObjectsCache] = useState<Record<string, IoBrokerObject>>({});
     const [statesCache, setStatesCache] = useState<Record<string, IoBrokerState | null>>({});
     const [flashOpen, setFlashOpen] = useState(false);
-    const [nvsTarget, setNvsTarget] = useState<{ deviceId: string; room: string } | null>(null);
+    const [nvsTarget, setNvsTarget] = useState<{ deviceId: string; displayName: string; room: string } | null>(null);
     const [satelliteDefaults, setSatelliteDefaults] = useState<SatelliteDefaults>({});
 
     const adapterNamespace = 'hannah.0';
@@ -190,6 +190,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                 open={nvsTarget !== null}
                 onClose={() => setNvsTarget(null)}
                 deviceId={nvsTarget?.deviceId ?? ''}
+                displayName={nvsTarget?.displayName ?? ''}
                 room={nvsTarget?.room ?? ''}
                 defaults={satelliteDefaults}
                 socket={socket}
@@ -283,7 +284,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                         <Button
                                             size="small"
                                             variant="outlined"
-                                            onClick={() => setNvsTarget({ deviceId: sat.deviceId, room: sat.room })}
+                                            onClick={() => setNvsTarget({ deviceId: sat.deviceId, displayName: sat.deviceName, room: sat.room })}
                                         >
                                             NVS
                                         </Button>

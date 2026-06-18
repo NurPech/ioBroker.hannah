@@ -226,7 +226,8 @@ message Satellite {
   string device_id    = 1;
   string room         = 2;   // room name as registered
   string address      = 3;   // IP:port of the UDP satellite
-  string serial       = 4;   // ESP32 hardware serial (empty if not yet paired)
+  reserved 4;
+  reserved "serial";         // removed: device_id is the hardware serial since v0.34
   string display_name = 5;   // human-readable name from Core DB (empty if not provisioned)
 }
 
@@ -430,10 +431,11 @@ message EnrollVoiceprintRequest {
 // ============================================================
 
 message SatelliteRegistration {
-  string device_id = 1;  // satellite device name (display name), e.g. "sat-wohnzimmer"
+  string device_id = 1;  // satellite device_id (== eFuse MAC since v0.34), e.g. "e072a1d01adc"
   string room      = 2;  // room name as reported by satellite, e.g. "Wohnzimmer"
   string address   = 3;  // IP of the UDP satellite as seen by the proxy, e.g. "192.168.8.42"
-  string serial    = 4;  // ESP32 MAC from eFuse, e.g. "e072a1d01adc" (empty if not provisioned)
+  reserved 4;
+  reserved "serial";     // removed: device_id is the hardware serial since v0.34
   string seed      = 5;  // one-time pairing token from NVS (empty after successful pairing)
 }
 
@@ -541,13 +543,14 @@ message AgentSetResident {
 // or that a satellite's volume or mute state changed.
 // The adapter updates hannah.<instance>.satellites.rooms.<room>.* states accordingly.
 message AgentSatelliteUpdate {
-  string device_id    = 1;  // satellite device ID
+  string device_id    = 1;  // satellite device_id (== eFuse MAC since v0.34); adapter uses as ioBroker object-ID
   string room         = 2;  // room the satellite is assigned to
   string address      = 3;  // UDP address (empty if not applicable)
   bool   online       = 4;  // true = registered/online, false = gone/offline
   optional int32 volume = 5;  // current volume level (0–100); absent = no change
   optional bool  mute   = 6;  // current mute state; absent = no change
-  string serial       = 7;  // ESP32 hardware serial (empty if not paired); adapter uses as ioBroker object-ID
+  reserved 7;
+  reserved "serial";          // removed: device_id is the hardware serial since v0.34
   string display_name = 8;  // human-readable name from Core DB (empty = fall back to device_id)
 }
 
