@@ -457,7 +457,7 @@ message AgentMessage {
 }
 
 // Adapter instructs Hannah to control satellites in a room or a specific satellite.
-// room: room name as registered, or "all" for all rooms.
+// room: room_id (enum ID segment) or "all" for all rooms.
 // device_id: if non-empty, only the named satellite is targeted (volume/mute only);
 //            room is still required (used for room-scoped commands and as fallback).
 message AgentSatelliteControl {
@@ -541,10 +541,10 @@ message AgentSetResident {
 
 // Hannah notifies the adapter that a satellite registered or disconnected,
 // or that a satellite's volume or mute state changed.
-// The adapter updates hannah.<instance>.satellites.rooms.<room>.* states accordingly.
+// The adapter updates hannah.<instance>.satellites.rooms.<room_id>.* states accordingly.
 message AgentSatelliteUpdate {
   string device_id    = 1;  // satellite device_id (== eFuse MAC since v0.34); adapter uses as ioBroker object-ID
-  string room         = 2;  // room the satellite is assigned to
+  string room         = 2;  // room_id: stable enum ID segment (e.g. "wohnzimmer"); adapter uses as ioBroker path segment
   string address      = 3;  // UDP address (empty if not applicable)
   bool   online       = 4;  // true = registered/online, false = gone/offline
   optional int32 volume = 5;  // current volume level (0–100); absent = no change
@@ -579,11 +579,12 @@ message AgentStateValue {
 message AgentDevice {
     string state_id  = 1;
     string floor     = 2;
-    string room      = 3;
+    string room      = 3;  // room_id: stable enum ID segment, e.g. "wohnzimmer" or "living_room"
     string device    = 4;
     string device_type        = 5;
     repeated string functions = 6;
     AgentStateValue value     = 7;
+    map<string, string> room_names = 8;  // all display names from ioBroker enum, e.g. {"de": "Wohnzimmer", "en": "Living Room"}
 }
 
 // a list with all known devices from the ioBroker adapter
