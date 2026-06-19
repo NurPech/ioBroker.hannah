@@ -61,6 +61,7 @@
     "No firmware files received": "No firmware files received",
     "Firmware loaded:": "Firmware loaded:",
     "unknown version": "unknown version",
+    "unknown error": "unknown error",
     "files": "files",
     "Generating NVS partition...": "Generating NVS partition...",
     "NVS partition generated": "NVS partition generated",

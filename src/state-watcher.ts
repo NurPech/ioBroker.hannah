@@ -178,6 +178,38 @@ export class StateWatcher {
     }
 
     /**
+     * Send the full enum.rooms.* catalog to Hannah Core, independent of devices.
+     * Without this, a room with no devices yet (e.g. before its first satellite is
+     * provisioned) is unknown to Hannah's RoomManager and provisioning into it fails.
+     */
+    private _sendRoomSnapshot(rows: Array<{ id: string; value: ioBroker.Object | null }>): void {
+        const rooms: Array<{ room_id: string; display_names: { [key: string]: string } }> = [];
+        for (const row of rows) {
+            if (!row.value || row.value.type !== 'enum') {
+                continue;
+            }
+            const roomId = row.id.split('.').pop();
+            if (!roomId) {
+                continue;
+            }
+            const nameRaw = (row.value.common as any)?.name;
+            const displayNames: { [key: string]: string } = {};
+            if (typeof nameRaw === 'string') {
+                displayNames.de = nameRaw;
+            } else if (nameRaw && typeof nameRaw === 'object') {
+                for (const [lang, val] of Object.entries(nameRaw)) {
+                    if (typeof val === 'string') {
+                        displayNames[lang] = val;
+                    }
+                }
+            }
+            rooms.push({ room_id: roomId, display_names: displayNames });
+        }
+        this.send({ send_rooms: { rooms } });
+        this.adapter.log.info(`[states] Room snapshot sent: ${rooms.length} rooms`);
+    }
+
+    /**
      * Read and forward the current value of all subscribed states.
      * Replaces MQTT retained messages — called once after all subscriptions are set up.
      */
@@ -433,6 +465,10 @@ export class StateWatcher {
         this.adapter.log.info(
             `[states] Enum-Discovery: ${roomResult.rows.length} room enums (${roomDevices.size} devices), ${funcResult.rows.length} function enums (${funcStates.size} states)`,
         );
+
+        // Full room catalog (unfiltered by selectedRooms) — independent of devices, so
+        // Hannah Core knows about rooms before the first device/satellite exists in them.
+        this._sendRoomSnapshot(roomResult.rows);
 
         const addWildcard = async (deviceId: string): Promise<void> => {
             const prefix = deviceId.endsWith('.') ? deviceId : `${deviceId}.`;

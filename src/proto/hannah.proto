@@ -432,7 +432,8 @@ message EnrollVoiceprintRequest {
 
 message SatelliteRegistration {
   string device_id = 1;  // satellite device_id (== eFuse MAC since v0.34), e.g. "e072a1d01adc"
-  string room      = 2;  // room name as reported by satellite, e.g. "Wohnzimmer"
+  reserved 2;
+  reserved "room";       // removed: RoomManager is the sole authority for room assignment
   string address   = 3;  // IP of the UDP satellite as seen by the proxy, e.g. "192.168.8.42"
   reserved 4;
   reserved "serial";     // removed: device_id is the hardware serial since v0.34
@@ -453,6 +454,7 @@ message AgentMessage {
     AgentDeviceSnapshot   send_snapshot     = 5;  // initial snapshot with all states
     AgentResidentSnapshot send_residents    = 6;  // initial snapshot with all residents
     AgentAskResident      ask_resident      = 7;  // ask Resident via Hannah
+    AgentRoomSnapshot     send_rooms        = 8;  // full room catalog, independent of devices
   }
 }
 
@@ -590,6 +592,20 @@ message AgentDevice {
 // a list with all known devices from the ioBroker adapter
 message AgentDeviceSnapshot {
     repeated AgentDevice devices = 1;
+}
+
+// A room from the ioBroker adapter's enum.rooms.* catalog — independent of devices,
+// so rooms without any device yet are still known to Hannah (e.g. before the first
+// satellite is provisioned into a brand-new room).
+message AgentRoom {
+    string room_id = 1;  // enum ID segment, e.g. "wohnzimmer"
+    map<string, string> display_names = 2;  // all display names from ioBroker enum, e.g. {"de": "Wohnzimmer", "en": "Living Room"}
+}
+
+// Full room catalog from the ioBroker adapter. Sent on AgentConnect and whenever
+// enum.rooms.* changes, independent of AgentDeviceSnapshot.
+message AgentRoomSnapshot {
+    repeated AgentRoom rooms = 1;
 }
 
 // A resident from the ioBroker adapter
