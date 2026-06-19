@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.21.1",
+    "version": "0.22.0",
     "news": {
+      "0.22.0": {
+        "en": "Fixed: `SatelliteWatcher.handleSatelliteUpdate` now skips satellites with empty room and `online=true` to prevent invalid ioBroker state IDs ending in `.` (Refs #37)",
+        "de": "Behoben: `SatelliteWatcher.handleSatelliteUpdate` überspringt nun Satelliten mit leerem Raum und `online=true`, um ungültige ioBroker-Status-IDs zu verhindern, die mit `.` enden. (Siehe #37)",
+        "ru": "Исправлено: `SatelliteWatcher.handleSatelliteUpdate` теперь пропускает спутники с пустым пространством и `online=true`, чтобы предотвратить недопустимые идентификаторы состояний ioBroker, заканчивающиеся на `.` (Ссылка #37)",
+        "pt": "Corrigido: `SatelliteWatcher.handleSatelliteUpdate` agora ignora satélites com sala vazia e `online=true` para evitar IDs de estado ioBroker inválidos terminando em `.` (Refs #37)",
+        "nl": "Opgelost: `SatelliteWatcher.handleSatelliteUpdate` slaat nu satellieten met een lege ruimte en `online=true` over om ongeldige ioBroker-status-ID's die eindigen op `.` te voorkomen (Refs #37)",
+        "fr": "Corrigé : `SatelliteWatcher.handleSatelliteUpdate` ignore désormais les satellites avec de l’espace vide et `online=true` afin d’éviter les ID d’état ioBroker invalides se terminant par `.` (Réf. #37)",
+        "it": "Risolto: `SatelliteWatcher.handleSatelliteUpdate` ora ignora i satelliti con spazio vuoto e `online=true` per evitare ID di stato ioBroker non validi che terminano con `.` (Rif. #37)",
+        "es": "Corregido: `SatelliteWatcher.handleSatelliteUpdate` ahora omite los satélites con sala vacía y `online=true` para evitar identificadores de estado de ioBroker no válidos que terminen en `.` (Refs #37)",
+        "pl": "Naprawiono: `SatelliteWatcher.handleSatelliteUpdate` teraz pomija satelity z pustym miejscem i `online=true`, aby zapobiec nieprawidłowym identyfikatorom stanu ioBroker kończącym się na `.` (patrz #37)",
+        "uk": "Виправлено: `SatelliteWatcher.handleSatelliteUpdate` тепер пропускає супутники з порожньою кімнатою та `online=true`, щоб запобігти недійсним ідентифікаторам стану ioBroker, що закінчуються на `.` (посилання №37)",
+        "zh-cn": "已修复：`SatelliteWatcher.handleSatelliteUpdate` 现在会跳过房间为空且 `online=true` 的卫星，以防止出现以 `.` 结尾的无效 ioBroker 状态 ID（参考 #37）"
+      },
       "0.21.1": {
         "en": "Fixed: `FlashDialog` room dropdown was empty — used `getForeignObjects('enum.rooms.*')` (not valid for `enum` object type) instead of `getEnums('rooms')`, the method already used correctly in `app.tsx`",
         "de": "Behoben: Das Dropdown-Menü für Räume im `FlashDialog` war leer – es wurde `getForeignObjects('enum.rooms.*')` (ungültig für den Objekttyp `enum`) anstelle von `getEnums('rooms')` verwendet, der Methode, die in `app.tsx` bereits korrekt verwendet wird.",
@@ -80,19 +93,6 @@
         "ru": "Добавлено: Идентичность спутника — сопряжённые спутники теперь используют аппаратный серийный номер (eFuse MAC) как стабильный ключ объекта ioBroker; несопряжённые спутники по-прежнему используют device_id\nДобавлено: команда sendTo `provisionSatellite` и диалог NVS-прошивки регистрирует спутник в Hannah Core с seed сопряжения перед прошивкой",
         "uk": "Додано: Ідентичність супутника — з'єднані супутники тепер використовують апаратний серійний номер (eFuse MAC) як стабільний ключ об'єкта ioBroker; нез'єднані супутники повертаються до device_id як раніше\nДодано: команда sendTo `provisionSatellite` та діалог NVS-прошивки реєструє супутник у Hannah Core з seed з'єднання перед прошивкою",
         "zh-cn": "新增：卫星身份 — 已配对的卫星现在使用其硬件序列号（eFuse MAC）作为稳定的 ioBroker 对象键；未配对的卫星像以前一样回退到 device_id\n新增：sendTo 命令 `provisionSatellite`，NVS 烧录对话框在烧录前向 Hannah Core 注册卫星并写入配对种子"
-      },
-      "0.17.0": {
-        "en": "Added: IAQ, IAQ accuracy, CO₂ equivalent and VOC equivalent states under satellites.sensors.<device> — populated when satellite uses BME680 with BSEC2 library",
-        "de": "Hinzugefügt: IAQ-, IAQ-Genauigkeits-, CO₂-Äquivalent- und VOC-Äquivalent-States unter satellites.sensors.<device> — werden befüllt, wenn der Satellit einen BME680 mit BSEC2-Bibliothek verwendet",
-        "es": "Añadido: estados IAQ, precisión IAQ, equivalente de CO₂ y equivalente de VOC en satellites.sensors.<device> — se rellenan cuando el satélite usa un BME680 con la biblioteca BSEC2",
-        "fr": "Ajouté : états IAQ, précision IAQ, équivalent CO₂ et équivalent COV sous satellites.sensors.<device> — renseignés lorsque le satellite utilise un BME680 avec la bibliothèque BSEC2",
-        "it": "Aggiunto: stati IAQ, precisione IAQ, equivalente CO₂ e equivalente VOC sotto satellites.sensors.<device> — popolati quando il satellite usa un BME680 con la libreria BSEC2",
-        "nl": "Toegevoegd: IAQ-, IAQ-nauwkeurigheids-, CO₂-equivalent- en VOC-equivalentstaten onder satellites.sensors.<device> — worden gevuld wanneer de satelliet een BME680 met BSEC2-bibliotheek gebruikt",
-        "pl": "Dodano: stany IAQ, dokładność IAQ, ekwiwalent CO₂ i ekwiwalent VOC w satellites.sensors.<device> — wypełniane gdy satelita używa BME680 z biblioteką BSEC2",
-        "pt": "Adicionado: estados IAQ, precisão IAQ, equivalente de CO₂ e equivalente de VOC em satellites.sensors.<device> — preenchidos quando o satélite usa BME680 com a biblioteca BSEC2",
-        "ru": "Добавлено: состояния IAQ, точность IAQ, эквивалент CO₂ и эквивалент VOC в satellites.sensors.<device> — заполняются, когда спутник использует BME680 с библиотекой BSEC2",
-        "uk": "Додано: стани IAQ, точність IAQ, еквівалент CO₂ та еквівалент VOC під satellites.sensors.<device> — заповнюються, коли супутник використовує BME680 з бібліотекою BSEC2",
-        "zh-cn": "新增：satellites.sensors.<device> 下的 IAQ、IAQ 精度、CO₂ 当量和 VOC 当量状态 — 当卫星使用带有 BSEC2 库的 BME680 时填充"
       }
     },
     "blockly": true,

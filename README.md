@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.22.0 (2026-06-19)
 - Fixed: `SatelliteWatcher.handleSatelliteUpdate` now skips satellites with empty room and `online=true` to prevent invalid ioBroker state IDs ending in `.` (Refs #37)
 
 ### 0.21.1 (2026-06-19)
