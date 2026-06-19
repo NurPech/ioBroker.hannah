@@ -347,7 +347,11 @@ export class StateWatcher {
         );
 
         const resolveType = (): string => {
-            const override = (stateObj?.common as any)?.hannah?.type ?? (deviceObj?.common as any)?.hannah?.type;
+            const ns = this.adapter.namespace; // e.g. "hannah.0"
+            const stateCustom = (stateObj?.common?.custom as any)?.[ns];
+            const deviceCustom = (deviceObj?.common?.custom as any)?.[ns];
+            const override =
+                (stateCustom?.enabled && stateCustom?.type) || (deviceCustom?.enabled && deviceCustom?.type);
             if (override) {
                 return String(override);
             }
