@@ -49,7 +49,7 @@ interface FlashConfig {
     tlsSkipVerify: boolean;
 }
 
-type FlashStep = 'config' | 'connecting' | 'flashing' | 'monitoring' | 'done' | 'error';
+type FlashStep = 'config' | 'connecting' | 'flashing' | 'preparing' | 'monitoring' | 'done' | 'downloaded' | 'error';
 
 interface Props {
     open: boolean;
@@ -70,6 +70,23 @@ function base64ToUint8Array(b64: string): Uint8Array {
 
 const NVS_OFFSET = 0x9000;
 const NVS_SIZE = 0x5000;
+
+// Combines firmware parts + NVS partition into a single flat binary, suitable
+// for `esptool.py write_flash 0x0 image.bin`. Gaps between parts are filled
+// with 0xff (erased flash default).
+function buildCombinedImage(files: FirmwareFile[], nvsPartition: Uint8Array, nvsOffset: number): Uint8Array {
+    const parts = [
+        ...files.map(f => ({ data: base64ToUint8Array(f.data), offset: f.offset })),
+        { data: nvsPartition, offset: nvsOffset },
+    ];
+    const totalSize = parts.reduce((max, p) => Math.max(max, p.offset + p.data.length), 0);
+    const image = new Uint8Array(totalSize);
+    image.fill(0xff);
+    for (const part of parts) {
+        image.set(part.data, part.offset);
+    }
+    return image;
+}
 
 const buildConfigFromDefaults = (defaults?: SatelliteDefaults): FlashConfig => ({
     deviceId: '',
@@ -195,6 +212,107 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
         [cleanupSerial],
     );
 
+    // Fetches firmware from the adapter, registers the satellite with Hannah
+    // Core and generates the NVS partition. Shared between the WebSerial
+    // flash flow and the combined-image download.
+    const prepareFirmwareAndNvs = async (): Promise<{ fw: FirmwareResult; nvsPartition: Uint8Array }> => {
+        addLog(I18n.t('Loading firmware from adapter...'));
+        const fw = (await (socket as any).sendTo(adapterNamespace, 'getFirmwareFiles', {})) as FirmwareResult;
+
+        if (fw.error || !fw.files?.length) {
+            throw new Error(fw.error ?? I18n.t('No firmware files received'));
+        }
+        addLog(
+            `${I18n.t('Firmware loaded:')} ${fw.version ?? I18n.t('unknown version')} (${fw.files.length} ${I18n.t('files')})`,
+        );
+        setFirmwareVersion(fw.version ?? '');
+
+        const seed = crypto.randomUUID();
+        addLog(I18n.t('Registering satellite with Hannah Core...'));
+        try {
+            await (socket as any).sendTo(adapterNamespace, 'provisionSatellite', {
+                seed,
+                displayName: config.deviceId,
+                roomId: config.room,
+            });
+            addLog(I18n.t('Satellite registered.'));
+        } catch (provisionErr: any) {
+            addLog(`${I18n.t('Warning: could not provision satellite:')} ${provisionErr?.message ?? provisionErr}`);
+        }
+
+        addLog(I18n.t('Generating NVS partition...'));
+        const nvsData = encodeNVS({
+            hannah: [
+                { name: 'wifi_ssid', encoding: 'string', value: config.wifiSsid },
+                { name: 'wifi_pass', encoding: 'string', value: config.wifiPass },
+                { name: 'device_id', encoding: 'string', value: config.deviceId },
+                { name: 'mqtt_broker', encoding: 'string', value: config.mqttBroker },
+                { name: 'mqtt_port', encoding: 'u16', value: parseInt(config.mqttPort, 10) || 1883 },
+                { name: 'mqtt_user', encoding: 'string', value: config.mqttUser },
+                { name: 'mqtt_pass', encoding: 'string', value: config.mqttPass },
+                { name: 'ota_url', encoding: 'string', value: config.otaUrl },
+                { name: 'ota_channel', encoding: 'string', value: config.otaChannel },
+                ...(config.otaToken
+                    ? [{ name: 'ota_token', encoding: 'string' as const, value: config.otaToken }]
+                    : []),
+                ...(config.assetUrl
+                    ? [{ name: 'asset_url', encoding: 'string' as const, value: config.assetUrl }]
+                    : []),
+                ...(config.assetToken
+                    ? [{ name: 'asset_token', encoding: 'string' as const, value: config.assetToken }]
+                    : []),
+                { name: 'seed', encoding: 'string', value: seed },
+                { name: 'ww_threshold', encoding: 'u8', value: 75 },
+                { name: 'tls_skip', encoding: 'u8', value: config.tlsSkipVerify ? 1 : 0 },
+            ],
+        });
+
+        // Pad NVS to partition size
+        const nvsPartition = new Uint8Array(NVS_SIZE);
+        nvsPartition.fill(0xff);
+        nvsPartition.set(nvsData.slice(0, NVS_SIZE));
+        addLog(`${I18n.t('NVS partition generated')} (${nvsData.byteLength} ${I18n.t('bytes')})`);
+
+        return { fw, nvsPartition };
+    };
+
+    const handleDownload = async (): Promise<void> => {
+        if (!config.deviceId || !config.room || !config.wifiSsid || !config.mqttBroker) {
+            return;
+        }
+
+        setStep('preparing');
+        setLog([]);
+        setProgress(0);
+        setErrorMsg('');
+
+        try {
+            const { fw, nvsPartition } = await prepareFirmwareAndNvs();
+
+            addLog(I18n.t('Combining image...'));
+            const image = buildCombinedImage(fw.files!, nvsPartition, NVS_OFFSET);
+            addLog(`${I18n.t('Image built')} (${image.byteLength} ${I18n.t('bytes')})`);
+
+            const blob = new Blob([image.buffer as ArrayBuffer], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hannah-satellite-${config.deviceId}.bin`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            addLog(I18n.t('Download started.'));
+            setProgress(100);
+            setStep('downloaded');
+        } catch (err: any) {
+            setErrorMsg(err?.message ?? String(err));
+            setStep('error');
+            addLog(`${I18n.t('Error:')} ${err?.message ?? err}`);
+        }
+    };
+
     const handleFlash = async (): Promise<void> => {
         if (!config.deviceId || !config.room || !config.wifiSsid || !config.mqttBroker) {
             return;
@@ -206,67 +324,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
         setErrorMsg('');
 
         try {
-            // 1. Fetch firmware from adapter
-            addLog(I18n.t('Loading firmware from adapter...'));
-            const fw = (await (socket as any).sendTo(adapterNamespace, 'getFirmwareFiles', {})) as FirmwareResult;
-
-            if (fw.error || !fw.files?.length) {
-                throw new Error(fw.error ?? I18n.t('No firmware files received'));
-            }
-            addLog(
-                `${I18n.t('Firmware loaded:')} ${fw.version ?? I18n.t('unknown version')} (${fw.files.length} ${I18n.t('files')})`,
-            );
-            setFirmwareVersion(fw.version ?? '');
-
-            // 2. Generate pairing seed and register satellite in Hannah Core
-            const seed = crypto.randomUUID();
-            addLog(I18n.t('Registering satellite with Hannah Core...'));
-            try {
-                await (socket as any).sendTo(adapterNamespace, 'provisionSatellite', {
-                    seed,
-                    displayName: config.deviceId,
-                    roomId: config.room,
-                });
-                addLog(I18n.t('Satellite registered.'));
-            } catch (provisionErr: any) {
-                addLog(
-                    `${I18n.t('Warning: could not provision satellite:')} ${provisionErr?.message ?? provisionErr}`,
-                );
-            }
-
-            // 3. Generate NVS partition
-            addLog(I18n.t('Generating NVS partition...'));
-            const nvsData = encodeNVS({
-                hannah: [
-                    { name: 'wifi_ssid', encoding: 'string', value: config.wifiSsid },
-                    { name: 'wifi_pass', encoding: 'string', value: config.wifiPass },
-                    { name: 'device_id', encoding: 'string', value: config.deviceId },
-                    { name: 'mqtt_broker', encoding: 'string', value: config.mqttBroker },
-                    { name: 'mqtt_port', encoding: 'u16', value: parseInt(config.mqttPort, 10) || 1883 },
-                    { name: 'mqtt_user', encoding: 'string', value: config.mqttUser },
-                    { name: 'mqtt_pass', encoding: 'string', value: config.mqttPass },
-                    { name: 'ota_url', encoding: 'string', value: config.otaUrl },
-                    { name: 'ota_channel', encoding: 'string', value: config.otaChannel },
-                    ...(config.otaToken
-                        ? [{ name: 'ota_token', encoding: 'string' as const, value: config.otaToken }]
-                        : []),
-                    ...(config.assetUrl
-                        ? [{ name: 'asset_url', encoding: 'string' as const, value: config.assetUrl }]
-                        : []),
-                    ...(config.assetToken
-                        ? [{ name: 'asset_token', encoding: 'string' as const, value: config.assetToken }]
-                        : []),
-                    { name: 'seed', encoding: 'string', value: seed },
-                    { name: 'ww_threshold', encoding: 'u8', value: 75 },
-                    { name: 'tls_skip', encoding: 'u8', value: config.tlsSkipVerify ? 1 : 0 },
-                ],
-            });
-
-            // Pad NVS to partition size
-            const nvsPartition = new Uint8Array(NVS_SIZE);
-            nvsPartition.fill(0xff);
-            nvsPartition.set(nvsData.slice(0, NVS_SIZE));
-            addLog(`${I18n.t('NVS partition generated')} (${nvsData.byteLength} ${I18n.t('bytes')})`);
+            const { fw, nvsPartition } = await prepareFirmwareAndNvs();
 
             // 4. Connect to ESP via WebSerial
             addLog(I18n.t('Opening WebSerial...'));
@@ -302,11 +360,11 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
 
             // 5. Build file array: firmware files + NVS
             setStep('flashing');
-            const totalFiles = fw.files.length + 1;
+            const totalFiles = fw.files!.length + 1;
             let filesDone = 0;
 
             const fileArray: Array<{ data: Uint8Array; address: number }> = [
-                ...fw.files.map(f => ({
+                ...fw.files!.map(f => ({
                     data: base64ToUint8Array(f.data),
                     address: f.offset,
                 })),
@@ -402,14 +460,16 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
     return (
         <Dialog
             open={open}
-            onClose={step === 'flashing' || step === 'connecting' ? undefined : handleClose}
+            onClose={
+                step === 'flashing' || step === 'connecting' || step === 'preparing' ? undefined : handleClose
+            }
             PaperProps={{ sx: { minHeight: step === 'monitoring' ? 420 : undefined } }}
             maxWidth="sm"
             fullWidth
         >
             <DialogTitle>{I18n.t('Flash new satellite')}</DialogTitle>
             <DialogContent>
-                {(step === 'config' || step === 'connecting' || step === 'flashing') && (
+                {(step === 'config' || step === 'connecting' || step === 'flashing' || step === 'preparing') && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                         <Box sx={{ display: 'flex', gap: 2 }}>
                             <TextField
@@ -634,7 +694,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                             </Box>
                         </Collapse>
 
-                        {(step === 'connecting' || step === 'flashing') && (
+                        {(step === 'connecting' || step === 'flashing' || step === 'preparing') && (
                             <Box sx={{ mt: 1 }}>
                                 {step === 'flashing' && (
                                     <LinearProgress
@@ -643,7 +703,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                                         sx={{ mb: 1 }}
                                     />
                                 )}
-                                {step === 'connecting' && <LinearProgress sx={{ mb: 1 }} />}
+                                {(step === 'connecting' || step === 'preparing') && <LinearProgress sx={{ mb: 1 }} />}
                                 <Box
                                     ref={logRef}
                                     sx={{
@@ -747,6 +807,56 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                     </Box>
                 )}
 
+                {step === 'downloaded' && (
+                    <Box sx={{ textAlign: 'center', py: 2 }}>
+                        <Typography
+                            variant="h6"
+                            color="success.main"
+                            sx={{ mb: 1 }}
+                        >
+                            {I18n.t('Image ready!')}
+                        </Typography>
+                        {firmwareVersion && (
+                            <Typography
+                                variant="body2"
+                                color="text.secondary"
+                            >
+                                {I18n.t('Firmware:')} {firmwareVersion}
+                            </Typography>
+                        )}
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mt: 1 }}
+                        >
+                            {I18n.t(
+                                'The combined image was downloaded. Flash it with esptool.py or the ESP Flash Download Tool.',
+                            )}
+                        </Typography>
+                        <Box
+                            ref={logRef}
+                            sx={{
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                                bgcolor: 'background.default',
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderRadius: 1,
+                                p: 1,
+                                maxHeight: 120,
+                                overflowY: 'auto',
+                                mt: 2,
+                                whiteSpace: 'pre-wrap',
+                                textAlign: 'left',
+                            }}
+                        >
+                            {log.map((line, i) => (
+                                <div key={i}>{line}</div>
+                            ))}
+                        </Box>
+                    </Box>
+                )}
+
                 {step === 'error' && (
                     <Box sx={{ py: 1 }}>
                         <Typography
@@ -782,6 +892,13 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                     <>
                         <Button onClick={handleClose}>{I18n.t('Cancel')}</Button>
                         <Button
+                            variant="outlined"
+                            onClick={() => void handleDownload()}
+                            disabled={!canFlash}
+                        >
+                            {I18n.t('Download image')}
+                        </Button>
+                        <Button
                             variant="contained"
                             color="success"
                             onClick={() => void handleFlash()}
@@ -797,7 +914,9 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                         </Button>
                     </>
                 )}
-                {(step === 'connecting' || step === 'flashing') && <Button disabled>{I18n.t('Please wait...')}</Button>}
+                {(step === 'connecting' || step === 'flashing' || step === 'preparing') && (
+                    <Button disabled>{I18n.t('Please wait...')}</Button>
+                )}
                 {step === 'monitoring' && (
                     <Button
                         variant="outlined"
@@ -808,7 +927,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                         {I18n.t('Stop monitor')}
                     </Button>
                 )}
-                {(step === 'done' || step === 'error') && (
+                {(step === 'done' || step === 'downloaded' || step === 'error') && (
                     <Button
                         variant="contained"
                         onClick={handleClose}
