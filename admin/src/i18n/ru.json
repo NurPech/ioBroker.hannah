@@ -91,5 +91,6 @@
     "gRPC Port": "порт gRPC",
     "hannah adapter settings": "Настройки адаптера Ханны",
     "partitions": "перегородки",
+    "unknown error": "неизвестная ошибка",
     "unknown version": "неизвестная версия"
 }

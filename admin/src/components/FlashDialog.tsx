@@ -230,11 +230,14 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
         const seed = crypto.randomUUID();
         addLog(I18n.t('Registering satellite with Hannah Core...'));
         try {
-            await (socket as any).sendTo(adapterNamespace, 'provisionSatellite', {
+            const result = (await (socket as any).sendTo(adapterNamespace, 'provisionSatellite', {
                 seed,
                 displayName: config.deviceId,
                 roomId: config.room,
-            });
+            })) as { ok?: boolean; message?: string; error?: string };
+            if (result?.error || result?.ok === false) {
+                throw new Error(result?.error ?? result?.message ?? I18n.t('unknown error'));
+            }
             addLog(I18n.t('Satellite registered.'));
         } catch (provisionErr: any) {
             addLog(`${I18n.t('Warning: could not provision satellite:')} ${provisionErr?.message ?? provisionErr}`);
