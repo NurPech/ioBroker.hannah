@@ -93,6 +93,10 @@ export class SatelliteWatcher {
             await this._setSatelliteOnline(storedKey, '', false);
             return;
         }
+        if (!room && online) {
+            this.adapter.log.warn(`[satellites] Satellite ${deviceId} has no room assigned — skipping state creation`);
+            return;
+        }
         if (online) {
             this.deviceRooms.set(deviceId.toLowerCase(), room);
             this.deviceToObjectKey.set(deviceId.toLowerCase(), objectKey);
