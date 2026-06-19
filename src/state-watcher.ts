@@ -181,6 +181,8 @@ export class StateWatcher {
      * Send the full enum.rooms.* catalog to Hannah Core, independent of devices.
      * Without this, a room with no devices yet (e.g. before its first satellite is
      * provisioned) is unknown to Hannah's RoomManager and provisioning into it fails.
+     *
+     * @param rows Roomlist from getObjectViewAsync('system', 'enum', { startkey: 'enum.rooms.', endkey: 'enum.rooms.*' })
      */
     private _sendRoomSnapshot(rows: Array<{ id: string; value: ioBroker.Object | null }>): void {
         const rooms: Array<{ room_id: string; display_names: { [key: string]: string } }> = [];
