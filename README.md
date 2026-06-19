@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.24.0 (2026-06-19)
 - Fixed: `StateWatcher.resolveType()` read a non-standard `common.hannah.type` field for the device-type override, which is never reliably persisted by ioBroker — now reads the officially documented `common.custom["<adapter-namespace>"]` structure (`{enabled: true, type: "..."}`), matching the convention from the ioBroker objects schema docs
 
 ### 0.23.0 (2026-06-19)
