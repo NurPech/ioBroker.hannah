@@ -113,14 +113,15 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
             setProgress(0);
             setErrorMsg('');
             setFirmwareVersion('');
-            void (socket as any).getForeignObjects('enum.rooms.*').then((objs: Record<string, any>) => {
-                const list = Object.entries(objs)
-                    .filter(([id]) => id !== 'enum.rooms')
-                    .map(([id, obj]) => {
-                        const name = obj?.common?.name;
+            void socket.getEnums('rooms').then((enums: Record<string, any>) => {
+                const list = Object.values(enums)
+                    .map(e => {
+                        const name = e?.common?.name;
                         const label =
-                            typeof name === 'string' ? name : (name?.de ?? name?.en ?? id.split('.').pop() ?? id);
-                        return { id: id.split('.').pop() ?? id, label };
+                            typeof name === 'string'
+                                ? name
+                                : (name?.de ?? name?.en ?? e._id.split('.').pop() ?? e._id);
+                        return { id: e._id.split('.').pop() ?? e._id, label };
                     })
                     .sort((a, b) => a.label.localeCompare(b.label));
                 setRooms(list);
