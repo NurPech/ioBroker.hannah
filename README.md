@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.21.1 (2026-06-19)
 - Fixed: `FlashDialog` room dropdown was empty — used `getForeignObjects('enum.rooms.*')` (not valid for `enum` object type) instead of `getEnums('rooms')`, the method already used correctly in `app.tsx`
 
 ### 0.21.0 (2026-06-18)

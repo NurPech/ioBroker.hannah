@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.21.0",
+    "version": "0.21.1",
     "news": {
+      "0.21.1": {
+        "en": "Fixed: `FlashDialog` room dropdown was empty — used `getForeignObjects('enum.rooms.*')` (not valid for `enum` object type) instead of `getEnums('rooms')`, the method already used correctly in `app.tsx`",
+        "de": "Behoben: Das Dropdown-Menü für Räume im `FlashDialog` war leer – es wurde `getForeignObjects('enum.rooms.*')` (ungültig für den Objekttyp `enum`) anstelle von `getEnums('rooms')` verwendet, der Methode, die in `app.tsx` bereits korrekt verwendet wird.",
+        "ru": "Исправлено: выпадающий список комнат в `FlashDialog` был пустым — использовался `getForeignObjects('enum.rooms.*')` (недопустимо для типа объекта `enum`) вместо `getEnums('rooms')`, метод, который уже корректно используется в `app.tsx`.",
+        "pt": "Corrigido: o menu suspenso de salas do `FlashDialog` estava vazio — estava usando `getForeignObjects('enum.rooms.*')` (inválido para o tipo de objeto `enum`) em vez de `getEnums('rooms')`, o método já utilizado corretamente em `app.tsx`.",
+        "nl": "Opgelost: De dropdownlijst voor kamers in `FlashDialog` was leeg — er werd `getForeignObjects('enum.rooms.*')` gebruikt (niet geldig voor het objecttype `enum`) in plaats van `getEnums('rooms')`, de methode die al correct werd gebruikt in `app.tsx`.",
+        "fr": "Corrigé : La liste déroulante des pièces de `FlashDialog` était vide — utilisation de `getForeignObjects('enum.rooms.*')` (non valide pour le type d'objet `enum`) au lieu de `getEnums('rooms')`, la méthode déjà utilisée correctement dans `app.tsx`.",
+        "it": "Risolto: il menu a tendina delle stanze di `FlashDialog` era vuoto: è stato utilizzato `getForeignObjects('enum.rooms.*')` (non valido per il tipo di oggetto `enum`) invece di `getEnums('rooms')`, il metodo già utilizzato correttamente in `app.tsx`.",
+        "es": "Corregido: El menú desplegable de habitaciones de `FlashDialog` estaba vacío; se usó `getForeignObjects('enum.rooms.*')` (no válido para el tipo de objeto `enum`) en lugar de `getEnums('rooms')`, el método que ya se usa correctamente en `app.tsx`.",
+        "pl": "Naprawiono: rozwijana lista pokoi `FlashDialog` była pusta — użyto metody `getForeignObjects('enum.rooms.*')` (nieprawidłowej dla typu obiektu `enum`) zamiast `getEnums('rooms')`, która była już poprawnie używana w `app.tsx`",
+        "uk": "Виправлено: випадаюче меню кімнат `FlashDialog` було порожнім — використовувалося `getForeignObjects('enum.rooms.*')` (недійсне для типу об'єкта `enum`) замість `getEnums('rooms')`, метод вже правильно використовувався в `app.tsx`.",
+        "zh-cn": "已修复：`FlashDialog` 房间下拉菜单为空——使用了 `getForeignObjects('enum.rooms.*')`（对 `enum` 对象类型无效），而不是 `getEnums('rooms')`，后者在 `app.tsx` 中已正确使用。"
+      },
       "0.21.0": {
         "en": "Changed: NvsDialog — removed room field; re-flashing NVS no longer requires room selection; RoomManager is the sole authority\nChanged: FlashDialog — room free-text field replaced with ioBroker enum.rooms dropdown; provisionSatellite now called before flash with seed and roomId; seed written to NVS\nChanged: provisionSatellite sendTo handler — roomId is now optional to support seed-only re-provisioning without changing room assignment",
         "de": "Geändert: NvsDialog — Raum-Feld entfernt; NVS-Neuschreiben erfordert keine Raumauswahl mehr; RoomManager ist alleinige Autorität\nGeändert: FlashDialog — Raum-Freitextfeld durch ioBroker enum.rooms-Dropdown ersetzt; provisionSatellite wird jetzt vor dem Flash mit Seed und RoomId aufgerufen; Seed ins NVS geschrieben\nGeändert: provisionSatellite sendTo-Handler — roomId ist jetzt optional für Seed-Neuregistrierung ohne Raumänderung",
@@ -80,19 +93,6 @@
         "ru": "Добавлено: состояния IAQ, точность IAQ, эквивалент CO₂ и эквивалент VOC в satellites.sensors.<device> — заполняются, когда спутник использует BME680 с библиотекой BSEC2",
         "uk": "Додано: стани IAQ, точність IAQ, еквівалент CO₂ та еквівалент VOC під satellites.sensors.<device> — заповнюються, коли супутник використовує BME680 з бібліотекою BSEC2",
         "zh-cn": "新增：satellites.sensors.<device> 下的 IAQ、IAQ 精度、CO₂ 当量和 VOC 当量状态 — 当卫星使用带有 BSEC2 库的 BME680 时填充"
-      },
-      "0.16.0": {
-        "en": "Added: `ask` message command — sends a question via Hannah TTS to a room, intercepts the next resident utterance, and returns the spoken answer via `result.answer` in the callback\nAdded: Blockly block for the `ask` command with variable binding for the spoken answer",
-        "de": "Hinzugefügt: Nachrichtenbefehl `ask` — stellt eine Frage per Hannah-TTS in einem Raum, fängt die nächste Äußerung des Bewohners ab und gibt die gesprochene Antwort über `result.answer` im Callback zurück\nHinzugefügt: Blockly-Block für den `ask`-Befehl mit Variablenbindung für die gesprochene Antwort",
-        "es": "Añadido: comando de mensaje `ask` — envía una pregunta por Hannah TTS a una sala, intercepta la siguiente utterance del residente y devuelve la respuesta hablada mediante `result.answer` en el callback\nAñadido: bloque Blockly para el comando `ask` con vinculación de variable para la respuesta hablada",
-        "fr": "Ajouté : commande de message `ask` — envoie une question via Hannah TTS dans une pièce, intercepte la prochaine utterance du résident et renvoie la réponse parlée via `result.answer` dans le callback\nAjouté : bloc Blockly pour la commande `ask` avec liaison de variable pour la réponse parlée",
-        "it": "Aggiunto: comando messaggio `ask` — invia una domanda tramite Hannah TTS in una stanza, intercetta la prossima utterance del residente e restituisce la risposta parlata tramite `result.answer` nel callback\nAggiunto: blocco Blockly per il comando `ask` con associazione di variabile per la risposta parlata",
-        "nl": "Toegevoegd: berichtcommando `ask` — verstuurt een vraag via Hannah TTS naar een kamer, onderschept de volgende utterance van de bewoner en geeft het gesproken antwoord terug via `result.answer` in de callback\nToegevoegd: Blockly-blok voor het `ask`-commando met variabelekoppeling voor het gesproken antwoord",
-        "pl": "Dodano: polecenie wiadomości `ask` — wysyła pytanie przez Hannah TTS do pokoju, przechwytuje kolejną wypowiedź mieszkańca i zwraca mówioną odpowiedź przez `result.answer` w callbacku\nDodano: blok Blockly dla polecenia `ask` z powiązaniem zmiennej dla mówionej odpowiedzi",
-        "pt": "Adicionado: comando de mensagem `ask` — envia uma pergunta via Hannah TTS para uma sala, intercepta a próxima utterance do residente e devolve a resposta falada via `result.answer` no callback\nAdicionado: bloco Blockly para o comando `ask` com vinculação de variável para a resposta falada",
-        "ru": "Добавлено: команда сообщения `ask` — отправляет вопрос через Hannah TTS в комнату, перехватывает следующее высказывание жильца и возвращает произнесённый ответ через `result.answer` в callback\nДобавлено: блок Blockly для команды `ask` с привязкой переменной для произнесённого ответа",
-        "uk": "Додано: команда повідомлення `ask` — надсилає запитання через Hannah TTS до кімнати, перехоплює наступне висловлювання мешканця та повертає вимовлену відповідь через `result.answer` у callback\nДодано: блок Blockly для команди `ask` із прив'язкою змінної для вимовленої відповіді",
-        "zh-cn": "新增：`ask` 消息命令 — 通过 Hannah TTS 向房间发送问题，拦截居民的下一次语音，并通过回调中的 `result.answer` 返回语音答案\n新增：`ask` 命令的 Blockly 块，带有用于语音答案的变量绑定"
       }
     },
     "blockly": true,
