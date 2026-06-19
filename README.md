@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: `StateWatcher.resolveType()` read a non-standard `common.hannah.type` field for the device-type override, which is never reliably persisted by ioBroker — now reads the officially documented `common.custom["<adapter-namespace>"]` structure (`{enabled: true, type: "..."}`), matching the convention from the ioBroker objects schema docs
+
 ### 0.23.0 (2026-06-19)
 - Added: `FlashDialog` — "Download image" button combines firmware partitions + generated NVS into a single flat binary and triggers a browser download, as an alternative to WebSerial flashing (works in any browser, e.g. Safari) (Refs #61)
 - Fixed: `FlashDialog.prepareFirmwareAndNvs()` now checks `result.ok`/`result.error` from the `provisionSatellite` sendTo call instead of always logging "Satellite registered." — provisioning failures (e.g. unknown room) are now surfaced instead of silently swallowed (Refs #66)
