@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.23.0 (2026-06-19)
 - Added: `FlashDialog` — "Download image" button combines firmware partitions + generated NVS into a single flat binary and triggers a browser download, as an alternative to WebSerial flashing (works in any browser, e.g. Safari) (Refs #61)
 - Fixed: `FlashDialog.prepareFirmwareAndNvs()` now checks `result.ok`/`result.error` from the `provisionSatellite` sendTo call instead of always logging "Satellite registered." — provisioning failures (e.g. unknown room) are now surfaced instead of silently swallowed (Refs #66)
 - Added: `StateWatcher` sends the full `enum.rooms.*` catalog to Hannah Core (`send_rooms`, independent of devices) on connect and on enum change, so Hannah's `RoomManager` knows about rooms before any device/satellite exists in them (Refs #66)
