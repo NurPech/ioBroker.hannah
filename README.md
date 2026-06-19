@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: `FlashDialog` — "Download image" button combines firmware partitions + generated NVS into a single flat binary and triggers a browser download, as an alternative to WebSerial flashing (works in any browser, e.g. Safari) (Refs #61)
+
 ### 0.22.0 (2026-06-19)
 - Fixed: `SatelliteWatcher.handleSatelliteUpdate` now skips satellites with empty room and `online=true` to prevent invalid ioBroker state IDs ending in `.` (Refs #37)
 
