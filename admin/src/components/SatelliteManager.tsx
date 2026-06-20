@@ -158,25 +158,6 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
         setSatellites(parseSatellites(objectsCache, statesCache));
     }, [objectsCache, statesCache]);
 
-    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-
-    const handleDelete = async (sat: Satellite): Promise<void> => {
-        // Deletion runs in the backend (deleteSatellite command): it removes the
-        // satellite tree, the separate sensor tree, and the room container if it
-        // becomes empty. deviceName is the raw device ID (the sensor path is not
-        // sanitized); room is the raw room name.
-        await (socket as any).sendTo(adapterNamespace, 'deleteSatellite', {
-            deviceId: sat.deviceId,
-            room: sat.room,
-        });
-        setConfirmDeleteId(null);
-        setObjectsCache(prev => {
-            const next = { ...prev };
-            delete next[sat.objectId];
-            return next;
-        });
-    };
-
     return (
         <Box sx={{ p: 3, position: 'relative', minHeight: '100%' }}>
             <FlashDialog
@@ -288,40 +269,6 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                             NVS
                                         </Button>
                                     </Box>
-                                    {/* Only offline satellites can be deleted: an online one would
-                                        re-register itself immediately via its own updates. */}
-                                    {!sat.online &&
-                                        (confirmDeleteId === sat.objectId ? (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Typography
-                                                    variant="caption"
-                                                    color="error"
-                                                >
-                                                    {I18n.t('Delete?')}
-                                                </Typography>
-                                                <Button
-                                                    size="small"
-                                                    color="error"
-                                                    onClick={() => void handleDelete(sat)}
-                                                >
-                                                    {I18n.t('Yes')}
-                                                </Button>
-                                                <Button
-                                                    size="small"
-                                                    onClick={() => setConfirmDeleteId(null)}
-                                                >
-                                                    {I18n.t('No')}
-                                                </Button>
-                                            </Box>
-                                        ) : (
-                                            <Button
-                                                size="small"
-                                                color="error"
-                                                onClick={() => setConfirmDeleteId(sat.objectId)}
-                                            >
-                                                {I18n.t('Remove')}
-                                            </Button>
-                                        ))}
                                 </CardActions>
                             </Card>
                         </Grid>

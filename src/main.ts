@@ -188,6 +188,13 @@ class Hannah extends utils.Adapter {
                     );
                 } else if (which === 'resident_answered' && cmd.resident_answered) {
                     this.messages?.onResidentAnswered(cmd.resident_answered);
+                } else if (which === 'satellite_deleted' && cmd.satellite_deleted) {
+                    const d = cmd.satellite_deleted;
+                    void (async (): Promise<void> => {
+                        await this.satellites?.deleteSatellite(d.device_id, d.room);
+                        await this.sensorWatcher?.deleteSensors(d.device_id);
+                        this.log.info(`[satellites] Deleted ${d.device_id} (requested by Hannah Core)`);
+                    })();
                 }
             },
         });
@@ -308,35 +315,6 @@ class Hannah extends utils.Adapter {
                     }
                 } catch (err) {
                     this.log.warn(`[satellites] provisionSatellite failed: ${(err as Error).message}`);
-                    if (obj.callback) {
-                        this.sendTo(obj.from, obj.command, { error: (err as Error).message }, obj.callback);
-                    }
-                }
-            })();
-            return;
-        }
-        if (obj.command === 'deleteSatellite') {
-            const params = (obj.message ?? {}) as { deviceId?: string; room?: string };
-            const { deviceId, room } = params;
-            if (!deviceId || !room) {
-                if (obj.callback) {
-                    this.sendTo(obj.from, obj.command, { error: 'deviceId and room required' }, obj.callback);
-                }
-                return;
-            }
-            this.log.info(`[satellites] Deleting satellite ${deviceId} in room ${room}`);
-            void (async (): Promise<void> => {
-                try {
-                    const roomRemoved = (await this.satellites?.deleteSatellite(deviceId, room)) ?? false;
-                    await this.sensorWatcher?.deleteSensors(deviceId);
-                    this.log.info(
-                        `[satellites] Deleted ${deviceId}${roomRemoved ? ` and now-empty room ${room}` : ''}`,
-                    );
-                    if (obj.callback) {
-                        this.sendTo(obj.from, obj.command, { success: true, roomRemoved }, obj.callback);
-                    }
-                } catch (err) {
-                    this.log.warn(`[satellites] deleteSatellite failed: ${(err as Error).message}`);
                     if (obj.callback) {
                         this.sendTo(obj.from, obj.command, { error: (err as Error).message }, obj.callback);
                     }
