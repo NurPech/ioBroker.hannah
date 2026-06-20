@@ -509,6 +509,7 @@ message AgentCommand {
     AgentBleUpdate          ble_update          = 7;  // BLE tag location changed
     AgentSensorUpdate       sensor_update       = 8;  // satellite sensor reading
     AgentResidentAnswered   resident_answered   = 9;  // answer to an ask_resident request
+    AgentSatelliteDeleted   satellite_deleted   = 10; // Hannah Core deleted a satellite — adapter must remove its object tree
   }
 }
 
@@ -554,6 +555,14 @@ message AgentSatelliteUpdate {
   reserved 7;
   reserved "serial";          // removed: device_id is the hardware serial since v0.34
   string display_name = 8;  // human-readable name from Core DB (empty = fall back to device_id)
+}
+
+// Hannah Core deleted a satellite (RoomManager.delete_satellite()) — the adapter
+// must remove the satellite's full object tree (and its sensor tree), mirroring
+// the room cleanup AgentSatelliteUpdate already does for online/offline changes.
+message AgentSatelliteDeleted {
+  string device_id = 1;  // satellite device_id being deleted
+  string room      = 2;  // room_id the satellite was assigned to, for room-container cleanup
 }
 
 // Hannah sends the answer to a text command back to the adapter.

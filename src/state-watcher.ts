@@ -370,6 +370,9 @@ export class StateWatcher {
             if (role === 'value.temperature') {
                 return 'temperature_sensor';
             }
+            if (role === 'value.humidity') {
+                return 'humidity_sensor';
+            }
             if (role === 'sensor.door' || role === 'indicator.open') {
                 return 'door';
             }

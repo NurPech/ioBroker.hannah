@@ -77,6 +77,10 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: `resolveType()` now maps role `value.humidity` to the new `humidity_sensor` device type (Refs https://dev.kernstock.net/gessinger/voice/hannah/-/work_items/47)
+- Changed: satellite deletion now happens via the new `satellite_deleted` `AgentCommand` sent by Hannah Core (`SatelliteWatcher.deleteSatellite()` + `SensorWatcher.deleteSensors()` are unchanged, only the trigger moved); the AdminUI "Remove" button and the `deleteSatellite` `sendTo` handler are removed — deletion is now done from Hannah's own Web UI satellite list, the only place that also clears RoomManager's DB entry (Refs https://dev.kernstock.net/gessinger/voice/hannah/-/work_items/42)
+
 ### 0.24.1 (2026-06-20)
 - Fixed: `StateWatcher.onStateChange()` dropped every state change with `ack:false`, including states subscribed via `AgentWatchMore` (trigger_engine) — manually/directly written flags (e.g. `0_userdata` booleans with no backing device to confirm them) never received an explicit `ack:true` and were silently never forwarded to Hannah Core. WatchMore states are monitoring-only (never written to via `handleSetState`), so there's no feedback-loop risk in forwarding them regardless of `ack` — the filter now only applies to enum-discovered device states
 
