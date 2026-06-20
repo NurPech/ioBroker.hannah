@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.25.0 (2026-06-20)
 - Added: `resolveType()` now maps role `value.humidity` to the new `humidity_sensor` device type (Refs https://dev.kernstock.net/gessinger/voice/hannah/-/work_items/47)
 - Changed: satellite deletion now happens via the new `satellite_deleted` `AgentCommand` sent by Hannah Core (`SatelliteWatcher.deleteSatellite()` + `SensorWatcher.deleteSensors()` are unchanged, only the trigger moved); the AdminUI "Remove" button and the `deleteSatellite` `sendTo` handler are removed — deletion is now done from Hannah's own Web UI satellite list, the only place that also clears RoomManager's DB entry (Refs https://dev.kernstock.net/gessinger/voice/hannah/-/work_items/42)
 
