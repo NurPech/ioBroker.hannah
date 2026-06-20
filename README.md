@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: `StateWatcher.onStateChange()` dropped every state change with `ack:false`, including states subscribed via `AgentWatchMore` (trigger_engine) — manually/directly written flags (e.g. `0_userdata` booleans with no backing device to confirm them) never received an explicit `ack:true` and were silently never forwarded to Hannah Core. WatchMore states are monitoring-only (never written to via `handleSetState`), so there's no feedback-loop risk in forwarding them regardless of `ack` — the filter now only applies to enum-discovered device states
+
 ### 0.24.0 (2026-06-19)
 - Fixed: `StateWatcher.resolveType()` read a non-standard `common.hannah.type` field for the device-type override, which is never reliably persisted by ioBroker — now reads the officially documented `common.custom["<adapter-namespace>"]` structure (`{enabled: true, type: "..."}`), matching the convention from the ioBroker objects schema docs
 
