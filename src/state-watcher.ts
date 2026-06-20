@@ -104,8 +104,8 @@ export class StateWatcher {
             return false;
         }
 
-        let isSubscribed =
-            this.subscribedIds.has(id) || this.watchMoreIds.has(id) || this.verifiedWildcardCache.has(id);
+        const isWatchMoreState = this.watchMoreIds.has(id);
+        let isSubscribed = this.subscribedIds.has(id) || isWatchMoreState || this.verifiedWildcardCache.has(id);
 
         if (!isSubscribed) {
             for (const prefix of this.wildcardPrefixes) {
@@ -136,8 +136,12 @@ export class StateWatcher {
             return true;
         }
 
-        // Only forward confirmed states — ack:false = command pending, ack:true = device confirmed
-        if (!state.ack) {
+        // Only forward confirmed states — ack:false = command pending, ack:true = device confirmed.
+        // WatchMore states are monitoring-only (Hannah never writes to them via handleSetState),
+        // so there's no feedback-loop risk — forward every change regardless of ack. This avoids
+        // losing updates for manually/directly written flags (e.g. 0_userdata booleans) that
+        // never receive an explicit ack:true.
+        if (!isWatchMoreState && !state.ack) {
             return false;
         }
 
