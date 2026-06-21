@@ -1,16 +1,45 @@
 import type * as utils from '@iobroker/adapter-core';
 import type { AgentMessageSender } from './grpc-client';
 
+// String-Enum, nicht numerisch: grpc-client.ts lädt das Proto mit `enums: String`
+// (siehe loadSync-Optionen) — eingehende Commands liefern den Enum-Namen als String,
+// kein numerischer Wert.
+enum ResidentType {
+    UNSPECIFIED = 'RESIDENT_TYPE_UNSPECIFIED',
+    ROOMIE = 'ROOMIE',
+    GUEST = 'GUEST',
+    PET = 'PET',
+}
+
+const RESIDENT_PATH_SEGMENTS: Record<string, ResidentType> = {
+    roomie: ResidentType.ROOMIE,
+    guest: ResidentType.GUEST,
+    pet: ResidentType.PET,
+};
+
+function residentTypeToSegment(type: ResidentType): string {
+    switch (type) {
+        case ResidentType.GUEST:
+            return 'guest';
+        case ResidentType.PET:
+            return 'pet';
+        default:
+            return 'roomie';
+    }
+}
+
 type AgentResident = {
     roomie_id: string;
     name: string;
-    is_guest: boolean;
+    type: ResidentType;
+    presence_state: number;
+    mood_level?: number; // Das '?' entspricht dem 'optional' aus der Proto-Datei
 };
 
 /**
  * Watches the residents adapter presence states and forwards changes
- * as AgentResidentUpdate messages to Hannah Core.
- * Covers roomies, guests, and any other resident types (e.g. pets).
+ * as AgentResident updates to Hannah Core.
+ * Covers roomies, guests, and pets.
  */
 export class ResidentsWatcher {
     private adapter: utils.AdapterInstance;
@@ -51,18 +80,16 @@ export class ResidentsWatcher {
         }
 
         // Extract type and id from: residents.<instance>.<type>.<resident_id>.presence.state
-        const match = id.match(/\.(roomie|guest)\.([^.]+)\.presence\.state$/);
+        const match = id.match(/\.(roomie|guest|pet)\.([^.]+)\.presence\.state$/);
         if (!match) {
-            // Silently skip unknown resident types (e.g. pet) — AgentResidentUpdate only
-            // supports roomie/guest via is_guest:bool. Proto extension needed for pets.
             return;
         }
 
-        const residentType = match[1];
+        const segment = match[1];
         const residentId = match[2];
         const presenceState = typeof state.val === 'number' ? state.val : parseInt(String(state.val), 10) || 0;
 
-        const key = `${residentType}/${residentId}`;
+        const key = `${segment}/${residentId}`;
         if (this.lastSent.get(key) === presenceState) {
             return;
         }
@@ -72,7 +99,7 @@ export class ResidentsWatcher {
             resident_update: {
                 roomie_id: residentId,
                 presence_state: presenceState,
-                is_guest: residentType === 'guest',
+                type: RESIDENT_PATH_SEGMENTS[segment],
             },
         });
 
@@ -91,7 +118,11 @@ export class ResidentsWatcher {
         if (parts.length !== 4) {
             return;
         }
-        if (id.startsWith(`residents.${this.instance}.roomie.`) || id.startsWith(`residents.${this.instance}.guest.`)) {
+        if (
+            id.startsWith(`residents.${this.instance}.roomie.`) ||
+            id.startsWith(`residents.${this.instance}.guest.`) ||
+            id.startsWith(`residents.${this.instance}.pet.`)
+        ) {
             this.adapter.log.info(`[residents] Resident added/removed: ${id} — sending updated snapshot`);
             void this._sendSnapshot();
         }
@@ -112,32 +143,30 @@ export class ResidentsWatcher {
     }
 
     /**
-     * resident state changes from Hannah Core (via set_resident command) are handled here.
-     *
-     * @param residentId - ID of the resident (e.g. "john_doe")
-     * @param value - JSON-encoded value to set (e.g. {"presence_state": 1, "is_guest": false})
-     */
-    /**
      * Hannah instructs the adapter to set a resident's presence state.
-     * is_guest determines the path: .roomie. for roomies, .guest. for guests.
+     * type determines the path: .roomie./.guest./.pet.
      *
      * @param residentId - Resident ID (e.g. "leonie", "hannah")
      * @param presenceState - Presence value from the residents adapter
-     * @param isGuest - True for guests, false for roomies
+     * @param type - ResidentType as decoded from the gRPC command (string enum, see ResidentType)
      */
-    public async handleSetResident(residentId: string, presenceState: number, isGuest: boolean): Promise<void> {
-        const type = isGuest ? 'guest' : 'roomie';
-        const stateId = `residents.${this.instance}.${type}.${residentId}.presence.state`;
+    public async handleSetResident(residentId: string, presenceState: number, type: ResidentType): Promise<void> {
+        const segment = residentTypeToSegment(type);
+        const stateId = `residents.${this.instance}.${segment}.${residentId}.presence.state`;
         try {
             await this.adapter.setForeignStateAsync(stateId, { val: presenceState, ack: false });
-            this.adapter.log.debug(`[residents] SetResident ${type}/${residentId} → ${presenceState}`);
+            this.adapter.log.debug(`[residents] SetResident ${segment}/${residentId} → ${presenceState}`);
         } catch (e) {
             this.adapter.log.error(`[residents] SetResident failed for ${stateId}: ${(e as Error).message}`);
         }
     }
 
     private async _sendSnapshot(): Promise<void> {
-        const patterns = [`residents.${this.instance}.roomie.*`, `residents.${this.instance}.guest.*`];
+        const patterns = [
+            `residents.${this.instance}.roomie.*`,
+            `residents.${this.instance}.guest.*`,
+            `residents.${this.instance}.pet.*`,
+        ];
 
         const residents: AgentResident[] = [];
         let sent = 0;
@@ -152,10 +181,16 @@ export class ResidentsWatcher {
                     continue;
                 }
 
+                const residentId = parts[3];
+                const presenceState = await this.adapter.getForeignStateAsync(`${id}.presence.state`);
+                const moodState = await this.adapter.getForeignStateAsync(`${id}.mood.state`);
+
                 residents.push({
-                    name: this._getObjectName(obj, parts[3]),
-                    roomie_id: parts[3],
-                    is_guest: parts[2] == 'roomie' ? false : true,
+                    name: this._getObjectName(obj, residentId),
+                    roomie_id: residentId,
+                    mood_level: typeof moodState?.val === 'number' ? moodState.val : undefined,
+                    type: RESIDENT_PATH_SEGMENTS[parts[2]],
+                    presence_state: typeof presenceState?.val === 'number' ? presenceState.val : 0,
                 });
                 sent++;
             }
