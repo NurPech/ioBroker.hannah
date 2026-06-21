@@ -448,7 +448,7 @@ message SatelliteRegistration {
 message AgentMessage {
   oneof payload {
     AgentStateUpdate      state_update      = 1;  // any ioBroker state changed
-    AgentResidentUpdate   resident_update   = 2;  // residents adapter presence changed
+    AgentResident         resident_update   = 2;  // residents adapter presence changed
     AgentTextCommand      text_command      = 3;  // text command state changed
     AgentSatelliteControl satellite_control = 4;  // satellite control command
     AgentDeviceSnapshot   send_snapshot     = 5;  // initial snapshot with all states
@@ -485,11 +485,11 @@ message AgentStateUpdate {
   int64  ts       = 4;  // Unix timestamp in milliseconds
 }
 
-// A change from the ioBroker residents adapter.
-message AgentResidentUpdate {
-  string roomie_id      = 1;
-  int32  presence_state = 2;  // residents adapter presence value (0=absent, 1=home, …)
-  bool   is_guest       = 3;
+enum ResidentType {
+  RESIDENT_TYPE_UNSPECIFIED = 0;
+  ROOMIE                    = 1;
+  GUEST                     = 2;
+  PET                       = 3;
 }
 
 // The text-command state in ioBroker changed — treat as a SubmitText call.
@@ -539,7 +539,7 @@ message AgentWatchMore {
 message AgentSetResident {
   string resident_id    = 1;  // e.g. "leonie", "hannah"
   int32  presence_state = 2;  // residents adapter presence value (0=absent, 1=home, …)
-  bool   is_guest       = 3;  // false → residents.<n>.roomie.<id>, true → residents.<n>.guest.<id>
+  ResidentType type     = 3;
 }
 
 // Hannah notifies the adapter that a satellite registered or disconnected,
@@ -619,9 +619,11 @@ message AgentRoomSnapshot {
 
 // A resident from the ioBroker adapter
 message AgentResident {
-  string roomie_id   = 1;
-  string name        = 2;
-  bool   is_guest    = 3;
+  string roomie_id          = 1;
+  string name               = 2;
+  ResidentType type         = 3;
+  optional int32 mood_level = 4;
+  int32 presence_state      = 5;
 }
 
 // a list with all known residents

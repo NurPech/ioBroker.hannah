@@ -77,6 +77,11 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: `ResidentsWatcher` now also tracks pets (`residents.<instance>.pet.*`), not just roomies/guests — presence updates and the resident snapshot carry a `type` field (`ROOMIE`/`GUEST`/`PET`) instead of the removed `is_guest` boolean
+- Fixed: the resident snapshot sent to Hannah Core always reported `presence_state: 0` regardless of the actual state; it now reads the real value from `<resident>.presence.state`
+- Added: resident snapshot now includes `mood_level`, read from `<resident>.mood.state` if present
+
 ### 0.25.0 (2026-06-20)
 - Added: `resolveType()` now maps role `value.humidity` to the new `humidity_sensor` device type (Refs https://dev.kernstock.net/gessinger/voice/hannah/-/work_items/47)
 - Changed: satellite deletion now happens via the new `satellite_deleted` `AgentCommand` sent by Hannah Core (`SatelliteWatcher.deleteSatellite()` + `SensorWatcher.deleteSensors()` are unchanged, only the trigger moved); the AdminUI "Remove" button and the `deleteSatellite` `sendTo` handler are removed — deletion is now done from Hannah's own Web UI satellite list, the only place that also clears RoomManager's DB entry (Refs https://dev.kernstock.net/gessinger/voice/hannah/-/work_items/42)
