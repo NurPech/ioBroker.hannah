@@ -129,8 +129,8 @@ message StatusResponse {
 // ============================================================
 
 message User {
-  string uuid            = 1;
-  string roomie_id       = 2;
+  string id              = 1;
+  string user_name       = 2;
   string display_name    = 3;
   int32  trust_level     = 4;
   bool   active          = 5;
@@ -150,15 +150,20 @@ message GetUsersResponse {
 // Exactly one of the lookup fields should be set.
 message GetUserRequest {
   oneof lookup {
-    string                roomie_id      = 1;
-    string                uuid           = 2;
+    string                user_name      = 1;
+    string                id             = 2;
     LinkedAccountLookup   linked_account = 3;
   }
+  // Only meaningful together with roomie_id: roomie_id alone is not unique across
+  // types (a Guest and a Roomie can share a name). Leave UNSPECIFIED if there's no
+  // collision; required when one exists, otherwise the RPC fails with
+  // FAILED_PRECONDITION naming the colliding types.
+  ResidentType type = 4;
 }
 
 message LinkedAccountLookup {
-  string service    = 1;
-  string account_id = 2;
+  string provider    = 1;
+  string external_id = 2;
 }
 
 message UserResponse {
@@ -167,24 +172,29 @@ message UserResponse {
 }
 
 message LinkAccountRequest {
-  string roomie_id  = 1;
+  string user_id          = 1;
+  string service          = 2;
+  string account_id       = 3;
+  string provider_payload  = 4;
+}
+
+message UnlinkAccountRequest {
+  string user_id    = 1;
   string service    = 2;
   string account_id = 3;
 }
 
-message UnlinkAccountRequest {
-  string service    = 1;
-  string account_id = 2;
-}
-
 message SetTrustLevelRequest {
-  string roomie_id = 1;
-  int32  level     = 2;  // clamped to [0, 10]
+  string user_id    = 1;
+  int32  level      = 2;  // clamped to [0, 10]
 }
 
 message SetSystemMessagesRequest {
-  string roomie_id = 1;
-  bool   enabled   = 2;
+  // Always called by the user for themselves, identified beforehand via a unique
+  // linked-account lookup (GetUserRequest.linked_account) — uuid is already known
+  // and unambiguous, unlike roomie_id which can collide across resident types.
+  string user_id  = 1;
+  bool   enabled  = 2;
 }
 
 // ============================================================
@@ -535,7 +545,7 @@ message AgentWatchMore {
 }
 
 // Hannah instructs the adapter to set a resident's presence state in the residents adapter.
-// is_guest determines whether the target path is .roomie. or .guest.
+// type determines whether the target path is .roomie./.guest./.pet.
 message AgentSetResident {
   string resident_id    = 1;  // e.g. "leonie", "hannah"
   int32  presence_state = 2;  // residents adapter presence value (0=absent, 1=home, …)
