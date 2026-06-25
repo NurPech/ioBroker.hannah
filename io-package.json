@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.26.0",
+    "version": "0.26.1",
     "news": {
+      "0.26.1": {
+        "en": "Added: `ResidentsWatcher.handleSetResidentMood()` — writes an incoming `AgentSetResidentMood` command to `residents.<instance>.<segment>.<id>.mood.state`, same path pattern as the existing presence write; dispatched in `main.ts` alongside the existing `set_resident` case",
+        "de": "Neu hinzugefügt: `ResidentsWatcher.handleSetResidentMood()` – schreibt einen eingehenden `AgentSetResidentMood`-Befehl in `residents.<instance>.<segment>.<id>.mood.state`, mit demselben Pfadmuster wie die bestehende Anwesenheitsmeldung; wird in `main.ts` zusammen mit dem bestehenden `set_resident`-Fall aufgerufen.",
+        "ru": "Добавлено: `ResidentsWatcher.handleSetResidentMood()` — записывает входящую команду `AgentSetResidentMood` в `residents.<instance>.<segment>.<id>.mood.state`, используя тот же шаблон пути, что и существующая запись присутствия; обрабатывается в `main.ts` вместе с существующим случаем `set_resident`.",
+        "pt": "Adicionado: `ResidentsWatcher.handleSetResidentMood()` — escreve um comando `AgentSetResidentMood` recebido em `residents.<instância>.<segmento>.<id>.mood.state`, seguindo o mesmo padrão de caminho da escrita de presença existente; despachado em `main.ts` junto com o caso `set_resident` existente.",
+        "nl": "Toegevoegd: `ResidentsWatcher.handleSetResidentMood()` — schrijft een binnenkomend `AgentSetResidentMood`-commando naar `residents.<instance>.<segment>.<id>.mood.state`, met hetzelfde padpatroon als de bestaande aanwezigheidsschrijfopdracht; wordt verzonden in `main.ts` samen met de bestaande `set_resident`-case.",
+        "fr": "Ajouté : `ResidentsWatcher.handleSetResidentMood()` — écrit une commande `AgentSetResidentMood` entrante dans `residents.<instance>.<segment>.<id>.mood.state`, selon le même modèle de chemin que l’écriture de présence existante ; déclenchée dans `main.ts` avec le cas `set_resident` existant",
+        "it": "Aggiunto: `ResidentsWatcher.handleSetResidentMood()` — scrive un comando `AgentSetResidentMood` in entrata in `residents.<instance>.<segment>.<id>.mood.state`, con lo stesso schema di percorso della scrittura di presenza esistente; inviato in `main.ts` insieme al caso `set_resident` esistente",
+        "es": "Añadido: `ResidentsWatcher.handleSetResidentMood()` — escribe un comando `AgentSetResidentMood` entrante en `residents.<instance>.<segment>.<id>.mood.state`, con el mismo patrón de ruta que la escritura de presencia existente; se envía en `main.ts` junto con el caso `set_resident` existente.",
+        "pl": "Dodano: `ResidentsWatcher.handleSetResidentMood()` — zapisuje przychodzące polecenie `AgentSetResidentMood` do `residents.<instance>.<segment>.<id>.mood.state`, ten sam wzorzec ścieżki co istniejący zapis obecności; wysyłane w `main.ts` obok istniejącego przypadku `set_resident`",
+        "uk": "Додано: `ResidentsWatcher.handleSetResidentMood()` — записує вхідну команду `AgentSetResidentMood` до `residents.<instance>.<segment>.<id>.mood.state`, той самий шаблон шляху, що й існуючий запис присутності; відправляється в `main.ts` разом із існуючим випадком `set_resident`",
+        "zh-cn": "新增：`ResidentsWatcher.handleSetResidentMood()` — 将传入的 `AgentSetResidentMood` 命令写入 `residents.<instance>.<segment>.<id>.mood.state`，路径模式与现有的状态写入相同；在 `main.ts` 中与现有的 `set_resident` 语句一起分发。"
+      },
       "0.26.0": {
         "en": "Added: `ResidentsWatcher` now also tracks pets (`residents.<instance>.pet.*`), not just roomies/guests — presence updates and the resident snapshot carry a `type` field (`ROOMIE`/`GUEST`/`PET`) instead of the removed `is_guest` boolean\nFixed: the resident snapshot sent to Hannah Core always reported `presence_state: 0` regardless of the actual state; it now reads the real value from `<resident>.presence.state`\nAdded: resident snapshot now includes `mood_level`, read from `<resident>.mood.state` if present",
         "de": "Neu: `ResidentsWatcher` erfasst nun auch Haustiere (`residents.<instance>.pet.*`), nicht nur Mitbewohner/Gäste. Anwesenheitsaktualisierungen und der Bewohner-Snapshot enthalten nun ein `type`-Feld (`ROOMIE`/`GUEST`/`PET`) anstelle des entfernten booleschen Werts `is_guest`.\nBehoben: Der an Hannah Core gesendete Resident-Snapshot meldete immer `presence_state: 0`, unabhängig vom tatsächlichen Status; jetzt liest er den tatsächlichen Wert aus `<resident>.presence.state`.\nNeu: Der Bewohner-Snapshot enthält nun `mood_level`, das, falls vorhanden, aus `<resident>.mood.state` gelesen wird.",
@@ -80,19 +93,6 @@
         "pl": "Naprawiono: `SatelliteWatcher.handleSatelliteUpdate` teraz pomija satelity z pustym miejscem i `online=true`, aby zapobiec nieprawidłowym identyfikatorom stanu ioBroker kończącym się na `.` (patrz #37)",
         "uk": "Виправлено: `SatelliteWatcher.handleSatelliteUpdate` тепер пропускає супутники з порожньою кімнатою та `online=true`, щоб запобігти недійсним ідентифікаторам стану ioBroker, що закінчуються на `.` (посилання №37)",
         "zh-cn": "已修复：`SatelliteWatcher.handleSatelliteUpdate` 现在会跳过房间为空且 `online=true` 的卫星，以防止出现以 `.` 结尾的无效 ioBroker 状态 ID（参考 #37）"
-      },
-      "0.21.1": {
-        "en": "Fixed: `FlashDialog` room dropdown was empty — used `getForeignObjects('enum.rooms.*')` (not valid for `enum` object type) instead of `getEnums('rooms')`, the method already used correctly in `app.tsx`",
-        "de": "Behoben: Das Dropdown-Menü für Räume im `FlashDialog` war leer – es wurde `getForeignObjects('enum.rooms.*')` (ungültig für den Objekttyp `enum`) anstelle von `getEnums('rooms')` verwendet, der Methode, die in `app.tsx` bereits korrekt verwendet wird.",
-        "ru": "Исправлено: выпадающий список комнат в `FlashDialog` был пустым — использовался `getForeignObjects('enum.rooms.*')` (недопустимо для типа объекта `enum`) вместо `getEnums('rooms')`, метод, который уже корректно используется в `app.tsx`.",
-        "pt": "Corrigido: o menu suspenso de salas do `FlashDialog` estava vazio — estava usando `getForeignObjects('enum.rooms.*')` (inválido para o tipo de objeto `enum`) em vez de `getEnums('rooms')`, o método já utilizado corretamente em `app.tsx`.",
-        "nl": "Opgelost: De dropdownlijst voor kamers in `FlashDialog` was leeg — er werd `getForeignObjects('enum.rooms.*')` gebruikt (niet geldig voor het objecttype `enum`) in plaats van `getEnums('rooms')`, de methode die al correct werd gebruikt in `app.tsx`.",
-        "fr": "Corrigé : La liste déroulante des pièces de `FlashDialog` était vide — utilisation de `getForeignObjects('enum.rooms.*')` (non valide pour le type d'objet `enum`) au lieu de `getEnums('rooms')`, la méthode déjà utilisée correctement dans `app.tsx`.",
-        "it": "Risolto: il menu a tendina delle stanze di `FlashDialog` era vuoto: è stato utilizzato `getForeignObjects('enum.rooms.*')` (non valido per il tipo di oggetto `enum`) invece di `getEnums('rooms')`, il metodo già utilizzato correttamente in `app.tsx`.",
-        "es": "Corregido: El menú desplegable de habitaciones de `FlashDialog` estaba vacío; se usó `getForeignObjects('enum.rooms.*')` (no válido para el tipo de objeto `enum`) en lugar de `getEnums('rooms')`, el método que ya se usa correctamente en `app.tsx`.",
-        "pl": "Naprawiono: rozwijana lista pokoi `FlashDialog` była pusta — użyto metody `getForeignObjects('enum.rooms.*')` (nieprawidłowej dla typu obiektu `enum`) zamiast `getEnums('rooms')`, która była już poprawnie używana w `app.tsx`",
-        "uk": "Виправлено: випадаюче меню кімнат `FlashDialog` було порожнім — використовувалося `getForeignObjects('enum.rooms.*')` (недійсне для типу об'єкта `enum`) замість `getEnums('rooms')`, метод вже правильно використовувався в `app.tsx`.",
-        "zh-cn": "已修复：`FlashDialog` 房间下拉菜单为空——使用了 `getForeignObjects('enum.rooms.*')`（对 `enum` 对象类型无效），而不是 `getEnums('rooms')`，后者在 `app.tsx` 中已正确使用。"
       }
     },
     "blockly": true,
