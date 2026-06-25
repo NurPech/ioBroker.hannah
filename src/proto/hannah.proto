@@ -129,7 +129,7 @@ message StatusResponse {
 // ============================================================
 
 message User {
-  string id              = 1;
+  int32  id              = 1;
   string user_name       = 2;
   string display_name    = 3;
   int32  trust_level     = 4;
@@ -151,7 +151,7 @@ message GetUsersResponse {
 message GetUserRequest {
   oneof lookup {
     string                user_name      = 1;
-    string                id             = 2;
+    int32                 id             = 2;
     LinkedAccountLookup   linked_account = 3;
   }
   // Only meaningful together with roomie_id: roomie_id alone is not unique across
@@ -172,28 +172,28 @@ message UserResponse {
 }
 
 message LinkAccountRequest {
-  string user_id          = 1;
+  int32  user_id          = 1;
   string service          = 2;
   string account_id       = 3;
   string provider_payload  = 4;
 }
 
 message UnlinkAccountRequest {
-  string user_id    = 1;
+  int32  user_id    = 1;
   string service    = 2;
   string account_id = 3;
 }
 
 message SetTrustLevelRequest {
-  string user_id    = 1;
+  int32  user_id    = 1;
   int32  level      = 2;  // clamped to [0, 10]
 }
 
 message SetSystemMessagesRequest {
   // Always called by the user for themselves, identified beforehand via a unique
-  // linked-account lookup (GetUserRequest.linked_account) — uuid is already known
+  // linked-account lookup (GetUserRequest.linked_account) — id is already known
   // and unambiguous, unlike roomie_id which can collide across resident types.
-  string user_id  = 1;
+  int32  user_id  = 1;
   bool   enabled  = 2;
 }
 
