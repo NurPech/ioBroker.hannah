@@ -372,9 +372,9 @@ message SubmitSatelliteAudioRequest {
   string room         = 2;  // room name (from proxy registration / config)
   bytes  audio_pcm    = 3;  // raw PCM, 16-bit signed mono, 16000 Hz
   int32  sample_rate  = 4;  // sample rate of the audio (typically 16000)
-  // Optional: speaker identity provided by an upstream speaker-ID service.
+  // Optional: speaker identity (Hannah users.id) provided by an upstream speaker-ID service.
   // Empty = anonymous (Hannah treats as unknown user).
-  string speaker_roomie_id = 5;
+  string speaker_user_id = 5;
 }
 
 message SubmitSatelliteAudioResponse {
@@ -431,7 +431,7 @@ message ProvisionSatelliteRequest {
 // ============================================================
 
 message EnrollVoiceprintRequest {
-  string roomie_id   = 1;  // whose voice this sample belongs to
+  string user_id     = 1;  // Hannah user this voice sample belongs to (users.id, stable)
   bytes  audio_pcm   = 2;  // raw PCM, 16-bit signed mono
   int32  sample_rate = 3;  // e.g. 16000
 }
@@ -520,6 +520,7 @@ message AgentCommand {
     AgentSensorUpdate       sensor_update       = 8;  // satellite sensor reading
     AgentResidentAnswered   resident_answered   = 9;  // answer to an ask_resident request
     AgentSatelliteDeleted   satellite_deleted   = 10; // Hannah Core deleted a satellite — adapter must remove its object tree
+    AgentSetResidentMood    set_resident_mood   = 11; // Hannah wants to set a resident's mood, independent of presence
   }
 }
 
@@ -550,6 +551,15 @@ message AgentSetResident {
   string resident_id    = 1;  // e.g. "leonie", "hannah"
   int32  presence_state = 2;  // residents adapter presence value (0=absent, 1=home, …)
   ResidentType type     = 3;
+}
+
+// Hannah instructs the adapter to set a resident's mood — separate command from
+// AgentSetResident so it can fire independent of any presence change (e.g. when a
+// Hannah User's linked mood changes without an arrival/departure).
+message AgentSetResidentMood {
+  string resident_id = 1;  // e.g. "leonie", "hannah"
+  int32  mood        = 2;
+  ResidentType type  = 3;
 }
 
 // Hannah notifies the adapter that a satellite registered or disconnected,
