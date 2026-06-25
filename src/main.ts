@@ -151,6 +151,9 @@ class Hannah extends utils.Adapter {
                 } else if (which === 'set_resident' && cmd.set_resident) {
                     const r = cmd.set_resident;
                     void this.residents?.handleSetResident(r.resident_id, r.presence_state, r.type);
+                } else if (which === 'set_resident_mood' && cmd.set_resident_mood) {
+                    const r = cmd.set_resident_mood;
+                    void this.residents?.handleSetResidentMood(r.resident_id, r.mood, r.type);
                 } else if (which === 'satellite_update' && cmd.satellite_update) {
                     const s = cmd.satellite_update;
                     void this.satellites?.handleSatelliteUpdate(

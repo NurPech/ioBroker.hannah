@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: `ResidentsWatcher.handleSetResidentMood()` — writes an incoming `AgentSetResidentMood` command to `residents.<instance>.<segment>.<id>.mood.state`, same path pattern as the existing presence write; dispatched in `main.ts` alongside the existing `set_resident` case
+
 ### 0.26.0 (2026-06-21)
 - Added: `ResidentsWatcher` now also tracks pets (`residents.<instance>.pet.*`), not just roomies/guests — presence updates and the resident snapshot carry a `type` field (`ROOMIE`/`GUEST`/`PET`) instead of the removed `is_guest` boolean
 - Fixed: the resident snapshot sent to Hannah Core always reported `presence_state: 0` regardless of the actual state; it now reads the real value from `<resident>.presence.state`

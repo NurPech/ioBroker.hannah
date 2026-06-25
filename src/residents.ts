@@ -161,6 +161,24 @@ export class ResidentsWatcher {
         }
     }
 
+    /**
+     * Hannah instructs the adapter to set a resident's mood, independent of presence.
+     *
+     * @param residentId - Resident ID (e.g. "leonie", "hannah")
+     * @param mood - Mood value from the linked Hannah User
+     * @param type - ResidentType as decoded from the gRPC command (string enum, see ResidentType)
+     */
+    public async handleSetResidentMood(residentId: string, mood: number, type: ResidentType): Promise<void> {
+        const segment = residentTypeToSegment(type);
+        const stateId = `residents.${this.instance}.${segment}.${residentId}.mood.state`;
+        try {
+            await this.adapter.setForeignStateAsync(stateId, { val: mood, ack: false });
+            this.adapter.log.debug(`[residents] SetResidentMood ${segment}/${residentId} → ${mood}`);
+        } catch (e) {
+            this.adapter.log.error(`[residents] SetResidentMood failed for ${stateId}: ${(e as Error).message}`);
+        }
+    }
+
     private async _sendSnapshot(): Promise<void> {
         const patterns = [
             `residents.${this.instance}.roomie.*`,
