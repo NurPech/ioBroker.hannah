@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: `updateSatelliteNvs` `sendTo` command — pushes a key-value map to a satellite's new `POST /nvs` HTTP endpoint to remotely update WiFi/MQTT/OTA-channel/seed/wakeword-threshold settings without physical access. Resolves the satellite's IP via `GrpcClient.getSatellites()`, authenticates with the new `satNvsToken` admin config field (Satellite Defaults tab)
+
 ### 0.26.1 (2026-06-25)
 - Added: `ResidentsWatcher.handleSetResidentMood()` — writes an incoming `AgentSetResidentMood` command to `residents.<instance>.<segment>.<id>.mood.state`, same path pattern as the existing presence write; dispatched in `main.ts` alongside the existing `set_resident` case
 

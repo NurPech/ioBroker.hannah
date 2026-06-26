@@ -8,6 +8,7 @@ import HannahDeviceManagement from './deviceManager';
 import { BleWatcher } from './ble';
 import { SensorWatcher } from './sensors';
 import { FirmwareManager } from './firmware-manager';
+import { updateSatelliteNvs } from './satellite-nvs';
 
 class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
@@ -318,6 +319,49 @@ class Hannah extends utils.Adapter {
                     }
                 } catch (err) {
                     this.log.warn(`[satellites] provisionSatellite failed: ${(err as Error).message}`);
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, { error: (err as Error).message }, obj.callback);
+                    }
+                }
+            })();
+            return;
+        }
+        if (obj.command === 'updateSatelliteNvs') {
+            const params = (obj.message ?? {}) as {
+                deviceId?: string;
+                values?: Record<string, string | number>;
+            };
+            const { deviceId, values } = params;
+            if (!deviceId || !values || Object.keys(values).length === 0) {
+                if (obj.callback) {
+                    this.sendTo(obj.from, obj.command, { error: 'deviceId and values required' }, obj.callback);
+                }
+                return;
+            }
+            const token = this.config.satNvsToken || '';
+            if (!token) {
+                if (obj.callback) {
+                    this.sendTo(obj.from, obj.command, { error: 'satNvsToken not configured' }, obj.callback);
+                }
+                return;
+            }
+            void (async (): Promise<void> => {
+                try {
+                    const satellites = await this.grpc!.getSatellites();
+                    const sat = satellites.find(s => s.device_id === deviceId);
+                    if (!sat) {
+                        throw new Error(`Unknown satellite '${deviceId}'`);
+                    }
+                    const ip = sat.address.split(':')[0];
+                    this.log.info(
+                        `[satellites] Pushing NVS update to '${deviceId}' (${ip}): ${Object.keys(values).join(', ')}`,
+                    );
+                    await updateSatelliteNvs(ip, token, values);
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, { ok: true }, obj.callback);
+                    }
+                } catch (err) {
+                    this.log.warn(`[satellites] updateSatelliteNvs failed: ${(err as Error).message}`);
                     if (obj.callback) {
                         this.sendTo(obj.from, obj.command, { error: (err as Error).message }, obj.callback);
                     }

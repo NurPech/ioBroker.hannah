@@ -37,6 +37,8 @@
     "Token": "Token",
     "Asset Server": "Asset Server",
     "Asset URL": "Asset URL",
+    "NVS Update API": "NVS Update API",
+    "Bearer token for POST /nvs. Separate from the OTA token — empty disables remote NVS updates on the satellite.": "Bearer token for POST /nvs. Separate from the OTA token — empty disables remote NVS updates on the satellite.",
     "Disable TLS certificate validation (insecure)": "Disable TLS certificate validation (insecure)",
     "Flash new satellite": "Flash new satellite",
     "New Device": "New Device",

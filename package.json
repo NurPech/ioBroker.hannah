@@ -25,7 +25,7 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
-    "@iobroker/adapter-core": "^3.3.2",
+    "@iobroker/adapter-core": "^3.4.1",
     "@iobroker/dm-utils": "^3.0.19",
     "adm-zip": "^0.5.17"
   },
@@ -41,11 +41,11 @@
     "@iobroker/dev-server": "^0.8.0",
     "@iobroker/eslint-config": "^2.3.4",
     "@iobroker/testing": "^5.2.2",
-    "@m1kad0/esp-nvs-utils": "^0.2.1",
+    "@m1kad0/esp-nvs-utils": "^0.2.3",
     "@mui/material": "^6.5.0",
     "@tsconfig/node22": "^22.0.5",
     "@types/adm-zip": "^0.5.8",
-    "@types/iobroker": "npm:@iobroker/types@^7.1.2",
+    "@types/iobroker": "npm:@iobroker/types@^7.2.2",
     "@types/node": "^20.19.41",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
