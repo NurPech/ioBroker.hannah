@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.27.0 (2026-06-26)
 - Added: `updateSatelliteNvs` `sendTo` command — pushes a key-value map to a satellite's new `POST /nvs` HTTP endpoint to remotely update WiFi/MQTT/OTA-channel/seed/wakeword-threshold settings without physical access. Resolves the satellite's IP via `GrpcClient.getSatellites()`, authenticates with the new `satNvsToken` admin config field (Satellite Defaults tab)
 
 ### 0.26.1 (2026-06-25)
