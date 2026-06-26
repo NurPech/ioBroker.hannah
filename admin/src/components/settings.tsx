@@ -500,6 +500,25 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                 />
 
                 <Divider />
+                <Typography
+                    variant="subtitle2"
+                    color="text.primary"
+                >
+                    {I18n.t('NVS Update API')}
+                </Typography>
+                <TextField
+                    label={I18n.t('Token')}
+                    value={native.satNvsToken || ''}
+                    onChange={e => onChange('satNvsToken', e.target.value)}
+                    type="password"
+                    size="small"
+                    fullWidth
+                    helperText={I18n.t(
+                        'Bearer token for POST /nvs. Separate from the OTA token — empty disables remote NVS updates on the satellite.',
+                    )}
+                />
+
+                <Divider />
                 <Switch
                     checked={!!native.satTlsSkipVerify}
                     onChange={e => onChange('satTlsSkipVerify', e.target.checked)}

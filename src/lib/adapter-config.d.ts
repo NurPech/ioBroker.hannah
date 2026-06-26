@@ -13,6 +13,7 @@ declare global {
             residentsInstance: string;
             firmwareSourceUrl: string;
             firmwareSourceToken: string;
+            satNvsToken: string;
         }
     }
 }
