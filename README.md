@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.27.1 (2026-06-27)
 - Changed: `GrpcClient.getSatellites()` now returns every satellite Hannah Core knows about (not just currently-connected ones), with new `room_id`/`room_display_name`/`last_seen`/`connected`/`room_mismatch` fields. `onConnected`'s initial sync now uses `connected` instead of assuming every returned satellite is online, and falls back to the DB-assigned room when a satellite isn't currently connected (its live room is empty then) — lets provisioned-but-never-connected satellites show up correctly instead of being skipped
 - Added: `last_seen` and `room_mismatch` states under `satellites.rooms.<room>.<device>.*`, populated from the extended `GetSatellites` response
 - Fixed: `updateSatelliteNvs` now rejects with a clear "not connected" error instead of pushing to an empty IP when the target satellite is known but currently offline
