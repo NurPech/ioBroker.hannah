@@ -74,6 +74,8 @@ export class SatelliteWatcher {
      * @param volume - Current volume level (0–100), if reported
      * @param mute - Current mute state, if reported
      * @param displayName - Optional satellite display name (for object naming); falls back to deviceId if not provided
+     * @param lastSeen - UTC timestamp (Core DB format) of the last time this satellite was seen, if known
+     * @param roomMismatch - true if the satellite is currently reporting a different room than assigned
      */
     async handleSatelliteUpdate(
         deviceId: string,
@@ -83,6 +85,8 @@ export class SatelliteWatcher {
         volume?: number,
         mute?: boolean,
         displayName?: string,
+        lastSeen?: string,
+        roomMismatch?: boolean,
     ): Promise<void> {
         const objectKey = deviceId;
 
@@ -129,6 +133,18 @@ export class SatelliteWatcher {
         if (mute !== undefined) {
             await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.mute`, {
                 val: mute,
+                ack: true,
+            });
+        }
+        if (lastSeen !== undefined) {
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.last_seen`, {
+                val: lastSeen,
+                ack: true,
+            });
+        }
+        if (roomMismatch !== undefined) {
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.room_mismatch`, {
+                val: roomMismatch,
                 ack: true,
             });
         }
@@ -323,6 +339,30 @@ export class SatelliteWatcher {
                 read: true,
                 write: false,
                 def: '',
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.last_seen`, {
+            type: 'state',
+            common: {
+                name: 'Last seen (UTC)',
+                type: 'string',
+                role: 'value.time',
+                read: true,
+                write: false,
+                def: '',
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.room_mismatch`, {
+            type: 'state',
+            common: {
+                name: 'Reports a different room than assigned',
+                type: 'boolean',
+                role: 'indicator.maintenance',
+                read: true,
+                write: false,
+                def: false,
             },
             native: {},
         });

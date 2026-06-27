@@ -46,8 +46,20 @@ service HannahService {
   // Send a notification from ioBroker to Hannah. Returns ok=true when queued.
   // direct=true: skip LLM reformulation. severity: "alert"|"notify"|"info".
   rpc Notify        (AgentNotification)    returns (StatusResponse);
-  // List all currently registered UDP satellites.
+  // List all known satellites (DB + live status merged).
   rpc GetSatellites (Empty)               returns (GetSatellitesResponse);
+
+  // --- Satellites (Admin-UI, #27 Phase 2) ---
+  rpc SetSatelliteRoom        (SetSatelliteRoomRequest)        returns (StatusResponse);
+  rpc SetSatelliteDisplayName (SetSatelliteDisplayNameRequest) returns (StatusResponse);
+
+  // --- Rooms/Groups (Admin-UI, #27 Phase 1) ---
+  rpc GetRooms      (Empty)                returns (GetRoomsResponse);
+  rpc GetGroups     (Empty)                returns (GetGroupsResponse);
+  rpc CreateGroup   (CreateGroupRequest)   returns (StatusResponse);
+  rpc UpdateGroup   (UpdateGroupRequest)   returns (StatusResponse);
+  rpc DeleteGroup   (DeleteGroupRequest)   returns (StatusResponse);
+  rpc SetGroupRooms (SetGroupRoomsRequest) returns (StatusResponse);
 
   // --- Car ---
   // Returns the current cached car state (available=false if no data received yet).
@@ -234,15 +246,70 @@ message AnnounceRequest {
 
 message Satellite {
   string device_id    = 1;
-  string room         = 2;   // room name as registered
-  string address      = 3;   // IP:port of the UDP satellite
+  string room         = 2;   // live-reported room (UDP/proxy registration); empty if not connected
+  string address      = 3;   // IP:port of the UDP satellite; empty if not connected
   reserved 4;
   reserved "serial";         // removed: device_id is the hardware serial since v0.34
   string display_name = 5;   // human-readable name from Core DB (empty if not provisioned)
+  string room_id            = 6;   // room assigned in Core DB, "" = unassigned
+  string room_display_name  = 7;   // display name of room_id
+  string last_seen           = 8;  // UTC "YYYY-MM-DD HH:MM:SS" from Core DB, "" = never seen
+  bool   connected            = 9;  // true if currently live (UDP or proxy)
+  bool   room_mismatch        = 10; // true if connected and live room differs from room_id
 }
 
 message GetSatellitesResponse {
   repeated Satellite satellites = 1;
+}
+
+message SetSatelliteRoomRequest {
+  string device_id = 1;
+  string room_id    = 2;  // "" = unassign
+}
+
+message SetSatelliteDisplayNameRequest {
+  string device_id    = 1;
+  string display_name = 2;
+}
+
+// --- Rooms/Groups (Admin-UI, #27 Phase 1) ---
+
+message Room {
+  string room_id      = 1;
+  string display_name = 2;
+}
+
+message GetRoomsResponse {
+  repeated Room rooms = 1;
+}
+
+message Group {
+  string group_id     = 1;
+  string display_name = 2;
+  repeated Room rooms = 3;
+}
+
+message GetGroupsResponse {
+  repeated Group groups = 1;
+}
+
+message CreateGroupRequest {
+  string group_id     = 1;
+  string display_name = 2;
+}
+
+message UpdateGroupRequest {
+  string group_id     = 1;
+  string display_name = 2;
+}
+
+message DeleteGroupRequest {
+  string group_id = 1;
+}
+
+message SetGroupRoomsRequest {
+  string group_id          = 1;
+  repeated string room_ids = 2;
 }
 
 // ============================================================
