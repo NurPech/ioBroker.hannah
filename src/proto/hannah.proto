@@ -29,6 +29,7 @@ service HannahService {
   rpc UnlinkAccount (UnlinkAccountRequest) returns (StatusResponse);
   rpc SetTrustLevel       (SetTrustLevelRequest)       returns (StatusResponse);
   rpc SetSystemMessages   (SetSystemMessagesRequest)   returns (StatusResponse);
+  rpc Login               (LoginRequest)               returns (UserResponse);
 
   // --- Device Control Menu ---
   // Returns all rooms and devices with current state — for building control menus.
@@ -60,6 +61,22 @@ service HannahService {
   rpc UpdateGroup   (UpdateGroupRequest)   returns (StatusResponse);
   rpc DeleteGroup   (DeleteGroupRequest)   returns (StatusResponse);
   rpc SetGroupRooms (SetGroupRoomsRequest) returns (StatusResponse);
+
+  // --- Routines/Triggers (Admin-UI, #27 Phase 4) ---
+  rpc GetRoutines   (Empty)                returns (GetRoutinesResponse);
+  rpc CreateRoutine (CreateRoutineRequest) returns (CreateRoutineResponse);
+  rpc UpdateRoutine (UpdateRoutineRequest) returns (StatusResponse);
+  rpc DeleteRoutine (DeleteRoutineRequest) returns (StatusResponse);
+  rpc GetTriggers   (Empty)                returns (GetTriggersResponse);
+  rpc CreateTrigger (CreateTriggerRequest) returns (StatusResponse);
+  rpc UpdateTrigger (UpdateTriggerRequest) returns (StatusResponse);
+  rpc DeleteTrigger (DeleteTriggerRequest) returns (StatusResponse);
+
+  // --- Settings (Admin-UI, #27 Phase 5) ---
+  rpc GetSettings   (Empty)                returns (GetSettingsResponse);
+  rpc UpdateConfig  (UpdateConfigRequest)  returns (StatusResponse);
+  rpc CreateSetting (CreateSettingRequest) returns (CreateSettingResponse);
+  rpc DeleteSetting (DeleteSettingRequest) returns (StatusResponse);
 
   // --- Car ---
   // Returns the current cached car state (available=false if no data received yet).
@@ -181,6 +198,11 @@ message LinkedAccountLookup {
 message UserResponse {
   bool found = 1;
   User user  = 2;  // only valid when found == true
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
 }
 
 message LinkAccountRequest {
@@ -310,6 +332,144 @@ message DeleteGroupRequest {
 message SetGroupRoomsRequest {
   string group_id          = 1;
   repeated string room_ids = 2;
+}
+
+// --- Routines/Triggers (Admin-UI, #27 Phase 4) ---
+//
+// `actions`/`when`/`cancel_when`/`on_response` stay JSON-encoded strings rather than
+// structured messages: `actions` is a union of two shapes ({say,room} or {topic,value},
+// see routines.py's `_load()`), and the trigger condition tree (`when`/`cancel_when`/
+// `on_response`) is deliberately open-ended (also/unless/time/days/condition strings,
+// see trigger_engine.py's module docstring) - modeling it as proto would force a schema
+// change on every new condition kind. Kept consistent with LinkedAccount.provider_payload.
+
+message Routine {
+  int32  id                = 1;
+  string name              = 2;
+  repeated string triggers = 3;
+  string actions_json      = 4;  // JSON list[{topic,value} | {say,room}]
+  string reply             = 5;
+}
+
+message GetRoutinesResponse {
+  repeated Routine routines = 1;
+}
+
+message CreateRoutineRequest {
+  string name              = 1;
+  repeated string triggers = 2;
+  string actions_json      = 3;
+  string reply             = 4;
+}
+
+message CreateRoutineResponse {
+  bool   ok      = 1;
+  int32  id      = 2;  // server-assigned, only valid when ok == true
+  string message = 3;
+}
+
+message UpdateRoutineRequest {
+  int32  id                = 1;
+  string name              = 2;
+  repeated string triggers = 3;
+  string actions_json      = 4;
+  string reply             = 5;
+}
+
+message DeleteRoutineRequest {
+  int32 id = 1;
+}
+
+message Trigger {
+  string id               = 1;  // client-assigned slug, e.g. "aussentuer_abend"
+  string when_json        = 2;  // JSON condition object
+  string cancel_when_json = 3;  // JSON condition object, "" = none
+  string on_response_json = 4;  // JSON list of response rules, "" = none
+  string say              = 5;
+  string ask              = 6;
+  bool   rephrase         = 7;
+  string room             = 8;
+  int32  cooldown         = 9;
+  string delay            = 10; // duration string e.g. "5h"/"30m"/"90s", "" = none
+}
+
+message GetTriggersResponse {
+  repeated Trigger triggers = 1;
+}
+
+message CreateTriggerRequest {
+  string id               = 1;
+  string when_json        = 2;
+  string cancel_when_json = 3;
+  string on_response_json = 4;
+  string say              = 5;
+  string ask              = 6;
+  bool   rephrase         = 7;
+  string room             = 8;
+  int32  cooldown         = 9;
+  string delay            = 10;
+}
+
+message UpdateTriggerRequest {
+  string id               = 1;
+  string when_json        = 2;
+  string cancel_when_json = 3;
+  string on_response_json = 4;
+  string say              = 5;
+  string ask              = 6;
+  bool   rephrase         = 7;
+  string room             = 8;
+  int32  cooldown         = 9;
+  string delay            = 10;
+}
+
+message DeleteTriggerRequest {
+  string id = 1;
+}
+
+// --- Settings (Admin-UI, #27 Phase 5) ---
+
+message Category {
+  int32  id        = 1;
+  string name      = 2;  // voller Punkt-Pfad, z.B. "ble.tags"
+  int32  parent_id = 3;  // 0 = keine Eltern-Kategorie (Root)
+}
+
+message Setting {
+  int32  id          = 1;
+  int32  category_id = 2;
+  string name        = 3;
+  string value       = 4;  // JSON-encoded
+}
+
+message GetSettingsResponse {
+  repeated Category categories = 1;
+  repeated Setting settings    = 2;
+}
+
+message SettingUpdate {
+  int32  setting_id = 1;
+  string value      = 2;  // JSON-encoded
+}
+
+message UpdateConfigRequest {
+  repeated SettingUpdate updates = 1;
+}
+
+message CreateSettingRequest {
+  int32  category_id = 1;
+  string name        = 2;
+  string value       = 3;
+}
+
+message CreateSettingResponse {
+  bool   ok      = 1;
+  int32  id      = 2;
+  string message = 3;
+}
+
+message DeleteSettingRequest {
+  int32 setting_id = 1;
 }
 
 // ============================================================
