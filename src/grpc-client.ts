@@ -143,6 +143,11 @@ export class GrpcClient {
             room: string;
             address: string;
             display_name?: string;
+            room_id?: string;
+            room_display_name?: string;
+            last_seen?: string;
+            connected?: boolean;
+            room_mismatch?: boolean;
         }>
     > {
         return new Promise(resolve => {

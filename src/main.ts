@@ -125,20 +125,33 @@ class Hannah extends utils.Adapter {
                 await this.subscribeStatesAsync('satellites.rooms.*');
                 await this.subscribeForeignObjectsAsync('enum.rooms.*');
                 await this.subscribeForeignObjectsAsync('enum.functions.*');
-                // Fetch existing satellites and create states
+                // Fetch existing satellites and create states. GetSatellites now returns every
+                // satellite known to Core's DB, not just currently-connected ones — use
+                // `connected` per-satellite instead of assuming every entry is online, and fall
+                // back to the DB-assigned room for disconnected ones (their live `room` is empty).
                 const sats = await this.grpc!.getSatellites();
+                const effectiveRoom = (sat: {
+                    room: string;
+                    room_id?: string;
+                    room_display_name?: string;
+                    connected?: boolean;
+                }): string => (sat.connected ? sat.room : sat.room_display_name || sat.room_id || '');
                 for (const sat of sats) {
                     await this.satellites!.handleSatelliteUpdate(
                         sat.device_id,
-                        sat.room,
+                        effectiveRoom(sat),
                         sat.address,
-                        true,
+                        sat.connected ?? false,
                         undefined,
                         undefined,
                         sat.display_name || undefined,
+                        sat.last_seen || undefined,
+                        sat.room_mismatch,
                     );
                 }
-                await this.satellites!.markUnknownOffline(sats);
+                await this.satellites!.markUnknownOffline(
+                    sats.map(sat => ({ device_id: sat.device_id, room: effectiveRoom(sat) })),
+                );
             },
             onDisconnected: async () => {
                 await this.setState('info.connection', false, true);
@@ -351,6 +364,9 @@ class Hannah extends utils.Adapter {
                     const sat = satellites.find(s => s.device_id === deviceId);
                     if (!sat) {
                         throw new Error(`Unknown satellite '${deviceId}'`);
+                    }
+                    if (!sat.connected || !sat.address) {
+                        throw new Error(`Satellite '${deviceId}' is not connected`);
                     }
                     const ip = sat.address.split(':')[0];
                     this.log.info(
