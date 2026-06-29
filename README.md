@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.28.0 (2026-06-29)
 - Added: virtual `satellites.rooms.all` room ("Alle") — always present, not tied to any satellite. Exposes `announcement`/`announcementSsml`/`announcementRephrase`, `dnd` and `mute` states that broadcast to every connected satellite (Hannah Core already resolves `room == "all"` as a broadcast target).
 
 ### 0.27.1 (2026-06-27)
