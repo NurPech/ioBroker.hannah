@@ -234,7 +234,7 @@ export class SatelliteWatcher {
         const roomId = match[1];
         const key = match[2];
         const originalRoom = this.roomNames.get(roomId.toLowerCase()) ?? roomId;
-        const writableKeys = ['dnd', 'announcement', 'announcementSsml', 'announcementRephrase'];
+        const writableKeys = ['dnd', 'mute', 'announcement', 'announcementSsml', 'announcementRephrase'];
         const resetKeys = ['announcement', 'announcementSsml', 'announcementRephrase'];
         if (!writableKeys.includes(key)) {
             return false;
@@ -242,6 +242,7 @@ export class SatelliteWatcher {
         // keepCase:true in proto-loader → field names stay snake_case on the wire
         const protoKey: Record<string, string> = {
             dnd: 'dnd',
+            mute: 'mute',
             announcement: 'announcement',
             announcementSsml: 'announcement_ssml',
             announcementRephrase: 'announcement_rephrase',
@@ -252,6 +253,45 @@ export class SatelliteWatcher {
         }
         this.adapter.log.debug(`[satellites] satellite_control room='${originalRoom}' ${key}=${state.val}`);
         return true;
+    }
+
+    /**
+     * Creates the static virtual "all" room used for broadcast control. Core already
+     * resolves room == "all" to every connected satellite (see AgentSatelliteControl in
+     * hannah.proto), so this only needs adapter-side state objects. Unlike real rooms,
+     * it isn't tied to any satellite — created once at startup, never removed by
+     * deleteSatellite's empty-room cleanup.
+     */
+    async ensureVirtualRooms(): Promise<void> {
+        const base = 'satellites.rooms.all';
+        await this.adapter.setObjectNotExistsAsync(base, {
+            type: 'folder',
+            common: { name: 'Alle' },
+            native: {},
+        });
+        const states: Array<[string, ioBroker.StateCommon]> = [
+            ['announcement', { name: 'Announcement', type: 'string', role: 'text', read: true, write: true, def: '' }],
+            [
+                'announcementSsml',
+                { name: 'Announcement (SSML)', type: 'string', role: 'text', read: true, write: true, def: '' },
+            ],
+            [
+                'announcementRephrase',
+                { name: 'Announcement (LLM rephrase)', type: 'string', role: 'text', read: true, write: true, def: '' },
+            ],
+            ['dnd', { name: 'Do not disturb', type: 'boolean', role: 'switch', read: true, write: true, def: false }],
+            [
+                'mute',
+                { name: 'Mute all microphones', type: 'boolean', role: 'switch', read: true, write: true, def: false },
+            ],
+        ];
+        for (const [key, common] of states) {
+            await this.adapter.setObjectNotExistsAsync(`${base}.${key}`, {
+                type: 'state',
+                common,
+                native: {},
+            });
+        }
     }
 
     private async _ensureRoomStates(room: string): Promise<void> {

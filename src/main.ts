@@ -100,6 +100,7 @@ class Hannah extends utils.Adapter {
         this.states = new StateWatcher(this, send);
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
         this.satellites = new SatelliteWatcher(this, send, () => this.grpc);
+        await this.satellites.ensureVirtualRooms();
         this.ble = new BleWatcher(this);
         this.sensorWatcher = new SensorWatcher(this);
         this.dm = new HannahDeviceManagement(this);
