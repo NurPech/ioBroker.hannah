@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.29.1 (2026-06-30)
 - Added: Blockly "Hannah announce" block now has a "Person (optional)" input, generating the new `person` field
 
 ### 0.29.0 (2026-06-30)
