@@ -31,6 +31,13 @@ service HannahService {
   rpc SetSystemMessages   (SetSystemMessagesRequest)   returns (StatusResponse);
   rpc Login               (LoginRequest)               returns (UserResponse);
 
+  // --- User-Verwaltung (Admin-UI, #27 Phase 6) ---
+  rpc CreateUser   (CreateUserRequest) returns (CreateUserResponse);
+  rpc UpdateUser   (UpdateUserRequest) returns (StatusResponse);
+  rpc DeleteUser   (DeleteUserRequest) returns (StatusResponse);
+  // Residents (Roomies/Guests/Pets) aus dem ioBroker-Adapter-Cache — fürs "Resident verknüpfen"-Dropdown.
+  rpc GetResidents (Empty)            returns (GetResidentsResponse);
+
   // --- Device Control Menu ---
   // Returns all rooms and devices with current state — for building control menus.
   rpc GetDevices    (Empty)                returns (GetDevicesResponse);
@@ -53,6 +60,8 @@ service HannahService {
   // --- Satellites (Admin-UI, #27 Phase 2) ---
   rpc SetSatelliteRoom        (SetSatelliteRoomRequest)        returns (StatusResponse);
   rpc SetSatelliteDisplayName (SetSatelliteDisplayNameRequest) returns (StatusResponse);
+  // Assign a satellite to a Person (User), independent of its room. #31
+  rpc SetSatelliteOwner       (SetSatelliteOwnerRequest)       returns (StatusResponse);
 
   // --- Rooms/Groups (Admin-UI, #27 Phase 1) ---
   rpc GetRooms      (Empty)                returns (GetRoomsResponse);
@@ -166,6 +175,8 @@ message User {
   // linked_accounts: service → account_id  (e.g. "telegram" → "123456789")
   map<string, string> linked_accounts = 6;
   bool   system_messages = 7;  // receives ioBroker/system notifications via Telegram
+  string email           = 8;  // #27 Phase 6
+  string type            = 9;  // "roomie" | "guest" | "pet", #27 Phase 6
 }
 
 message GetUsersRequest {
@@ -231,6 +242,47 @@ message SetSystemMessagesRequest {
   bool   enabled  = 2;
 }
 
+// --- User-Verwaltung (Admin-UI, #27 Phase 6) ---
+
+message CreateUserRequest {
+  string username     = 1;
+  string password     = 2;  // Klartext, wird serverseitig gehasht — gleicher akzeptierter Constraint wie LoginRequest
+  string email        = 3;
+  string display_name = 4;
+  string type         = 5;  // "roomie" | "guest" | "pet"
+}
+
+message CreateUserResponse {
+  bool   ok      = 1;
+  int32  id      = 2;  // server-assigned, only valid when ok == true
+  string message = 3;
+}
+
+message UpdateUserRequest {
+  int32  user_id      = 1;
+  string display_name = 2;
+  string email        = 3;
+  string type         = 4;
+  bool   is_active    = 5;
+  string password     = 6;  // Klartext, "" = unverändert
+}
+
+message DeleteUserRequest {
+  int32 user_id = 1;
+}
+
+message Resident {
+  string id           = 1;  // z.B. "leonie_roomie" — roomie_id + "_" + type
+  string roomie_id    = 2;
+  string display_name = 3;
+  string type         = 4;  // "roomie" | "guest" | "pet"
+  bool   home         = 5;
+}
+
+message GetResidentsResponse {
+  repeated Resident residents = 1;
+}
+
 // ============================================================
 //  Control messages
 // ============================================================
@@ -262,8 +314,12 @@ message SubmitVoiceResponse {
 }
 
 message AnnounceRequest {
-  string text   = 1;
-  string device = 2;  // satellite device name, or "all" for broadcast
+  string text     = 1;
+  string device   = 2;  // satellite device name, or "all" for broadcast — legacy path, ignored if room_id or user_id is set
+  // #31: target by room and/or Person (User) instead of a specific device. Both set = AND
+  // (only the satellite that is both in that room AND owned by that Person), not OR.
+  string room_id  = 3;  // "" = not set
+  int32  user_id  = 4;  // 0 = not set
 }
 
 message Satellite {
@@ -278,6 +334,8 @@ message Satellite {
   string last_seen           = 8;  // UTC "YYYY-MM-DD HH:MM:SS" from Core DB, "" = never seen
   bool   connected            = 9;  // true if currently live (UDP or proxy)
   bool   room_mismatch        = 10; // true if connected and live room differs from room_id
+  int32  owner_user_id        = 11; // Person (User) assigned as owner in Core DB, 0 = unassigned. #31
+  string owner_display_name   = 12; // display name of owner_user_id, "" if unassigned
 }
 
 message GetSatellitesResponse {
@@ -292,6 +350,11 @@ message SetSatelliteRoomRequest {
 message SetSatelliteDisplayNameRequest {
   string device_id    = 1;
   string display_name = 2;
+}
+
+message SetSatelliteOwnerRequest {
+  string device_id = 1;
+  int32  user_id    = 2;  // 0 = unassign
 }
 
 // --- Rooms/Groups (Admin-UI, #27 Phase 1) ---
@@ -382,15 +445,16 @@ message DeleteRoutineRequest {
 
 message Trigger {
   string id               = 1;  // client-assigned slug, e.g. "aussentuer_abend"
-  string when_json        = 2;  // JSON condition object
+  string when_json        = 2;  // JSON condition object or list (OR'd), see trigger_engine.py
   string cancel_when_json = 3;  // JSON condition object, "" = none
   string on_response_json = 4;  // JSON list of response rules, "" = none
-  string say              = 5;
+  string say              = 5;  // legacy single announcement, "" once actions_json is used
   string ask              = 6;
   bool   rephrase         = 7;
   string room             = 8;
   int32  cooldown         = 9;
   string delay            = 10; // duration string e.g. "5h"/"30m"/"90s", "" = none
+  string actions_json     = 11; // JSON list[{say,room} | {set_state:{id,value}}], "" = none (falls back to say)
 }
 
 message GetTriggersResponse {
@@ -408,6 +472,7 @@ message CreateTriggerRequest {
   string room             = 8;
   int32  cooldown         = 9;
   string delay            = 10;
+  string actions_json     = 11;
 }
 
 message UpdateTriggerRequest {
@@ -421,6 +486,7 @@ message UpdateTriggerRequest {
   string room             = 8;
   int32  cooldown         = 9;
   string delay            = 10;
+  string actions_json     = 11;
 }
 
 message DeleteTriggerRequest {
