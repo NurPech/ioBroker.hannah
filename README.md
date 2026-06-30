@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.29.0 (2026-06-30)
 - Added: `owner` state under `satellites.rooms.<room>.<device>.*` — shows the Person a satellite is assigned to in Hannah Core, if any (populated from the extended `GetSatellites` response, refreshed on (re)connect like `last_seen`/`room_mismatch`)
 - Added: `sendTo('announce', ...)` accepts a new optional `person` field (roomie ID, e.g. `"leonie"`) to target a specific Person directly, in addition to or independent of `room`/`rooms` — routes through Hannah Core's `Announce` RPC instead of the room-only `satellite_control` stream path used otherwise
 
