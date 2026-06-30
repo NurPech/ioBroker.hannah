@@ -92,6 +92,7 @@ Blockly.JavaScript['hannah-send-direct'] = function (block) {
 
 Blockly.Words['hannah-announce'] = { en: 'Hannah announce', de: 'Hannah Ansage' };
 Blockly.Words['hannah-announce_room'] = { en: 'Room', de: 'Raum' };
+Blockly.Words['hannah-announce_person'] = { en: 'Person (optional)', de: 'Person (optional)' };
 Blockly.Words['hannah-announce_text'] = { en: 'Text', de: 'Text' };
 Blockly.Words['hannah-announce_anyInstance'] = { en: 'All instances', de: 'Alle Instanzen' };
 Blockly.Words['hannah-announce_help'] = {
@@ -104,6 +105,11 @@ Blockly.Sendto.blocks['hannah-announce'] =
     '  <field name="INSTANCE"></field>' +
     '  <value name="ROOMS">' +
     '    <block type="lists_create_with"><mutation items="1"></mutation></block>' +
+    '  </value>' +
+    '  <value name="PERSON">' +
+    '    <shadow type="text">' +
+    '      <field name="TEXT"></field>' +
+    '    </shadow>' +
     '  </value>' +
     '  <value name="TEXT">' +
     '    <shadow type="text">' +
@@ -140,6 +146,8 @@ Blockly.Blocks['hannah-announce'] = {
 
         this.appendValueInput('ROOMS').appendField(Blockly.Translate('hannah-announce_room'));
 
+        this.appendValueInput('PERSON').appendField(Blockly.Translate('hannah-announce_person'));
+
         this.appendValueInput('TEXT').appendField(Blockly.Translate('hannah-announce_text'));
 
         this.setInputsInline(false);
@@ -153,9 +161,10 @@ Blockly.Blocks['hannah-announce'] = {
 Blockly.JavaScript['hannah-announce'] = function (block) {
     const instance = block.getFieldValue('INSTANCE');
     const rooms = Blockly.JavaScript.valueToCode(block, 'ROOMS', Blockly.JavaScript.ORDER_ATOMIC) || "['all']";
+    const person = Blockly.JavaScript.valueToCode(block, 'PERSON', Blockly.JavaScript.ORDER_ATOMIC) || "''";
     const text = Blockly.JavaScript.valueToCode(block, 'TEXT', Blockly.JavaScript.ORDER_ATOMIC);
 
-    return `sendTo('hannah${instance}', 'announce', { rooms: ${rooms}, text: ${text} });\n`;
+    return `sendTo('hannah${instance}', 'announce', { rooms: ${rooms}, person: ${person}, text: ${text} });\n`;
 };
 
 // --- Hannah ask ------------------------------------------------------------------

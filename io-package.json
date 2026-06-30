@@ -3,6 +3,19 @@
     "name": "hannah",
     "version": "0.29.0",
     "news": {
+      "0.29.1": {
+        "en": "Added: Blockly \"Hannah announce\" block now has a \"Person (optional)\" input, generating the new `person` field.",
+        "de": "Hinzugefügt: Der Blockly-Block \"Hannah Ansage\" hat jetzt ein Eingabefeld \"Person (optional)\", das das neue Feld `person` erzeugt.",
+        "ru": "Добавлено: блок Blockly «Hannah announce» теперь имеет поле ввода «Person (optional)», генерирующее новое поле `person`.",
+        "pt": "Adicionado: o bloco Blockly \"Hannah announce\" agora tem uma entrada \"Person (optional)\", gerando o novo campo `person`.",
+        "nl": "Toegevoegd: het Blockly-blok \"Hannah announce\" heeft nu een invoerveld \"Person (optional)\", dat het nieuwe veld `person` genereert.",
+        "fr": "Ajouté : le bloc Blockly « Hannah announce » dispose désormais d'une entrée « Person (optional) », générant le nouveau champ `person`.",
+        "it": "Aggiunto: il blocco Blockly \"Hannah announce\" ora ha un campo di input \"Person (optional)\", che genera il nuovo campo `person`.",
+        "es": "Añadido: el bloque Blockly \"Hannah announce\" ahora tiene una entrada \"Person (optional)\", que genera el nuevo campo `person`.",
+        "pl": "Dodano: blok Blockly \"Hannah announce\" ma teraz pole wejściowe \"Person (optional)\", generujące nowe pole `person`.",
+        "uk": "Додано: блок Blockly «Hannah announce» тепер має поле введення «Person (optional)», яке генерує нове поле `person`.",
+        "zh-cn": "新增：Blockly 的 \"Hannah announce\" 积木块现在有一个 \"Person (optional)\" 输入项，用于生成新的 `person` 字段。"
+      },
       "0.29.0": {
         "en": "Added: `owner` state under `satellites.rooms.<room>.<device>.*` — shows the Person a satellite is assigned to in Hannah Core, if any.\nAdded: `sendTo('announce', ...)` accepts a new optional `person` field (roomie ID, e.g. \"leonie\") to target a specific Person directly, in addition to or independent of `room`/`rooms`.",
         "de": "Hinzugefügt: Zustand `owner` unter `satellites.rooms.<room>.<device>.*` — zeigt die Person, der ein Satellit in Hannah Core zugewiesen ist, falls vorhanden.\nHinzugefügt: `sendTo('announce', ...)` akzeptiert ein neues optionales Feld `person` (Roomie-ID, z. B. \"leonie\"), um gezielt eine bestimmte Person anzusprechen, zusätzlich zu oder unabhängig von `room`/`rooms`.",
