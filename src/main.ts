@@ -153,7 +153,7 @@ class Hannah extends utils.Adapter {
                         sat.owner_display_name || '',
                     );
                 }
-                await this.satellites!.markUnknownOffline(
+                await this.satellites!.removeUnknownSatellites(
                     sats.map(sat => ({ device_id: sat.device_id, room: effectiveRoom(sat) })),
                 );
             },

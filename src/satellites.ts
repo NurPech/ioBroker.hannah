@@ -491,18 +491,26 @@ export class SatelliteWatcher {
     }
 
     /**
-     * After the initial GetSatellites sync, mark any satellite device objects that are
-     * not in Hannah's current list as offline. Prevents stale "online" states when a
-     * satellite is renamed or reassigned to a different room.
+     * After the initial GetSatellites sync, remove any satellite device object trees that
+     * Hannah Core no longer reports. Hannah is the stateful, leading system for satellites
+     * (sends every known satellite via GetSatellites regardless of connection status, and
+     * pushes satellite_deleted when one is actually removed) — "not reported at all" reliably
+     * means genuinely gone (deleted, or Core was reinstalled without data), not just
+     * transiently offline, so deleting here is correct rather than just marking offline.
+     *
+     * Does NOT touch deviceRooms/deviceToObjectKey/objectKeyToDeviceId — those already
+     * reflect each known device's current room from the handleSatelliteUpdate() calls run
+     * just before this.
      *
      * @param knownSatellites - Satellites currently reported by Hannah Core
      */
-    async markUnknownOffline(knownSatellites: Array<{ device_id: string; room: string }>): Promise<void> {
+    async removeUnknownSatellites(knownSatellites: Array<{ device_id: string; room: string }>): Promise<void> {
         const known = new Set(knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.device_id)}`));
         const objects = await this.adapter.getForeignObjectsAsync(
             `${this.adapter.namespace}.satellites.rooms.*.*`,
             'device',
         );
+        const touchedRooms = new Set<string>();
         for (const id of Object.keys(objects)) {
             const m = id.match(/\.satellites\.rooms\.([^.]+)\.([^.]+)$/);
             if (!m) {
@@ -510,11 +518,19 @@ export class SatelliteWatcher {
             }
             const [, roomId, deviceId] = m;
             if (!known.has(`${roomId}.${deviceId}`)) {
-                await this.adapter.setState(`satellites.rooms.${roomId}.${deviceId}.online`, {
-                    val: false,
-                    ack: true,
-                });
-                this.adapter.log.info(`[satellites] Marked offline (not reported by Hannah): ${deviceId} in ${roomId}`);
+                await this.adapter.delObjectAsync(`satellites.rooms.${roomId}.${deviceId}`, { recursive: true });
+                touchedRooms.add(roomId);
+                this.adapter.log.info(
+                    `[satellites] Removed stale satellite (not reported by Hannah): ${deviceId} in ${roomId}`,
+                );
+            }
+        }
+        for (const roomId of touchedRooms) {
+            const prefix = `${this.adapter.namespace}.satellites.rooms.${roomId}.`;
+            const remaining = await this.adapter.getForeignObjectsAsync(`${prefix}*`, 'device');
+            if (Object.keys(remaining ?? {}).length === 0) {
+                await this.adapter.delObjectAsync(`satellites.rooms.${roomId}`, { recursive: true });
+                this.roomNames.delete(roomId.toLowerCase());
             }
         }
     }
