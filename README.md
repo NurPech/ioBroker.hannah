@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: stale satellite/room object trees that Hannah Core no longer reports are now actually removed instead of just marked offline — `markUnknownOffline()` renamed `removeUnknownSatellites()`. Hannah's satellite tracking is stateful now (reports every known satellite regardless of connection status, pushes `satellite_deleted` on real deletion), so "not reported at all" reliably means genuinely gone (#83)
+
 ### 0.29.1 (2026-06-30)
 - Added: Blockly "Hannah announce" block now has a "Person (optional)" input, generating the new `person` field
 
