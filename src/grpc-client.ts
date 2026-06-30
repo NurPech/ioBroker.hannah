@@ -148,6 +148,8 @@ export class GrpcClient {
             last_seen?: string;
             connected?: boolean;
             room_mismatch?: boolean;
+            owner_user_id?: number;
+            owner_display_name?: string;
         }>
     > {
         return new Promise(resolve => {
@@ -224,6 +226,73 @@ export class GrpcClient {
                     resolve({ ok: response.ok, message: response.message });
                 }
             });
+        });
+    }
+
+    /**
+     * Send a TTS announcement to a specific device, room, and/or Person.
+     * room_id and user_id (#31) take precedence over device when set — see AnnounceRequest
+     * in hannah.proto for the AND semantics when both room_id and user_id are given.
+     *
+     * @param text - Text to announce
+     * @param opts - Target selector
+     * @param opts.device - Satellite device name, or "all" for broadcast (legacy path)
+     * @param opts.roomId - Target room (Core DB room_id)
+     * @param opts.userId - Target Person (Hannah's numeric User.id)
+     * @param timeoutMs - Max wait time in milliseconds (default 5000)
+     */
+    announce(
+        text: string,
+        opts: { device?: string; roomId?: string; userId?: number } = {},
+        timeoutMs = 5000,
+    ): Promise<{ ok: boolean; message?: string }> {
+        return new Promise((resolve, reject) => {
+            if (!this.client) {
+                reject(new Error('not connected'));
+                return;
+            }
+            const timer = this._setTimeout(() => reject(new Error('timeout')), timeoutMs);
+            this.client.Announce(
+                { text, device: opts.device ?? '', room_id: opts.roomId ?? '', user_id: opts.userId ?? 0 },
+                (err: Error | null, response: any) => {
+                    this._clearTimeout(timer);
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve({ ok: response.ok, message: response.message });
+                    }
+                },
+            );
+        });
+    }
+
+    /**
+     * Resolve a roomie_id (e.g. "leonie") to Hannah's numeric User.id via the residents
+     * linked-account lookup — same external_id scheme Core itself uses (`<roomie_id>_roomie`,
+     * see core/hannah/user_manager.py `_resident_link`/main.py `_hannah_external_id`).
+     *
+     * @param roomieId - Roomie ID as known throughout this adapter (residents.ts, set_resident, ask)
+     * @param timeoutMs - Max wait time in milliseconds (default 5000)
+     * @returns The numeric User.id, or null if no matching/active user is found
+     */
+    resolveRoomieUserId(roomieId: string, timeoutMs = 5000): Promise<number | null> {
+        return new Promise(resolve => {
+            if (!this.client) {
+                resolve(null);
+                return;
+            }
+            const timer = this._setTimeout(() => resolve(null), timeoutMs);
+            this.client.GetUser(
+                { linked_account: { provider: 'residents', external_id: `${roomieId}_roomie` } },
+                (err: Error | null, response: any) => {
+                    this._clearTimeout(timer);
+                    if (err || !response?.found) {
+                        resolve(null);
+                    } else {
+                        resolve(response.user?.id ?? null);
+                    }
+                },
+            );
         });
     }
 

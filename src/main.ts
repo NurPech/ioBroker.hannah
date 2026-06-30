@@ -108,6 +108,8 @@ class Hannah extends utils.Adapter {
             this,
             (text, direct, severity) => this.grpc!.notify(text, direct, severity),
             send,
+            (text, opts) => this.grpc!.announce(text, opts),
+            roomieId => this.grpc!.resolveRoomieUserId(roomieId),
         );
 
         this.grpc = new GrpcClient({
@@ -148,6 +150,7 @@ class Hannah extends utils.Adapter {
                         sat.display_name || undefined,
                         sat.last_seen || undefined,
                         sat.room_mismatch,
+                        sat.owner_display_name || '',
                     );
                 }
                 await this.satellites!.markUnknownOffline(
