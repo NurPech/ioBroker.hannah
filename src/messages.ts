@@ -20,6 +20,12 @@ interface AnnouncePayload {
     rooms?: string | string[];
     room?: string;
     text?: string;
+    /**
+     * roomie_id (e.g. "leonie") — routes via the Announce RPC's room_id/user_id (#31) instead of the
+     * room-only satellite_control stream path. Combined with room/rooms: AND semantics (only the
+     * satellite that's both in that room AND owned by that Person), one Announce call per room.
+     */
+    person?: string;
 }
 
 interface AskPayload {
@@ -37,10 +43,21 @@ export type NotifyFn = (
     severity: string,
 ) => Promise<{ ok: boolean; message?: string }>;
 
+/** Function that sends a TTS announcement targeted by device, room, and/or Person via the Announce RPC (#31). */
+export type AnnounceFn = (
+    text: string,
+    opts: { device?: string; roomId?: string; userId?: number },
+) => Promise<{ ok: boolean; message?: string }>;
+
+/** Resolves a roomie_id to Hannah's numeric User.id, or null if not found. */
+export type ResolveRoomieUserIdFn = (roomieId: string) => Promise<number | null>;
+
 /** Handles sendDirect, sendNotification, and announce adapter messages. */
 export class MessagesHandler {
     private adapter: utils.AdapterInstance;
     private notify: NotifyFn;
+    private announceRpc: AnnounceFn;
+    private resolveRoomieUserId: ResolveRoomieUserIdFn;
     private send: AgentMessageSender;
     private readonly _pending = new Map<string, { from: string; command: string; cb: ioBroker.MessageCallbackInfo }>();
 
@@ -48,11 +65,21 @@ export class MessagesHandler {
      * @param adapter - ioBroker adapter instance
      * @param notify - Unary gRPC call to Hannah Core (for notifications)
      * @param send - Stream send for satellite control messages
+     * @param announceRpc - Unary Announce RPC call, used for person-targeted announcements (#31)
+     * @param resolveRoomieUserId - Resolves a roomie_id to Hannah's numeric User.id (#31)
      */
-    constructor(adapter: utils.AdapterInstance, notify: NotifyFn, send: AgentMessageSender) {
+    constructor(
+        adapter: utils.AdapterInstance,
+        notify: NotifyFn,
+        send: AgentMessageSender,
+        announceRpc: AnnounceFn,
+        resolveRoomieUserId: ResolveRoomieUserIdFn,
+    ) {
         this.adapter = adapter;
         this.notify = notify;
         this.send = send;
+        this.announceRpc = announceRpc;
+        this.resolveRoomieUserId = resolveRoomieUserId;
     }
 
     /**
@@ -112,11 +139,42 @@ export class MessagesHandler {
                     }
                 });
         } else if (obj.command === 'announce') {
-            const { rooms, room, text } = (obj.message ?? {}) as AnnouncePayload;
+            const { rooms, room, text, person } = (obj.message ?? {}) as AnnouncePayload;
             if (!text) {
                 if (obj.callback) {
                     this.adapter.sendTo(obj.from, obj.command, { sent: false, error: 'no payload' }, obj.callback);
                 }
+                return;
+            }
+            if (person) {
+                // Person-targeted: routes via the Announce RPC's room_id/user_id (#31) instead of
+                // the room-only satellite_control stream path used below. room/rooms combined with
+                // person is AND semantics — one Announce call per room, see AnnounceFn/hannah.proto.
+                void (async (): Promise<void> => {
+                    const userId = await this.resolveRoomieUserId(person);
+                    if (userId === null) {
+                        this.adapter.log.warn(`[messages] announce: unknown person '${person}'`);
+                        if (obj.callback) {
+                            this.adapter.sendTo(
+                                obj.from,
+                                obj.command,
+                                { sent: false, error: `unknown person '${person}'` },
+                                obj.callback,
+                            );
+                        }
+                        return;
+                    }
+                    const roomIds: string[] = Array.isArray(rooms) ? rooms : rooms ? [rooms] : room ? [room] : [];
+                    const targets = roomIds.length ? roomIds : [''];
+                    const results = await Promise.all(targets.map(r => this.announceRpc(text, { roomId: r, userId })));
+                    const ok = results.every(r => r.ok);
+                    this.adapter.log.debug(
+                        `[messages] announce person=${person} userId=${userId} rooms=${JSON.stringify(roomIds)} text=${text}`,
+                    );
+                    if (obj.callback) {
+                        this.adapter.sendTo(obj.from, obj.command, { sent: ok }, obj.callback);
+                    }
+                })();
                 return;
             }
             const roomList: string[] = Array.isArray(rooms) ? rooms : rooms ? [rooms] : room ? [room] : ['all'];

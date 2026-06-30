@@ -21,7 +21,7 @@ This adapter replaces the previous MQTT-based integration and eliminates the mes
 - **Text commands** — write to `hannah.<instance>.textCommand` to send text queries to Hannah
 - **SetState** — Hannah can set ioBroker states directly via the same gRPC channel
 - **Notifications** — forward messages to Hannah via `sendTo` or the native ioBroker Notification Manager; LLM reformulation for system messages, direct TTS for `sendDirect`
-- **Announcements** — play TTS in specific satellite rooms via `sendTo` with a room list, without LLM or Telegram
+- **Announcements** — play TTS in specific satellite rooms and/or for a specific Person via `sendTo` with a room list and/or roomie ID, without LLM or Telegram
 - **Blockly support** — custom blocks for direct messages and room announcements
 
 ## Requirements
@@ -77,6 +77,10 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: `owner` state under `satellites.rooms.<room>.<device>.*` — shows the Person a satellite is assigned to in Hannah Core, if any (populated from the extended `GetSatellites` response, refreshed on (re)connect like `last_seen`/`room_mismatch`)
+- Added: `sendTo('announce', ...)` accepts a new optional `person` field (roomie ID, e.g. `"leonie"`) to target a specific Person directly, in addition to or independent of `room`/`rooms` — routes through Hannah Core's `Announce` RPC instead of the room-only `satellite_control` stream path used otherwise
+
 ### 0.28.0 (2026-06-29)
 - Added: virtual `satellites.rooms.all` room ("Alle") — always present, not tied to any satellite. Exposes `announcement`/`announcementSsml`/`announcementRephrase`, `dnd` and `mute` states that broadcast to every connected satellite (Hannah Core already resolves `room == "all"` as a broadcast target).
 

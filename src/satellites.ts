@@ -76,6 +76,7 @@ export class SatelliteWatcher {
      * @param displayName - Optional satellite display name (for object naming); falls back to deviceId if not provided
      * @param lastSeen - UTC timestamp (Core DB format) of the last time this satellite was seen, if known
      * @param roomMismatch - true if the satellite is currently reporting a different room than assigned
+     * @param ownerDisplayName - Display name of the Person (User) this satellite is assigned to, if any (#31)
      */
     async handleSatelliteUpdate(
         deviceId: string,
@@ -87,6 +88,7 @@ export class SatelliteWatcher {
         displayName?: string,
         lastSeen?: string,
         roomMismatch?: boolean,
+        ownerDisplayName?: string,
     ): Promise<void> {
         const objectKey = deviceId;
 
@@ -145,6 +147,12 @@ export class SatelliteWatcher {
         if (roomMismatch !== undefined) {
             await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.room_mismatch`, {
                 val: roomMismatch,
+                ack: true,
+            });
+        }
+        if (ownerDisplayName !== undefined) {
+            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.owner`, {
+                val: ownerDisplayName,
                 ack: true,
             });
         }
@@ -403,6 +411,18 @@ export class SatelliteWatcher {
                 read: true,
                 write: false,
                 def: false,
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.owner`, {
+            type: 'state',
+            common: {
+                name: 'Assigned Person (display name)',
+                type: 'string',
+                role: 'text',
+                read: true,
+                write: false,
+                def: '',
             },
             native: {},
         });
