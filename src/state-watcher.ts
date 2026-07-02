@@ -373,6 +373,9 @@ export class StateWatcher {
             if (role === 'value.humidity') {
                 return 'humidity_sensor';
             }
+            if (role === 'value.brightness') {
+                return 'illuminance_sensor';
+            }
             if (role === 'sensor.door' || role === 'indicator.open') {
                 return 'door';
             }
@@ -389,6 +392,12 @@ export class StateWatcher {
             }
 
             const funcIds = matchingFunctionObjs.map((obj: any) => (obj._id as string).toLowerCase());
+            // Read-only Helligkeits-/Lux-Sensoren landen oft mit unter der "Licht"-Funktion einsortiert —
+            // deshalb vor dem generischen light/licht-Fallback geprüft, und nur bei write===false gematcht,
+            // damit ein tatsächlich steuerbares Licht (write möglich) nicht fälschlich als Sensor erkannt wird.
+            if (stateObj?.common?.write === false && funcIds.some(id => id.includes('helligkeit') || id.includes('lux'))) {
+                return 'illuminance_sensor';
+            }
             if (funcIds.some(id => id.includes('light') || id.includes('licht'))) {
                 return 'light';
             }
