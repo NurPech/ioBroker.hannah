@@ -395,7 +395,10 @@ export class StateWatcher {
             // Read-only Helligkeits-/Lux-Sensoren landen oft mit unter der "Licht"-Funktion einsortiert —
             // deshalb vor dem generischen light/licht-Fallback geprüft, und nur bei write===false gematcht,
             // damit ein tatsächlich steuerbares Licht (write möglich) nicht fälschlich als Sensor erkannt wird.
-            if (stateObj?.common?.write === false && funcIds.some(id => id.includes('helligkeit') || id.includes('lux'))) {
+            if (
+                stateObj?.common?.write === false &&
+                funcIds.some(id => id.includes('helligkeit') || id.includes('lux'))
+            ) {
                 return 'illuminance_sensor';
             }
             if (funcIds.some(id => id.includes('light') || id.includes('licht'))) {
