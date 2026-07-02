@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: illuminance/lux sensors are now recognized as their own device category (`illuminance_sensor`) — via the `value.brightness` role, or a read-only state under a "Helligkeit"/"Lux" function
+
 ### 0.29.2 (2026-06-30)
 - Fixed: stale satellite/room object trees that Hannah Core no longer reports are now actually removed instead of just marked offline — `markUnknownOffline()` renamed `removeUnknownSatellites()`. Hannah's satellite tracking is stateful now (reports every known satellite regardless of connection status, pushes `satellite_deleted` on real deletion), so "not reported at all" reliably means genuinely gone (#83)
 
