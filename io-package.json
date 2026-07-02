@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.29.2",
+    "version": "0.30.0",
     "news": {
+      "0.30.0": {
+        "en": "Added: illuminance/lux sensors are now recognized as their own device category (`illuminance_sensor`) — via the `value.brightness` role, or a read-only state under a \"Helligkeit\"/\"Lux\" function",
+        "de": "Neu: Beleuchtungsstärke-/Lux-Sensoren werden nun als eigene Gerätekategorie („illuminance_sensor“) erkannt – entweder über die Rolle „value.brightness“ oder als schreibgeschützter Zustand unter einer „Helligkeit“/„Lux“-Funktion.",
+        "ru": "Добавлено: датчики освещенности/люкса теперь распознаются как отдельная категория устройств (`illuminance_sensor`) — через роль `value.brightness` или в состоянии только для чтения в рамках функции \"Helligkeit\"/\"Lux\".",
+        "pt": "Adicionado: sensores de iluminância/lux agora são reconhecidos como sua própria categoria de dispositivo (`illuminance_sensor`) — por meio da função `value.brightness` ou de um estado somente leitura em uma função \"Heligkeit\"/\"Lux\".",
+        "nl": "Toegevoegd: verlichtingssterkte-/lux-sensoren worden nu herkend als een eigen apparaatcategorie (`illuminance_sensor`) — via de `value.brightness`-rol, of een alleen-lezen status onder een \"Helligkeit\"/\"Lux\"-functie.",
+        "fr": "Ajout : les capteurs d'éclairement/lux sont désormais reconnus comme leur propre catégorie de périphérique (« illuminance_sensor ») — via le rôle `value.brightness`, ou un état en lecture seule sous une fonction « Helligkeit »/« Lux ».",
+        "it": "Aggiunto: i sensori di illuminamento/lux sono ora riconosciuti come una categoria di dispositivi a sé stante (`illuminance_sensor`) — tramite il ruolo `value.brightness` o uno stato di sola lettura sotto una funzione \"Helligkeit\"/\"Lux\"",
+        "es": "Añadido: los sensores de iluminancia/lux ahora se reconocen como su propia categoría de dispositivo (`illuminance_sensor`) — a través del rol `value.brightness`, o un estado de solo lectura bajo una función \"Helligkeit\"/\"Lux\"",
+        "pl": "Dodano: czujniki natężenia oświetlenia/luksów są teraz rozpoznawane jako osobna kategoria urządzeń (`illuminance_sensor`) — za pośrednictwem roli `value.brightness` lub stanu tylko do odczytu w ramach funkcji „Helligkeit”/„Lux”",
+        "uk": "Додано: датчики освітленості/люкс тепер розпізнаються як окрема категорія пристроїв (`illuminance_sensor`) — через роль `value.brightness` або через стан лише для читання у функції \"Helligkeit\"/\"Lux\".",
+        "zh-cn": "新增：照度/勒克斯传感器现在被识别为一个独立的设备类别 (`illuminance_sensor`)——通过 `value.brightness` 角色，或在“Helligkeit”/“Lux” 函数下以只读状态进行识别。"
+      },
       "0.29.2": {
         "en": "Fixed: stale satellite/room object trees that Hannah Core no longer reports are now actually removed instead of just marked offline — `markUnknownOffline()` renamed `removeUnknownSatellites()`. Hannah's satellite tracking is stateful now (reports every known satellite regardless of connection status, pushes `satellite_deleted` on real deletion), so \"not reported at all\" reliably means genuinely gone (#83)",
         "de": "Fixed: veraltete Satelliten-/Raumobjektbäume, die Hannah Core nicht mehr meldet, werden jetzt tatsächlich entfernt, anstatt nur offline markiert zu werden – `markUnknownOffline()` umbenannt `removeUnknownSatellites()`. Hannahs Satellitenverfolgung ist jetzt zustandsorientiert (meldet jeden bekannten Satelliten unabhängig vom Verbindungsstatus, drückt \"satellite deleted\" bei echter Löschung), so dass \"überhaupt nicht gemeldet\" zuverlässig bedeutet, dass er wirklich weg ist (#83)",
@@ -80,19 +93,6 @@
         "pl": "Dodano: polecenie `updateSatelliteNvs` `sendTo` — przesyła mapę klucz-wartość do nowego punktu końcowego HTTP `POST /nvs` satelity, aby zdalnie aktualizować ustawienia WiFi/MQTT/kanału OTA/ziarna/progu wybudzania bez dostępu fizycznego. Rozpoznaje adres IP satelity za pomocą `GrpcClient.getSatellites()`, uwierzytelnia za pomocą nowego pola konfiguracji administratora `satNvsToken` (zakładka Ustawienia domyślne satelity).",
         "uk": "Додано: команда `updateSatelliteNvs` `sendTo` — надсилає карту пар ключ-значення до нової кінцевої точки HTTP супутника `POST /nvs` для віддаленого оновлення налаштувань WiFi/MQTT/OTA-channel/seed/wakeword-threshold без фізичного доступу. Визначає IP-адресу супутника через `GrpcClient.getSatellites()`, автентифікується за допомогою нового поля конфігурації адміністратора `satNvsToken` (вкладка Satellite Defaults).",
         "zh-cn": "新增：`updateSatelliteNvs` `sendTo` 命令——将键值对推送至卫星新的 `POST /nvs` HTTP 端点，以便在无需物理访问的情况下远程更新 WiFi/MQTT/OTA 通道/种子/唤醒词阈值设置。该命令通过 `GrpcClient.getSatellites()` 解析卫星 IP 地址，并使用新的 `satNvsToken` 管理配置字段（位于“卫星默认设置”选项卡）进行身份验证。"
-      },
-      "0.26.1": {
-        "en": "Added: `ResidentsWatcher.handleSetResidentMood()` — writes an incoming `AgentSetResidentMood` command to `residents.<instance>.<segment>.<id>.mood.state`, same path pattern as the existing presence write; dispatched in `main.ts` alongside the existing `set_resident` case",
-        "de": "Neu hinzugefügt: `ResidentsWatcher.handleSetResidentMood()` – schreibt einen eingehenden `AgentSetResidentMood`-Befehl in `residents.<instance>.<segment>.<id>.mood.state`, mit demselben Pfadmuster wie die bestehende Anwesenheitsmeldung; wird in `main.ts` zusammen mit dem bestehenden `set_resident`-Fall aufgerufen.",
-        "ru": "Добавлено: `ResidentsWatcher.handleSetResidentMood()` — записывает входящую команду `AgentSetResidentMood` в `residents.<instance>.<segment>.<id>.mood.state`, используя тот же шаблон пути, что и существующая запись присутствия; обрабатывается в `main.ts` вместе с существующим случаем `set_resident`.",
-        "pt": "Adicionado: `ResidentsWatcher.handleSetResidentMood()` — escreve um comando `AgentSetResidentMood` recebido em `residents.<instância>.<segmento>.<id>.mood.state`, seguindo o mesmo padrão de caminho da escrita de presença existente; despachado em `main.ts` junto com o caso `set_resident` existente.",
-        "nl": "Toegevoegd: `ResidentsWatcher.handleSetResidentMood()` — schrijft een binnenkomend `AgentSetResidentMood`-commando naar `residents.<instance>.<segment>.<id>.mood.state`, met hetzelfde padpatroon als de bestaande aanwezigheidsschrijfopdracht; wordt verzonden in `main.ts` samen met de bestaande `set_resident`-case.",
-        "fr": "Ajouté : `ResidentsWatcher.handleSetResidentMood()` — écrit une commande `AgentSetResidentMood` entrante dans `residents.<instance>.<segment>.<id>.mood.state`, selon le même modèle de chemin que l’écriture de présence existante ; déclenchée dans `main.ts` avec le cas `set_resident` existant",
-        "it": "Aggiunto: `ResidentsWatcher.handleSetResidentMood()` — scrive un comando `AgentSetResidentMood` in entrata in `residents.<instance>.<segment>.<id>.mood.state`, con lo stesso schema di percorso della scrittura di presenza esistente; inviato in `main.ts` insieme al caso `set_resident` esistente",
-        "es": "Añadido: `ResidentsWatcher.handleSetResidentMood()` — escribe un comando `AgentSetResidentMood` entrante en `residents.<instance>.<segment>.<id>.mood.state`, con el mismo patrón de ruta que la escritura de presencia existente; se envía en `main.ts` junto con el caso `set_resident` existente.",
-        "pl": "Dodano: `ResidentsWatcher.handleSetResidentMood()` — zapisuje przychodzące polecenie `AgentSetResidentMood` do `residents.<instance>.<segment>.<id>.mood.state`, ten sam wzorzec ścieżki co istniejący zapis obecności; wysyłane w `main.ts` obok istniejącego przypadku `set_resident`",
-        "uk": "Додано: `ResidentsWatcher.handleSetResidentMood()` — записує вхідну команду `AgentSetResidentMood` до `residents.<instance>.<segment>.<id>.mood.state`, той самий шаблон шляху, що й існуючий запис присутності; відправляється в `main.ts` разом із існуючим випадком `set_resident`",
-        "zh-cn": "新增：`ResidentsWatcher.handleSetResidentMood()` — 将传入的 `AgentSetResidentMood` 命令写入 `residents.<instance>.<segment>.<id>.mood.state`，路径模式与现有的状态写入相同；在 `main.ts` 中与现有的 `set_resident` 语句一起分发。"
       }
     },
     "blockly": true,
