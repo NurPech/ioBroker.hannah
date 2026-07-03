@@ -79,6 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
 -->
 ### **WORK IN PROGRESS**
 - Changed: `hannah.proto` split by scope into several files on the Hannah side; the adapter's proto loader now resolves `import` statements between them (`includeDirs`). No functional change.
+- Fixed: `npm run build` only copied `hannah.proto` into `build/proto/`, not the other scope files added above — adapter crashed on startup (`ENOENT: .../build/proto/shared.proto`) once installed from a packaged build
 
 ### 0.30.0 (2026-07-02)
 - Added: illuminance/lux sensors are now recognized as their own device category (`illuminance_sensor`) — via the `value.brightness` role, or a read-only state under a "Helligkeit"/"Lux" function
