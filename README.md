@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.30.1 (2026-07-03)
 - Changed: `hannah.proto` split by scope into several files on the Hannah side; the adapter's proto loader now resolves `import` statements between them (`includeDirs`). No functional change.
 - Fixed: `npm run build` only copied `hannah.proto` into `build/proto/`, not the other scope files added above — adapter crashed on startup (`ENOENT: .../build/proto/shared.proto`) once installed from a packaged build
 
