@@ -1,0 +1,381 @@
+syntax = "proto3";
+
+package hannah;
+
+option go_package = "dev.kernstock.net/gessinger/voice/hannah/proxy/proto/hannah";
+
+message SubmitTextRequest {
+  string text            = 1;
+  // Identifies the calling service and its user, so Hannah can look up
+  // the corresponding roomie via linked_accounts.
+  string source_service  = 2;  // e.g. "telegram"
+  string source_user_id  = 3;  // e.g. Telegram chat_id as string
+}
+
+message SubmitTextResponse {
+  string answer      = 1;  // text to send back to the user
+  string intent_name = 2;  // e.g. "WeatherQuery", "TurnOn", "Unknown"
+}
+
+message SubmitVoiceRequest {
+  bytes  audio           = 1;  // OGG/Opus audio bytes (from Telegram voice message)
+  string source_service  = 2;  // e.g. "telegram"
+  string source_user_id  = 3;  // e.g. Telegram chat_id as string
+}
+
+message SubmitVoiceResponse {
+  string transcript  = 1;  // STT result (for display / caption)
+  string answer      = 2;  // text answer from Hannah
+  string intent_name = 3;  // e.g. "CarQuery" — caller may enrich the text reply
+  bytes  audio_ogg   = 4;  // OGG/Opus TTS response (empty if TTS disabled or failed)
+}
+
+message AnnounceRequest {
+  string text     = 1;
+  string device   = 2;  // satellite device name, or "all" for broadcast — legacy path, ignored if room_id or user_id is set
+  // #31: target by room and/or Person (User) instead of a specific device. Both set = AND
+  // (only the satellite that is both in that room AND owned by that Person), not OR.
+  string room_id  = 3;  // "" = not set
+  int32  user_id  = 4;  // 0 = not set
+}
+
+message Satellite {
+  string device_id    = 1;
+  string room         = 2;   // live-reported room (UDP/proxy registration); empty if not connected
+  string address      = 3;   // IP:port of the UDP satellite; empty if not connected
+  reserved 4;
+  reserved "serial";         // removed: device_id is the hardware serial since v0.34
+  string display_name = 5;   // human-readable name from Core DB (empty if not provisioned)
+  string room_id            = 6;   // room assigned in Core DB, "" = unassigned
+  string room_display_name  = 7;   // display name of room_id
+  string last_seen           = 8;  // UTC "YYYY-MM-DD HH:MM:SS" from Core DB, "" = never seen
+  bool   connected            = 9;  // true if currently live (UDP or proxy)
+  bool   room_mismatch        = 10; // true if connected and live room differs from room_id
+  int32  owner_user_id        = 11; // Person (User) assigned as owner in Core DB, 0 = unassigned. #31
+  string owner_display_name   = 12; // display name of owner_user_id, "" if unassigned
+}
+
+message GetSatellitesResponse {
+  repeated Satellite satellites = 1;
+}
+
+message SetSatelliteRoomRequest {
+  string device_id = 1;
+  string room_id    = 2;  // "" = unassign
+  int32 requestor_id     = 3; //requestor
+}
+
+message SetSatelliteDisplayNameRequest {
+  string device_id    = 1;
+  string display_name = 2;
+  int32 requestor_id       = 3; //requestor
+}
+
+message SetSatelliteOwnerRequest {
+  string device_id = 1;
+  int32  user_id    = 2;  // 0 = unassign
+  int32 requestor_id     = 3; //requestor
+}
+
+message DeleteSatelliteRequest {
+  string device_id = 1;
+  int32 requestor_id    = 2; //requestor
+}
+
+// --- Rooms/Groups (Admin-UI, #27 Phase 1) ---
+
+message Room {
+  string room_id      = 1;
+  string display_name = 2;
+}
+
+message GetRoomsResponse {
+  repeated Room rooms = 1;
+}
+
+message Group {
+  string group_id     = 1;
+  string display_name = 2;
+  repeated Room rooms = 3;
+}
+
+message GetGroupsResponse {
+  repeated Group groups = 1;
+}
+
+message CreateGroupRequest {
+  string group_id     = 1;
+  string display_name = 2;
+}
+
+message UpdateGroupRequest {
+  string group_id     = 1;
+  string display_name = 2;
+}
+
+message DeleteGroupRequest {
+  string group_id = 1;
+}
+
+message SetGroupRoomsRequest {
+  string group_id          = 1;
+  repeated string room_ids = 2;
+}
+
+// --- Routines/Triggers (Admin-UI, #27 Phase 4) ---
+//
+// `actions`/`when`/`cancel_when`/`on_response` stay JSON-encoded strings rather than
+// structured messages: `actions` is a union of two shapes ({say,room} or {topic,value},
+// see routines.py's `_load()`), and the trigger condition tree (`when`/`cancel_when`/
+// `on_response`) is deliberately open-ended (also/unless/time/days/condition strings,
+// see trigger_engine.py's module docstring) - modeling it as proto would force a schema
+// change on every new condition kind. Kept consistent with LinkedAccount.provider_payload.
+
+message Routine {
+  int32  id                = 1;
+  string name              = 2;
+  repeated string triggers = 3;
+  string actions_json      = 4;  // JSON list[{topic,value} | {say,room}]
+  string reply             = 5;
+}
+
+message GetRoutinesResponse {
+  repeated Routine routines = 1;
+}
+
+message CreateRoutineRequest {
+  string name              = 1;
+  repeated string triggers = 2;
+  string actions_json      = 3;
+  string reply             = 4;
+}
+
+message CreateRoutineResponse {
+  bool   ok      = 1;
+  int32  id      = 2;  // server-assigned, only valid when ok == true
+  string message = 3;
+}
+
+message UpdateRoutineRequest {
+  int32  id                = 1;
+  string name              = 2;
+  repeated string triggers = 3;
+  string actions_json      = 4;
+  string reply             = 5;
+}
+
+message DeleteRoutineRequest {
+  int32 id = 1;
+}
+
+message Trigger {
+  string id               = 1;  // client-assigned slug, e.g. "aussentuer_abend"
+  string when_json        = 2;  // JSON condition object or list (OR'd), see trigger_engine.py
+  string cancel_when_json = 3;  // JSON condition object, "" = none
+  string on_response_json = 4;  // JSON list of response rules, "" = none
+  string say              = 5;  // legacy single announcement, "" once actions_json is used
+  string ask              = 6;
+  bool   rephrase         = 7;
+  string room             = 8;
+  int32  cooldown         = 9;
+  string delay            = 10; // duration string e.g. "5h"/"30m"/"90s", "" = none
+  string actions_json     = 11; // JSON list[{say,room} | {set_state:{id,value}}], "" = none (falls back to say)
+}
+
+message GetTriggersResponse {
+  repeated Trigger triggers = 1;
+}
+
+message CreateTriggerRequest {
+  string id               = 1;
+  string when_json        = 2;
+  string cancel_when_json = 3;
+  string on_response_json = 4;
+  string say              = 5;
+  string ask              = 6;
+  bool   rephrase         = 7;
+  string room             = 8;
+  int32  cooldown         = 9;
+  string delay            = 10;
+  string actions_json     = 11;
+}
+
+message UpdateTriggerRequest {
+  string id               = 1;
+  string when_json        = 2;
+  string cancel_when_json = 3;
+  string on_response_json = 4;
+  string say              = 5;
+  string ask              = 6;
+  bool   rephrase         = 7;
+  string room             = 8;
+  int32  cooldown         = 9;
+  string delay            = 10;
+  string actions_json     = 11;
+}
+
+message DeleteTriggerRequest {
+  string id = 1;
+}
+
+// --- Alarms (Wecker, #4) ---
+//
+// Anders als Routine.actions_json/Trigger.when_json sind weekdays/skip_dates flache
+// skalare Listen (Ints 0-6 / ISO-Datumsstrings) ohne heterogene Verschachtelung, daher
+// als native repeated-Felder statt als JSON-String-Blob modelliert. Semantik siehe
+// AlarmManager-Docstring in core/hannah/timers.py: weekdays leer = One-off-Alarm
+// (one_shot_date ist dann das einzige Zieldatum), weekdays gesetzt = wiederkehrend
+// (skip_dates schließt einzelne Termine aus der Serie aus).
+
+message Alarm {
+  int32  id            = 1;
+  string satellite_id  = 2;
+  string time          = 3;   // "HH:MM"
+  repeated int32  weekdays   = 4;   // 0=Mo..6=So; leer = One-off
+  repeated string skip_dates = 5;   // ISO-Daten, aus einer wiederkehrenden Serie ausgeschlossen
+  string one_shot_date = 6;   // ISO-Datum; nur relevant wenn weekdays leer ist
+  bool   enabled        = 7;
+  string label           = 8;
+  int32  user_id         = 9;
+}
+
+message GetAlarmsResponse {
+  repeated Alarm alarms = 1;
+}
+
+message CreateAlarmRequest {
+  string satellite_id  = 1;
+  string time          = 2;
+  repeated int32 weekdays = 3;
+  string one_shot_date = 4;
+  string label          = 5;
+  int32  user_id        = 6;
+}
+
+message CreateAlarmResponse {
+  bool   ok      = 1;
+  int32  id      = 2;
+  string message = 3;
+}
+
+message UpdateAlarmRequest {
+  int32  id             = 1;
+  string satellite_id   = 2;
+  string time           = 3;
+  repeated int32  weekdays   = 4;
+  repeated string skip_dates = 5;
+  string one_shot_date  = 6;
+  bool   enabled         = 7;
+  string label            = 8;
+}
+
+message DeleteAlarmRequest {
+  int32 id = 1;
+}
+
+// --- Settings (Admin-UI, #27 Phase 5) ---
+
+message Category {
+  int32  id        = 1;
+  string name      = 2;  // voller Punkt-Pfad, z.B. "ble.tags"
+  int32  parent_id = 3;  // 0 = keine Eltern-Kategorie (Root)
+}
+
+message Setting {
+  int32  id          = 1;
+  int32  category_id = 2;
+  string name        = 3;
+  string value       = 4;  // JSON-encoded
+}
+
+message GetSettingsResponse {
+  repeated Category categories = 1;
+  repeated Setting settings    = 2;
+}
+
+message SettingUpdate {
+  int32  setting_id = 1;
+  string value      = 2;  // JSON-encoded
+}
+
+message UpdateConfigRequest {
+  repeated SettingUpdate updates = 1;
+}
+
+// --- BLE Tags (Admin-UI, #115) ---
+
+message BleTag {
+  int32  id          = 1;
+  string mac_address = 2;
+  string label       = 3;
+  int32  user_id     = 4;  // 0 = kein Owner zugeordnet
+}
+
+message GetBleTagsResponse {
+  repeated BleTag tags = 1;
+}
+
+message CreateBleTagRequest {
+  string mac_address = 1;
+  string label       = 2;
+  int32  user_id     = 3;
+}
+
+message CreateBleTagResponse {
+  bool   ok      = 1;
+  int32  id      = 2;
+  string message = 3;
+}
+
+message UpdateBleTagRequest {
+  int32  id          = 1;
+  string mac_address = 2;
+  string label       = 3;
+  int32  user_id     = 4;
+}
+
+message DeleteBleTagRequest {
+  int32 id = 1;
+}
+
+// --- Cars (Admin-UI, #115) ---
+//
+// Konfiguration eines getrackten Autos — unabhängig von CarStateProto weiter unten,
+// das den live per MQTT empfangenen Fahrzeugstatus abbildet.
+
+message Car {
+  int32  id                     = 1;
+  string topic_prefix           = 2;
+  string home_address           = 3;
+  repeated int32 owner_user_ids = 4;
+  string name                   = 5;
+}
+
+message GetCarsResponse {
+  repeated Car cars = 1;
+}
+
+message CreateCarRequest {
+  string topic_prefix           = 1;
+  string home_address           = 2;
+  repeated int32 owner_user_ids = 3;
+  string name                   = 4;
+}
+
+message CreateCarResponse {
+  bool   ok      = 1;
+  int32  id      = 2;
+  string message = 3;
+}
+
+message UpdateCarRequest {
+  int32  id                     = 1;
+  string topic_prefix           = 2;
+  string home_address           = 3;
+  repeated int32 owner_user_ids = 4;
+  string name                   = 5;
+}
+
+message DeleteCarRequest {
+  int32 id = 1;
+}

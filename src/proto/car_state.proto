@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package hannah;
+
+option go_package = "dev.kernstock.net/gessinger/voice/hannah/proxy/proto/hannah";
+
+message CarStateResponse {
+  bool         available = 1;  // false if no MQTT data received yet
+  CarStateProto state    = 2;
+}
+
+message GetAllCarStatesResponse {
+  repeated CarStateProto states = 1;
+}
+
+message CarStateProto {
+  // position
+  float  latitude      = 1;
+  float  longitude     = 2;
+  string address       = 3;
+  bool   is_moving     = 4;
+  int64  position_date = 5;   // Unix timestamp (seconds)
+
+  // status
+  int32  odometer         = 6;
+  int32  total_range      = 7;
+  bool   is_car_locked    = 8;
+  string door_lock_status = 9;
+  string overall_status   = 10;
+
+  // doors/windows: name → true (closed) / false (open)
+  map<string, bool> doors   = 11;
+  map<string, bool> windows = 12;
+
+  // Roomie-ID des Fahrzeughalters (leer = kein Owner-Filter)
+  string owner_roomie = 13;
+
+  // Metadaten
+  string display_name = 14;  // z.B. "Leonies Golf"
+  string plate        = 15;  // Nummernschild
+  string vin          = 16;  // Fahrzeug-Identifikationsnummer
+  string home_address = 17;  // Heimadresse für "steht zu Hause"-Erkennung
+}

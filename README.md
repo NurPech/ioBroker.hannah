@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Changed: `hannah.proto` split by scope into several files on the Hannah side; the adapter's proto loader now resolves `import` statements between them (`includeDirs`). No functional change.
+
 ### 0.30.0 (2026-07-02)
 - Added: illuminance/lux sensors are now recognized as their own device category (`illuminance_sensor`) — via the `value.brightness` role, or a read-only state under a "Helligkeit"/"Lux" function
 

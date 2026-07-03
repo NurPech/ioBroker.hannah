@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package hannah;
+
+option go_package = "dev.kernstock.net/gessinger/voice/hannah/proxy/proto/hannah";
+
+import "car_state.proto";
+
+message EventFilter {
+  // If empty, subscribe to all event types.
+  repeated string event_types = 1;
+}
+
+message HannahEvent {
+  string event_type = 1;   // "car.parked" | "resident.arrived" | "resident.departed" | "system.notification" | "satellite.firmware"
+  string timestamp  = 2;   // ISO 8601 UTC
+
+  oneof payload {
+    CarStateProto            car_state            = 10;
+    ResidentEventProto       resident_event       = 11;
+    SystemNotificationEvent  system_notification  = 12;
+    FirmwareEventProto       firmware_event       = 13;
+  }
+}
+
+message SystemNotificationEvent {
+  string text = 1;  // LLM-reformulierter Benachrichtigungstext
+}
+
+message FirmwareEventProto {
+  string device  = 1;
+  string version = 2;
+}
+
+message TriggerFirmwareUpdateRequest {
+  string device = 1;
+}
+
+message ResidentEventProto {
+  string roomie_id    = 1;
+  string display_name = 2;
+  string event        = 3;   // "arrived" | "departed"
+}

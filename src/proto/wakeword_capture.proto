@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package hannah;
+
+option go_package = "dev.kernstock.net/gessinger/voice/hannah/proxy/proto/hannah";
+
+message SatelliteCaptureRequest {
+  string device_id   = 1;
+  // "noise" (default) or "hey_hannah" — controls ESP streaming behaviour.
+  // noise: continuous auto-flush every 5 s.
+  // hey_hannah: stream only while PTT is held, flush on PTT release.
+  string sample_type = 2;
+}
+
+message TriggerPlinkRequest {
+  string device_id       = 1;
+  float  record_duration = 2;  // seconds to hold virtual PTT after plink (default 3.0)
+}
+
+// ok=false when the satellite is unknown or already captured by another client.
+message SatelliteCaptureResponse {
+  bool   ok    = 1;
+  string error = 2;
+}
+
+// A single audio chunk streamed from a captured satellite to the collector.
+// end_of_utterance=true marks a PTT-release boundary — the collector should
+// finalise and save the accumulated audio as a labelled sample at that point.
+message SatelliteAudioChunk {
+  bytes pcm              = 1;  // raw PCM, 16-bit signed mono
+  int32 sample_rate      = 2;  // Hz, typically 16000
+  bool  end_of_utterance = 3;  // true = PTT released, utterance boundary
+}
