@@ -1,0 +1,240 @@
+syntax = "proto3";
+
+package hannah;
+
+option go_package = "dev.kernstock.net/gessinger/voice/hannah/proxy/proto/hannah";
+
+// Sent by the HannahAgent ioBroker adapter over the AgentConnect stream.
+message AgentMessage {
+  oneof payload {
+    AgentStateUpdate      state_update      = 1;  // any ioBroker state changed
+    AgentResident         resident_update   = 2;  // residents adapter presence changed
+    AgentTextCommand      text_command      = 3;  // text command state changed
+    AgentSatelliteControl satellite_control = 4;  // satellite control command
+    AgentDeviceSnapshot   send_snapshot     = 5;  // initial snapshot with all states
+    AgentResidentSnapshot send_residents    = 6;  // initial snapshot with all residents
+    AgentAskResident      ask_resident      = 7;  // ask Resident via Hannah
+    AgentRoomSnapshot     send_rooms        = 8;  // full room catalog, independent of devices
+  }
+}
+
+// Adapter instructs Hannah to control satellites in a room or a specific satellite.
+// room: room_id (enum ID segment) or "all" for all rooms.
+// device_id: if non-empty, only the named satellite is targeted (volume/mute only);
+//            room is still required (used for room-scoped commands and as fallback).
+message AgentSatelliteControl {
+  string room      = 1;
+  string device_id = 7;  // optional: target a specific satellite instead of the whole room
+  oneof control {
+    bool   dnd                    = 2;  // set do-not-disturb
+    bool   mute                   = 3;  // mute/unmute microphone
+    int32  volume                 = 4;  // set volume (0–100)
+    string announcement           = 5;  // speak plain-text announcement (verbatim)
+    string announcement_ssml      = 6;  // speak SSML announcement
+    string announcement_rephrase  = 8;  // speak announcement, text rephrased by LLM first
+  }
+}
+
+// An ioBroker state change event. ack=true means the device confirmed the value
+// (as opposed to ack=false which is the "desired" value). Hannah uses this to
+// verify that a SetState command was executed successfully.
+message AgentStateUpdate {
+  string state_id = 1;  // full ioBroker state ID, e.g. "javascript.0.virtualDevice.Licht.EG.Wohnzimmer.DeckeSeite.on"
+  string value    = 2;  // JSON-encoded value: "true", "42", "\"text\""
+  bool   ack      = 3;  // true = confirmed by device
+  int64  ts       = 4;  // Unix timestamp in milliseconds
+}
+
+enum ResidentType {
+  RESIDENT_TYPE_UNSPECIFIED = 0;
+  ROOMIE                    = 1;
+  GUEST                     = 2;
+  PET                       = 3;
+}
+
+// The text-command state in ioBroker changed — treat as a SubmitText call.
+message AgentTextCommand {
+  string text = 1;
+}
+
+// Sent by Hannah Core over the AgentConnect stream.
+message AgentCommand {
+  oneof command {
+    AgentSetState        set_state        = 1;  // Hannah wants to control an ioBroker device
+    AgentWatchMore       watch_more       = 2;  // Hannah needs additional states streamed
+    AgentSetResident     set_resident     = 3;  // Hannah wants to set a resident's presence state
+    AgentSatelliteUpdate satellite_update = 4;  // a satellite registered or disconnected
+    AgentTextAnswer      text_answer      = 5;  // Hannah's answer to a text command
+    AgentFirmwareEvent   firmware_event   = 6;  // satellite firmware version update
+    AgentBleUpdate          ble_update          = 7;  // BLE tag location changed
+    AgentSensorUpdate       sensor_update       = 8;  // satellite sensor reading
+    AgentResidentAnswered   resident_answered   = 9;  // answer to an ask_resident request
+    AgentSatelliteDeleted   satellite_deleted   = 10; // Hannah Core deleted a satellite — adapter must remove its object tree
+    AgentSetResidentMood    set_resident_mood   = 11; // Hannah wants to set a resident's mood, independent of presence
+  }
+}
+
+message AgentFirmwareEvent {
+  string device           = 1;
+  string version          = 2;
+  bool   update_available = 3;  // true = newer version pending, false = current version report
+}
+
+// Hannah instructs the adapter to set an ioBroker state.
+// The adapter calls setForeignState(); the resulting ack=true AgentStateUpdate
+// confirms execution back to Hannah.
+message AgentSetState {
+  string state_id = 1;  // ioBroker state ID to write
+  string value    = 2;  // JSON-encoded value
+}
+
+// Hannah requests additional state IDs to be included in the AgentStateUpdate stream.
+// Used by the trigger engine at runtime when triggers reference arbitrary state IDs
+// (e.g. unless.state: "0_userdata.0.feeded") that aren't covered by enum discovery.
+message AgentWatchMore {
+  repeated string state_ids = 1;
+}
+
+// Hannah instructs the adapter to set a resident's presence state in the residents adapter.
+// type determines whether the target path is .roomie./.guest./.pet.
+message AgentSetResident {
+  string resident_id    = 1;  // e.g. "leonie", "hannah"
+  int32  presence_state = 2;  // residents adapter presence value (0=absent, 1=home, …)
+  ResidentType type     = 3;
+}
+
+// Hannah instructs the adapter to set a resident's mood — separate command from
+// AgentSetResident so it can fire independent of any presence change (e.g. when a
+// Hannah User's linked mood changes without an arrival/departure).
+message AgentSetResidentMood {
+  string resident_id = 1;  // e.g. "leonie", "hannah"
+  int32  mood        = 2;
+  ResidentType type  = 3;
+}
+
+// Hannah notifies the adapter that a satellite registered or disconnected,
+// or that a satellite's volume or mute state changed.
+// The adapter updates hannah.<instance>.satellites.rooms.<room_id>.* states accordingly.
+message AgentSatelliteUpdate {
+  string device_id    = 1;  // satellite device_id (== eFuse MAC since v0.34); adapter uses as ioBroker object-ID
+  string room         = 2;  // room_id: stable enum ID segment (e.g. "wohnzimmer"); adapter uses as ioBroker path segment
+  string address      = 3;  // UDP address (empty if not applicable)
+  bool   online       = 4;  // true = registered/online, false = gone/offline
+  optional int32 volume = 5;  // current volume level (0–100); absent = no change
+  optional bool  mute   = 6;  // current mute state; absent = no change
+  reserved 7;
+  reserved "serial";          // removed: device_id is the hardware serial since v0.34
+  string display_name = 8;  // human-readable name from Core DB (empty = fall back to device_id)
+}
+
+// Hannah Core deleted a satellite (RoomManager.delete_satellite()) — the adapter
+// must remove the satellite's full object tree (and its sensor tree), mirroring
+// the room cleanup AgentSatelliteUpdate already does for online/offline changes.
+message AgentSatelliteDeleted {
+  string device_id = 1;  // satellite device_id being deleted
+  string room      = 2;  // room_id the satellite was assigned to, for room-container cleanup
+}
+
+// Hannah sends the answer to a text command back to the adapter.
+// The adapter sets hannah.<instance>.textAnswer accordingly.
+message AgentTextAnswer {
+  string text   = 1;  // plain-text answer
+  string intent = 2;  // detected intent name
+}
+
+// A notification from the ioBroker adapter.
+// direct=true: skip LLM, play text unchanged (severity ignored).
+// direct=false: LLM reformulates text; severity controls tone ("alert"|"notify"|"info").
+message AgentNotification {
+  string text     = 1;
+  bool   direct   = 2;
+  string severity = 3;  // "alert" | "notify" | "info" — only used when direct=false
+}
+
+message AgentStateValue {
+    string value = 1;
+    bool ack      = 2;
+}
+
+// A device from the ioBroker adapter
+message AgentDevice {
+    string state_id  = 1;
+    string floor     = 2;
+    string room      = 3;  // room_id: stable enum ID segment, e.g. "wohnzimmer" or "living_room"
+    string device    = 4;
+    string device_type        = 5;
+    repeated string functions = 6;
+    AgentStateValue value     = 7;
+    map<string, string> room_names = 8;  // all display names from ioBroker enum, e.g. {"de": "Wohnzimmer", "en": "Living Room"}
+}
+
+// a list with all known devices from the ioBroker adapter
+message AgentDeviceSnapshot {
+    repeated AgentDevice devices = 1;
+}
+
+// A room from the ioBroker adapter's enum.rooms.* catalog — independent of devices,
+// so rooms without any device yet are still known to Hannah (e.g. before the first
+// satellite is provisioned into a brand-new room).
+message AgentRoom {
+    string room_id = 1;  // enum ID segment, e.g. "wohnzimmer"
+    map<string, string> display_names = 2;  // all display names from ioBroker enum, e.g. {"de": "Wohnzimmer", "en": "Living Room"}
+}
+
+// Full room catalog from the ioBroker adapter. Sent on AgentConnect and whenever
+// enum.rooms.* changes, independent of AgentDeviceSnapshot.
+message AgentRoomSnapshot {
+    repeated AgentRoom rooms = 1;
+}
+
+// A resident from the ioBroker adapter
+message AgentResident {
+  string roomie_id          = 1;
+  string name               = 2;
+  ResidentType type         = 3;
+  optional int32 mood_level = 4;
+  int32 presence_state      = 5;
+}
+
+// a list with all known residents
+message AgentResidentSnapshot {
+  repeated AgentResident residents = 1;
+}
+
+message AgentAskResident {
+  string correlation_id = 3;
+  string room           = 1;
+  string question       = 2;
+}
+
+message AgentResidentAnswered {
+  string correlation_id = 1;
+  string answer         = 2;
+}
+
+// Hannah notifies the adapter that a BLE tag's location has changed.
+// The adapter creates/updates states under hannah.<instance>.ble.<label>.*.
+// room and satellite are empty when the tag is no longer visible.
+message AgentBleUpdate {
+  string label     = 1;  // human-readable tag name (from config, used as state path)
+  string mac       = 2;  // MAC address (lowercase, colon-separated)
+  string room      = 3;  // room name (empty = tag not visible / stale)
+  string satellite = 4;  // satellite device ID that last detected the tag
+  int32  rssi      = 5;  // last known RSSI in dBm (0 when room is empty)
+}
+// Hannah notifies the adapter of a satellite's sensor reading.
+// The adapter creates/updates states under hannah.<instance>.satellites.<device>.sensors.*.
+// gas_resistance is omitted (0.0) when not available (BMP280+AHT20 hardware).
+// iaq/co2_equiv/voc_equiv are omitted (0.0) when BSEC2 is not calibrated yet.
+message AgentSensorUpdate {
+  reserved 5;
+  reserved "gas_resistance";  // removed: BSEC2 replaces raw VOC resistance
+  string device          = 1;  // satellite device ID
+  float  temperature     = 2;  // °C
+  float  pressure        = 3;  // hPa
+  float  humidity        = 4;  // % relative humidity (0 when not available)
+  float  iaq             = 6;  // IAQ 0–500 (BSEC2); 0 when not calibrated
+  uint32 iaq_accuracy    = 7;  // 0=uncertain 1=low 2=medium 3=high
+  float  co2_equiv       = 8;  // CO₂ equivalent ppm (BSEC2); 0 when not available
+  float  voc_equiv       = 9;  // breath VOC equivalent ppm (BSEC2); 0 when not available
+}

@@ -2,7 +2,8 @@ import * as path from 'node:path';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 
-const PROTO_PATH = path.join(__dirname, 'proto', 'hannah.proto');
+const PROTO_DIR = path.join(__dirname, 'proto');
+const PROTO_PATH = path.join(PROTO_DIR, 'hannah.proto');
 
 const packageDef = protoLoader.loadSync(PROTO_PATH, {
     keepCase: true,
@@ -10,6 +11,9 @@ const packageDef = protoLoader.loadSync(PROTO_PATH, {
     enums: String,
     defaults: true,
     oneofs: true,
+    // #44: hannah.proto wurde in mehrere Scope-Dateien mit `import "x.proto";`
+    // aufgeteilt — proto-loader muss wissen, wo die importierten Dateien liegen.
+    includeDirs: [PROTO_DIR],
 });
 
 const proto = grpc.loadPackageDefinition(packageDef) as any;

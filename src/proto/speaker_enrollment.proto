@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package hannah;
+
+option go_package = "dev.kernstock.net/gessinger/voice/hannah/proxy/proto/hannah";
+
+message EnrollVoiceprintRequest {
+  string user_id     = 1;  // Hannah user this voice sample belongs to (users.id, stable)
+  bytes  audio_pcm   = 2;  // raw PCM, 16-bit signed mono
+  int32  sample_rate = 3;  // e.g. 16000
+}

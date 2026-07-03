@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package hannah;
+
+option go_package = "dev.kernstock.net/gessinger/voice/hannah/proxy/proto/hannah";
+
+// Sent by the ioBroker adapter (WebFlasher) before flashing a satellite.
+// Hannah stores the seed + pre-config; when the satellite first connects with
+// this seed, Hannah links the hardware serial to the pre-config and clears the seed.
+message ProvisionSatelliteRequest {
+  string seed         = 1;  // random UUID, also written to NVS during flash
+  string display_name = 2;  // pre-configured display name
+  string room_id      = 3;  // optional: pre-configured room (room_id from ioBroker)
+}
