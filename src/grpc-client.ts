@@ -1,9 +1,30 @@
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 
 const PROTO_DIR = path.join(__dirname, 'proto');
 const PROTO_PATH = path.join(PROTO_DIR, 'hannah.proto');
+
+// Protocol-Version-Check (#60): Hannah Core lehnt RPCs ohne passende
+// `x-proto-version`-Metadata ab, sobald ihr Reject-Mode aktiv ist. Statisch
+// aus der lokal mitsynchten PROTO_VERSION-Datei gelesen (siehe
+// scripts/sync_proto_to_iobroker.py im Monorepo).
+const PROTO_VERSION = fs.readFileSync(path.join(PROTO_DIR, 'PROTO_VERSION'), 'utf-8').trim();
+
+/** Hängt die lokale PROTO_VERSION als `x-proto-version`-Metadata an jeden ausgehenden Call. */
+function protocolVersionInterceptor(
+    options: grpc.InterceptorOptions,
+    nextCall: (options: grpc.InterceptorOptions) => grpc.InterceptingCall,
+): grpc.InterceptingCall {
+    const requester = new grpc.RequesterBuilder()
+        .withStart((metadata, listener, next) => {
+            metadata.set('x-proto-version', PROTO_VERSION);
+            next(metadata, listener);
+        })
+        .build();
+    return new grpc.InterceptingCall(nextCall(options), requester);
+}
 
 const packageDef = protoLoader.loadSync(PROTO_PATH, {
     keepCase: true,
@@ -96,7 +117,9 @@ export class GrpcClient {
 
         const addr = `${host}:${port}`;
         this.log.info(`[grpc] Connecting to Hannah Core: ${addr}`);
-        this.client = new proto.hannah.HannahService(addr, grpc.credentials.createInsecure());
+        this.client = new proto.hannah.HannahService(addr, grpc.credentials.createInsecure(), {
+            interceptors: [protocolVersionInterceptor],
+        });
         this.stream = this.client.AgentConnect();
 
         // For bidi streams with Python gRPC, the server does not send initial metadata,
