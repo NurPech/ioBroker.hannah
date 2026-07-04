@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.30.2 (2026-07-04)
 - Added: the adapter now sends a protocol-version header with every request to Hannah Core, so version mismatches between the two are caught with a clear error instead of unexplained misbehavior
 
 ### 0.30.1 (2026-07-03)
