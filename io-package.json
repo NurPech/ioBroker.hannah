@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.30.2",
+    "version": "0.30.3",
     "news": {
+      "0.30.3": {
+        "en": "Changed: replaced the manually-synced `hannah.proto` files and `@grpc/proto-loader` with the published `@m1kad0/hannah-proto` npm package (typed `@grpc/grpc-js` client, no local codegen). No functional change.",
+        "de": "Geändert: Die manuell synchronisierten `hannah.proto`-Dateien und `@grpc/proto-loader` wurden durch das veröffentlichte npm-Paket `@m1kad0/hannah-proto` ersetzt (Typ: `@grpc/grpc-js`-Client, keine lokale Codegenerierung). Funktionale Änderungen bestehen nicht.",
+        "ru": "Изменения: файлы `hannah.proto` и `@grpc/proto-loader`, синхронизированные вручную, заменены опубликованным npm-пакетом `@m1kad0/hannah-proto` (использован типизированный клиент `@grpc/grpc-js`, локальная генерация кода отсутствует). Функциональных изменений нет.",
+        "pt": "Alterações: os arquivos `hannah.proto` sincronizados manualmente e o pacote `@grpc/proto-loader` foram substituídos pelo pacote npm `@m1kad0/hannah-proto` publicado (cliente tipado `@grpc/grpc-js`, sem geração de código local). Nenhuma alteração funcional.",
+        "nl": "Gewijzigd: de handmatig gesynchroniseerde `hannah.proto`-bestanden en `@grpc/proto-loader` zijn vervangen door het gepubliceerde `@m1kad0/hannah-proto` npm-pakket (client `@grpc/grpc-js` getypt, geen lokale codegeneratie). Geen functionele wijziging.",
+        "fr": "Modification : les fichiers `hannah.proto` synchronisés manuellement et `@grpc/proto-loader` ont été remplacés par le package npm `@m1kad0/hannah-proto` publié (client `@grpc/grpc-js`, sans génération de code locale). Aucune modification fonctionnelle.",
+        "it": "Modificato: sostituiti i file `hannah.proto` sincronizzati manualmente e `@grpc/proto-loader` con il pacchetto npm pubblicato `@m1kad0/hannah-proto` (client `@grpc/grpc-js` tipizzato, senza generazione di codice locale). Nessuna modifica funzionale.",
+        "es": "Modificado: se reemplazaron los archivos `hannah.proto` sincronizados manualmente y `@grpc/proto-loader` por el paquete npm publicado `@m1kad0/hannah-proto` (cliente `@grpc/grpc-js` tipado, sin generación de código local). Sin cambios funcionales.",
+        "pl": "Zmieniono: zastąpiono ręcznie synchronizowane pliki `hannah.proto` i `@grpc/proto-loader` opublikowanym pakietem npm `@m1kad0/hannah-proto` (z typem klienta `@grpc/grpc-js`, bez lokalnego generowania kodu). Brak zmian funkcjonalnych.",
+        "uk": "Змінено: замінено синхронізовані вручну файли `hannah.proto` та `@grpc/proto-loader` на опублікований npm-пакет `@m1kad0/hannah-proto` (клієнт типу `@grpc/grpc-js`, без локального генерування коду). Без функціональних змін.",
+        "zh-cn": "已更改：将手动同步的 `hannah.proto` 文件和 `@grpc/proto-loader` 替换为已发布的 `@m1kad0/hannah-proto` npm 包（使用 `@grpc/grpc-js` 客户端，未进行本地代码生成）。功能上无变化。"
+      },
       "0.30.2": {
         "en": "Added: the adapter now sends a protocol-version header with every request to Hannah Core, so version mismatches between the two are caught with a clear error instead of unexplained misbehavior",
         "de": "Neu: Der Adapter sendet nun mit jeder Anfrage an Hannah Core einen Header mit der Protokollversion, sodass Versionsunterschiede zwischen den beiden mit einer klaren Fehlermeldung anstatt mit unerklärlichem Fehlverhalten erkannt werden.",
@@ -80,19 +93,6 @@
         "pl": "Dodano: stan `owner` w `satellites.rooms.<room>.<device>.*` — pokazuje Osobę, do której przypisany jest satelita w Hannah Core, jeśli taka istnieje.\nDodano: `sendTo('announce', ...)` akceptuje teraz nowe opcjonalne pole `person` (identyfikator roomie, np. \"leonie\"), aby bezpośrednio celować w konkretną Osobę, dodatkowo do `room`/`rooms` lub niezależnie od nich.",
         "uk": "Додано: стан `owner` у `satellites.rooms.<room>.<device>.*` — показує Особу, якій призначено супутник у Hannah Core, якщо така є.\nДодано: `sendTo('announce', ...)` тепер приймає нове необов'язкове поле `person` (roomie ID, напр. \"leonie\") для прямого націлювання на конкретну Особу, додатково до `room`/`rooms` або незалежно від них.",
         "zh-cn": "新增：`satellites.rooms.<room>.<device>.*` 下新增 `owner` 状态——显示该卫星在 Hannah Core 中被分配给的人员（如果有）。\n新增：`sendTo('announce', ...)` 现在接受一个新的可选字段 `person`（roomie ID，例如 \"leonie\"），可直接针对特定人员，可与 `room`/`rooms` 一起使用，也可独立使用。"
-      },
-      "0.28.0": {
-        "en": "Added: virtual `satellites.rooms.all` room (\"Alle\") — always present, not tied to any satellite. Exposes `announcement`/`announcementSsml`/`announcementRephrase`, `dnd` and `mute` states that broadcast to every connected satellite (Hannah Core already resolves `room == \"all\"` as a broadcast target).",
-        "de": "Hinzugefügt: virtueller Raum \"Satelliten.rooms.all\" (\"Alle\") - immer vorhanden, nicht an einen Satelliten gebunden. Exposes `announcement`/`announcementSsml`/`announcementRephrase`, `dnd` und `mute`-Zustände, die zu jedem angeschlossenen Satelliten ausgestrahlt werden (Hannah Core löst `room == \"all\" bereits als Sendeziel auf).",
-        "ru": "Добавлено: виртуальный «satellites.rooms.all» — всегда присутствует, не привязан к какому-либо спутнику. Разоблачает «объявление»/«объявление»Ssml’/«объявление»Rephrase, «dnd» и «mute» состояния, которые транслируются на каждый подключенный спутник (Hannah Core уже разрешает «комнату == «все» в качестве цели трансляции).",
-        "pt": "Adicionado: virtual `satélites.rooms.all` room (\"Alle\") — sempre presente, não ligado a qualquer satélite. Expos `anúncio`/`anúncioSsml`/`anúncioRefrase', `dnd` e `mute` afirma que transmite para cada satélite conectado (Hannah Core já resolve `quarto] \"todos\" como alvo de transmissão).",
-        "nl": "Toegevoegd: virtual  Uitdrukt .",
-        "fr": "Ajouté: virtuel `satellites.rooms.all` chambre (\"Alle\") — toujours présent, pas lié à aucun satellite. Exposes `announcement`/`announcementSsml`/`announcementRephrase`, `dnd` et `mute` indique que la diffusion à chaque satellite connecté (Hannah Core résout déjà `room=\"all\"` comme cible de diffusion).",
-        "it": "Aggiunto: virtuale `satellites.rooms.all` stanza (\"Alle\") — sempre presente, non legato a qualsiasi satellite. Esposizioni `annuncio`/`annuncioSsml`/`announcementRephrase`, `dnd` e `mute` che trasmettono ad ogni satellite connesso (Hannah Core risolve già `room == \"all\"` come target di trasmissione).",
-        "es": "Añadido: virtual `satellites.rooms.all` habitación (\"Alle\") — siempre presente, no atado a ningún satélite. Exposes `announcement`/`announcementSsml`/`announcementRephrase`, `dnd` and `mute` states that broadcast to every connected satellite (Hannah Core already resolve `room == \"all\" as a broadcast target).",
-        "pl": "Dodano: wirtualny 'satellites.rooms' pokój (\"Alle\") - zawsze obecny, nie związany z żadnym satelitą. Eksponuje \"ogłoszenie\" / \"ogłoszenie Ssml\" / \"ogłoszenie\" Rephrase \",\" dnd \"i\" nieme \"stwierdza, że transmisja do każdego podłączonego satelity (Hannah Core już rozwiązuje\" pokój = \"all\" \"jako cel nadawany).",
-        "uk": "Додані: віртуальні `satellites.rooms.all` room (\"Alle\") — завжди присутні, не прив’язані до будь-якого супутника. Виставки `announcement`/`announcementSsml`/`announcementRephrase`, `dnd` і `mute` стани, які транслюються до кожного підключеного супутника (Hannah Core вже вирішить `room == \"все\" як мовна ціль.",
-        "zh-cn": "添加:虚拟的`卫星.房间. ' 房间( \" Alle \" )——总是在场,不与任何卫星捆绑。 `通知 ' /`通知 ' ssml`/`通知重述 ' 、`dnd'和`mute'表示,向每颗连接的卫星广播(Hannah Core已经将`room == \" )作为广播目标."
       }
     },
     "blockly": true,
