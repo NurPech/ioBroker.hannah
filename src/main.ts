@@ -1,4 +1,5 @@
 import * as utils from '@iobroker/adapter-core';
+import type { agent, control } from '@m1kad0/hannah-proto';
 import { GrpcClient } from './grpc-client';
 import { StateWatcher } from './state-watcher';
 import { ResidentsWatcher } from './residents';
@@ -133,28 +134,24 @@ class Hannah extends utils.Adapter {
                 // `connected` per-satellite instead of assuming every entry is online, and fall
                 // back to the DB-assigned room for disconnected ones (their live `room` is empty).
                 const sats = await this.grpc!.getSatellites();
-                const effectiveRoom = (sat: {
-                    room: string;
-                    room_id?: string;
-                    room_display_name?: string;
-                    connected?: boolean;
-                }): string => (sat.connected ? sat.room : sat.room_display_name || sat.room_id || '');
+                const effectiveRoom = (sat: control.Satellite): string =>
+                    sat.connected ? sat.room : sat.roomDisplayName || sat.roomId || '';
                 for (const sat of sats) {
                     await this.satellites!.handleSatelliteUpdate(
-                        sat.device_id,
+                        sat.deviceId,
                         effectiveRoom(sat),
                         sat.address,
                         sat.connected ?? false,
                         undefined,
                         undefined,
-                        sat.display_name || undefined,
-                        sat.last_seen || undefined,
-                        sat.room_mismatch,
-                        sat.owner_display_name || '',
+                        sat.displayName || undefined,
+                        sat.lastSeen || undefined,
+                        sat.roomMismatch,
+                        sat.ownerDisplayName || '',
                     );
                 }
                 await this.satellites!.removeUnknownSatellites(
-                    sats.map(sat => ({ device_id: sat.device_id, room: effectiveRoom(sat) })),
+                    sats.map(sat => ({ deviceId: sat.deviceId, room: effectiveRoom(sat) })),
                 );
             },
             onDisconnected: async () => {
@@ -162,59 +159,58 @@ class Hannah extends utils.Adapter {
                 await this.states?.stop();
                 await this.residents?.unsubscribe();
             },
-            onCommand: (cmd: any) => {
-                const which = Object.keys(cmd).find(k => k !== 'command' && cmd[k]);
-                if (which === 'set_state' && cmd.set_state) {
-                    void this.states?.handleSetState(cmd.set_state.state_id, cmd.set_state.value);
-                } else if (which === 'set_resident' && cmd.set_resident) {
-                    const r = cmd.set_resident;
-                    void this.residents?.handleSetResident(r.resident_id, r.presence_state, r.type);
-                } else if (which === 'set_resident_mood' && cmd.set_resident_mood) {
-                    const r = cmd.set_resident_mood;
-                    void this.residents?.handleSetResidentMood(r.resident_id, r.mood, r.type);
-                } else if (which === 'satellite_update' && cmd.satellite_update) {
-                    const s = cmd.satellite_update;
+            onCommand: (cmd: agent.AgentCommand) => {
+                if (cmd.setState) {
+                    void this.states?.handleSetState(cmd.setState.stateId, cmd.setState.value);
+                } else if (cmd.setResident) {
+                    const r = cmd.setResident;
+                    void this.residents?.handleSetResident(r.residentId, r.presenceState, r.type);
+                } else if (cmd.setResidentMood) {
+                    const r = cmd.setResidentMood;
+                    void this.residents?.handleSetResidentMood(r.residentId, r.mood, r.type);
+                } else if (cmd.satelliteUpdate) {
+                    const s = cmd.satelliteUpdate;
                     void this.satellites?.handleSatelliteUpdate(
-                        s.device_id,
+                        s.deviceId,
                         s.room,
                         s.address,
                         s.online,
                         s.volume ?? undefined,
                         s.mute ?? undefined,
-                        s.display_name || undefined,
+                        s.displayName || undefined,
                     );
-                } else if (which === 'watch_more' && cmd.watch_more?.state_ids) {
-                    void this.states?.watchMore(cmd.watch_more.state_ids);
-                } else if (which === 'text_answer' && cmd.text_answer) {
-                    void this.setState('textAnswer', { val: cmd.text_answer.text, ack: true });
-                } else if (which === 'firmware_event' && cmd.firmware_event) {
-                    const fe = cmd.firmware_event;
+                } else if (cmd.watchMore?.stateIds) {
+                    void this.states?.watchMore(cmd.watchMore.stateIds);
+                } else if (cmd.textAnswer) {
+                    void this.setState('textAnswer', { val: cmd.textAnswer.text, ack: true });
+                } else if (cmd.firmwareEvent) {
+                    const fe = cmd.firmwareEvent;
                     if (fe.device && fe.version) {
-                        void this.satellites?.handleFirmwareEvent(fe.device, fe.version, fe.update_available);
+                        void this.satellites?.handleFirmwareEvent(fe.device, fe.version, fe.updateAvailable);
                     }
-                } else if (which === 'ble_update' && cmd.ble_update) {
-                    const b = cmd.ble_update;
+                } else if (cmd.bleUpdate) {
+                    const b = cmd.bleUpdate;
                     void this.ble?.handleBleUpdate(b.label, b.mac, b.room, b.satellite, b.rssi);
-                } else if (which === 'sensor_update' && cmd.sensor_update) {
-                    const s = cmd.sensor_update;
+                } else if (cmd.sensorUpdate) {
+                    const s = cmd.sensorUpdate;
                     void this.sensorWatcher?.handleSensorUpdate(
                         s.device,
                         s.temperature,
                         s.pressure,
                         s.humidity,
                         s.iaq,
-                        s.iaq_accuracy,
-                        s.co2_equiv,
-                        s.voc_equiv,
+                        s.iaqAccuracy,
+                        s.co2Equiv,
+                        s.vocEquiv,
                     );
-                } else if (which === 'resident_answered' && cmd.resident_answered) {
-                    this.messages?.onResidentAnswered(cmd.resident_answered);
-                } else if (which === 'satellite_deleted' && cmd.satellite_deleted) {
-                    const d = cmd.satellite_deleted;
+                } else if (cmd.residentAnswered) {
+                    this.messages?.onResidentAnswered(cmd.residentAnswered);
+                } else if (cmd.satelliteDeleted) {
+                    const d = cmd.satelliteDeleted;
                     void (async (): Promise<void> => {
-                        await this.satellites?.deleteSatellite(d.device_id, d.room);
-                        await this.sensorWatcher?.deleteSensors(d.device_id);
-                        this.log.info(`[satellites] Deleted ${d.device_id} (requested by Hannah Core)`);
+                        await this.satellites?.deleteSatellite(d.deviceId, d.room);
+                        await this.sensorWatcher?.deleteSensors(d.deviceId);
+                        this.log.info(`[satellites] Deleted ${d.deviceId} (requested by Hannah Core)`);
                     })();
                 }
             },
@@ -365,7 +361,7 @@ class Hannah extends utils.Adapter {
             void (async (): Promise<void> => {
                 try {
                     const satellites = await this.grpc!.getSatellites();
-                    const sat = satellites.find(s => s.device_id === deviceId);
+                    const sat = satellites.find(s => s.deviceId === deviceId);
                     if (!sat) {
                         throw new Error(`Unknown satellite '${deviceId}'`);
                     }
