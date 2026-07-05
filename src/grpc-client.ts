@@ -1,46 +1,29 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as grpc from '@grpc/grpc-js';
-import * as protoLoader from '@grpc/proto-loader';
+import { PROTO_VERSION, agent, hannah } from '@m1kad0/hannah-proto';
+import type { control, shared, satellite_provisioning, user_registry } from '@m1kad0/hannah-proto';
 
-const PROTO_DIR = path.join(__dirname, 'proto');
-const PROTO_PATH = path.join(PROTO_DIR, 'hannah.proto');
-
-// Protocol-Version-Check (#60): Hannah Core lehnt RPCs ohne passende
-// `x-proto-version`-Metadata ab, sobald ihr Reject-Mode aktiv ist. Statisch
-// aus der lokal mitsynchten PROTO_VERSION-Datei gelesen (siehe
-// scripts/sync_proto_to_iobroker.py im Monorepo).
-const PROTO_VERSION = fs.readFileSync(path.join(PROTO_DIR, 'PROTO_VERSION'), 'utf-8').trim();
-
-/** Hängt die lokale PROTO_VERSION als `x-proto-version`-Metadata an jeden ausgehenden Call. */
-function protocolVersionInterceptor(
+/**
+ * Haengt die PROTO_VERSION der installierten hannah-proto npm-Version als `x-proto-version`-Metadata
+ * an jeden ausgehenden Call (#60).
+ *
+ * @param options - Call options for this interceptor invocation
+ * @param nextCall - Continuation to the next interceptor / the actual call
+ */
+const protocolVersionInterceptor: grpc.Interceptor = (
     options: grpc.InterceptorOptions,
-    nextCall: (options: grpc.InterceptorOptions) => grpc.InterceptingCall,
-): grpc.InterceptingCall {
+    nextCall: grpc.NextCall,
+): grpc.InterceptingCall => {
     const requester = new grpc.RequesterBuilder()
         .withStart((metadata, listener, next) => {
-            metadata.set('x-proto-version', PROTO_VERSION);
+            metadata.set('x-proto-version', String(PROTO_VERSION));
             next(metadata, listener);
         })
         .build();
     return new grpc.InterceptingCall(nextCall(options), requester);
-}
+};
 
-const packageDef = protoLoader.loadSync(PROTO_PATH, {
-    keepCase: true,
-    longs: String,
-    enums: String,
-    defaults: true,
-    oneofs: true,
-    // #44: hannah.proto wurde in mehrere Scope-Dateien mit `import "x.proto";`
-    // aufgeteilt — proto-loader muss wissen, wo die importierten Dateien liegen.
-    includeDirs: [PROTO_DIR],
-});
-
-const proto = grpc.loadPackageDefinition(packageDef) as any;
-
-export type AgentMessageSender = (msg: object) => void;
-export type CommandHandler = (cmd: object) => void;
+export type AgentMessageSender = (msg: agent.AgentMessage) => void;
+export type CommandHandler = (cmd: agent.AgentCommand) => void;
 
 interface LogAdapter {
     info: (s: string) => void;
@@ -63,8 +46,8 @@ interface GrpcClientOptions {
  * Automatically reconnects on error or stream end.
  */
 export class GrpcClient {
-    private client: any = null;
-    private stream: any = null;
+    private client: hannah.HannahServiceClient | null = null;
+    private stream: grpc.ClientDuplexStream<agent.AgentMessage, agent.AgentCommand> | null = null;
     private reconnectTimer: number | null = null;
     private running = false;
     private onCommand: CommandHandler;
@@ -117,10 +100,10 @@ export class GrpcClient {
 
         const addr = `${host}:${port}`;
         this.log.info(`[grpc] Connecting to Hannah Core: ${addr}`);
-        this.client = new proto.hannah.HannahService(addr, grpc.credentials.createInsecure(), {
+        this.client = new hannah.HannahServiceClient(addr, grpc.credentials.createInsecure(), {
             interceptors: [protocolVersionInterceptor],
         });
-        this.stream = this.client.AgentConnect();
+        this.stream = this.client.agentConnect();
 
         // For bidi streams with Python gRPC, the server does not send initial metadata,
         // so the 'metadata' event never fires. Trigger onConnected immediately — if the
@@ -130,7 +113,7 @@ export class GrpcClient {
             this.log.error(`[grpc] onConnected error: ${e.message}`);
         });
 
-        this.stream.on('data', (cmd: object) => {
+        this.stream.on('data', (cmd: agent.AgentCommand) => {
             this.onCommand(cmd);
         });
 
@@ -164,27 +147,13 @@ export class GrpcClient {
      * Fetch the current list of registered satellites from Hannah Core.
      * Returns an array of satellite objects or an empty array on error.
      */
-    getSatellites(): Promise<
-        Array<{
-            device_id: string;
-            room: string;
-            address: string;
-            display_name?: string;
-            room_id?: string;
-            room_display_name?: string;
-            last_seen?: string;
-            connected?: boolean;
-            room_mismatch?: boolean;
-            owner_user_id?: number;
-            owner_display_name?: string;
-        }>
-    > {
+    getSatellites(): Promise<control.Satellite[]> {
         return new Promise(resolve => {
             if (!this.client) {
                 resolve([]);
                 return;
             }
-            this.client.GetSatellites({}, (err: Error | null, response: any) => {
+            this.client.getSatellites({}, (err: Error | null, response?: control.GetSatellitesResponse) => {
                 if (err || !response) {
                     this.log.warn(`[grpc] GetSatellites failed: ${err?.message ?? 'no response'}`);
                     resolve([]);
@@ -210,17 +179,15 @@ export class GrpcClient {
                 return;
             }
             const timer = this._setTimeout(() => reject(new Error('timeout')), 5000);
-            this.client.ProvisionSatellite(
-                { seed, display_name: displayName, room_id: roomId },
-                (err: Error | null, response: any) => {
-                    this._clearTimeout(timer);
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve({ ok: response.ok, message: response.message });
-                    }
-                },
-            );
+            const request: satellite_provisioning.ProvisionSatelliteRequest = { seed, displayName, roomId };
+            this.client.provisionSatellite(request, (err: Error | null, response?: shared.StatusResponse) => {
+                this._clearTimeout(timer);
+                if (err || !response) {
+                    reject(err ?? new Error('no response'));
+                } else {
+                    resolve({ ok: response.ok, message: response.message });
+                }
+            });
         });
     }
 
@@ -245,10 +212,11 @@ export class GrpcClient {
                 return;
             }
             const timer = this._setTimeout(() => reject(new Error('timeout')), timeoutMs);
-            this.client.Notify({ text, direct, severity }, (err: Error | null, response: any) => {
+            const request: agent.AgentNotification = { text, direct, severity };
+            this.client.notify(request, (err: Error | null, response?: shared.StatusResponse) => {
                 this._clearTimeout(timer);
-                if (err) {
-                    reject(err);
+                if (err || !response) {
+                    reject(err ?? new Error('no response'));
                 } else {
                     resolve({ ok: response.ok, message: response.message });
                 }
@@ -279,17 +247,20 @@ export class GrpcClient {
                 return;
             }
             const timer = this._setTimeout(() => reject(new Error('timeout')), timeoutMs);
-            this.client.Announce(
-                { text, device: opts.device ?? '', room_id: opts.roomId ?? '', user_id: opts.userId ?? 0 },
-                (err: Error | null, response: any) => {
-                    this._clearTimeout(timer);
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve({ ok: response.ok, message: response.message });
-                    }
-                },
-            );
+            const request: control.AnnounceRequest = {
+                text,
+                device: opts.device ?? '',
+                roomId: opts.roomId ?? '',
+                userId: opts.userId ?? 0,
+            };
+            this.client.announce(request, (err: Error | null, response?: shared.StatusResponse) => {
+                this._clearTimeout(timer);
+                if (err || !response) {
+                    reject(err ?? new Error('no response'));
+                } else {
+                    resolve({ ok: response.ok, message: response.message });
+                }
+            });
         });
     }
 
@@ -309,17 +280,18 @@ export class GrpcClient {
                 return;
             }
             const timer = this._setTimeout(() => resolve(null), timeoutMs);
-            this.client.GetUser(
-                { linked_account: { provider: 'residents', external_id: `${roomieId}_roomie` } },
-                (err: Error | null, response: any) => {
-                    this._clearTimeout(timer);
-                    if (err || !response?.found) {
-                        resolve(null);
-                    } else {
-                        resolve(response.user?.id ?? null);
-                    }
-                },
-            );
+            const request: user_registry.GetUserRequest = {
+                linkedAccount: { provider: 'residents', externalId: `${roomieId}_roomie` },
+                type: agent.ResidentType.RESIDENT_TYPE_UNSPECIFIED,
+            };
+            this.client.getUser(request, (err: Error | null, response?: user_registry.UserResponse) => {
+                this._clearTimeout(timer);
+                if (err || !response?.found) {
+                    resolve(null);
+                } else {
+                    resolve(response.user?.id ?? null);
+                }
+            });
         });
     }
 
@@ -335,10 +307,10 @@ export class GrpcClient {
                 return;
             }
             const timer = this._setTimeout(() => reject(new Error('timeout')), 5000);
-            this.client.TriggerFirmwareUpdate({ device }, (err: Error | null, response: any) => {
+            this.client.triggerFirmwareUpdate({ device }, (err: Error | null, response?: shared.StatusResponse) => {
                 this._clearTimeout(timer);
-                if (err) {
-                    reject(err);
+                if (err || !response) {
+                    reject(err ?? new Error('no response'));
                 } else {
                     resolve({ ok: response.ok, message: response.message });
                 }
@@ -349,9 +321,9 @@ export class GrpcClient {
     /**
      * Send a message to Hannah Core.
      *
-     * @param msg - Protobuf message object
+     * @param msg - AgentMessage frame
      */
-    send(msg: object): void {
+    send(msg: agent.AgentMessage): void {
         if (!this.stream) {
             return;
         }

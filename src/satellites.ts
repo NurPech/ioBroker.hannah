@@ -224,7 +224,7 @@ export class SatelliteWatcher {
                         );
                     });
             } else if (key === 'volume' || key === 'mute') {
-                this.send({ satellite_control: { room: originalRoom, device_id: actualDeviceId, [key]: state.val } });
+                this.send({ satelliteControl: { room: originalRoom, deviceId: actualDeviceId, [key]: state.val } });
                 this.adapter.log.debug(
                     `[satellites] satellite_control device='${actualDeviceId}' room='${originalRoom}' ${key}=${state.val}`,
                 );
@@ -247,15 +247,7 @@ export class SatelliteWatcher {
         if (!writableKeys.includes(key)) {
             return false;
         }
-        // keepCase:true in proto-loader → field names stay snake_case on the wire
-        const protoKey: Record<string, string> = {
-            dnd: 'dnd',
-            mute: 'mute',
-            announcement: 'announcement',
-            announcementSsml: 'announcement_ssml',
-            announcementRephrase: 'announcement_rephrase',
-        };
-        this.send({ satellite_control: { room: originalRoom, [protoKey[key] ?? key]: state.val } });
+        this.send({ satelliteControl: { room: originalRoom, deviceId: '', [key]: state.val } });
         if (resetKeys.includes(key)) {
             void this.adapter.setState(id, { val: '', ack: true });
         }
@@ -504,8 +496,8 @@ export class SatelliteWatcher {
      *
      * @param knownSatellites - Satellites currently reported by Hannah Core
      */
-    async removeUnknownSatellites(knownSatellites: Array<{ device_id: string; room: string }>): Promise<void> {
-        const known = new Set(knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.device_id)}`));
+    async removeUnknownSatellites(knownSatellites: Array<{ deviceId: string; room: string }>): Promise<void> {
+        const known = new Set(knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.deviceId)}`));
         const objects = await this.adapter.getForeignObjectsAsync(
             `${this.adapter.namespace}.satellites.rooms.*.*`,
             'device',

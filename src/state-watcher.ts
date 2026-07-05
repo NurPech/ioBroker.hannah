@@ -1,21 +1,6 @@
 import type * as utils from '@iobroker/adapter-core';
+import type { agent } from '@m1kad0/hannah-proto';
 import type { AgentMessageSender } from './grpc-client';
-
-type AgentStateValue = {
-    value: string;
-    ack: boolean;
-};
-
-type AgentDevice = {
-    state_id: string;
-    floor: string;
-    room: string; // room_id: enum ID segment, e.g. "wohnzimmer"
-    room_names: { [key: string]: string }; // all display names, e.g. {de: "Wohnzimmer", en: "Living Room"}
-    device: string;
-    device_type: string;
-    functions: string[];
-    value: AgentStateValue;
-};
 
 /**
  * Discovers ioBroker states via enum (rooms + functions) and extra prefixes,
@@ -127,7 +112,7 @@ export class StateWatcher {
         if (id === this.textCommandStateId && state.ack === false) {
             const text = String(state.val ?? '').trim();
             if (text) {
-                this.send({ text_command: { text } });
+                this.send({ textCommand: { text } });
                 this.adapter.log.debug(`[states] TextCommand: ${text}`);
                 this.adapter.setState(id, { val: '', ack: true }).catch(e => {
                     this.adapter.log.error(`[states] Failed to reset text command state: ${(e as Error).message}`);
@@ -147,11 +132,11 @@ export class StateWatcher {
 
         // Regular state → AgentStateUpdate
         this.send({
-            state_update: {
-                state_id: id,
+            stateUpdate: {
+                stateId: id,
                 value: JSON.stringify(state.val),
                 ack: state.ack ?? false,
-                ts: state.ts ?? Date.now(),
+                ts: BigInt(state.ts ?? Date.now()),
             },
         });
         return true;
@@ -189,7 +174,7 @@ export class StateWatcher {
      * @param rows Roomlist from getObjectViewAsync('system', 'enum', { startkey: 'enum.rooms.', endkey: 'enum.rooms.*' })
      */
     private _sendRoomSnapshot(rows: Array<{ id: string; value: ioBroker.Object | null }>): void {
-        const rooms: Array<{ room_id: string; display_names: { [key: string]: string } }> = [];
+        const rooms: Array<{ roomId: string; displayNames: { [key: string]: string } }> = [];
         for (const row of rows) {
             if (!row.value || row.value.type !== 'enum') {
                 continue;
@@ -209,9 +194,9 @@ export class StateWatcher {
                     }
                 }
             }
-            rooms.push({ room_id: roomId, display_names: displayNames });
+            rooms.push({ roomId, displayNames });
         }
-        this.send({ send_rooms: { rooms } });
+        this.send({ sendRooms: { rooms } });
         this.adapter.log.info(`[states] Room snapshot sent: ${rooms.length} rooms`);
     }
 
@@ -220,7 +205,7 @@ export class StateWatcher {
      * Replaces MQTT retained messages — called once after all subscriptions are set up.
      */
     private async _sendSnapshot(): Promise<void> {
-        const devices: AgentDevice[] = [];
+        const devices: agent.AgentDevice[] = [];
         let sent = 0;
 
         const [allRooms, allFunctions] = await Promise.all([
@@ -240,12 +225,12 @@ export class StateWatcher {
                     const meta = await this._resolveDeviceMeta(id, allRooms, allFunctions);
 
                     devices.push({
-                        state_id: id,
+                        stateId: id,
                         floor: meta.floor,
                         room: meta.room,
-                        room_names: meta.room_names,
+                        roomNames: meta.roomNames,
                         device: meta.device,
-                        device_type: meta.type,
+                        deviceType: meta.type,
                         functions: meta.functions,
                         value: {
                             value: JSON.stringify(state.val),
@@ -260,7 +245,7 @@ export class StateWatcher {
             }
         }
 
-        this.send({ send_snapshot: { devices } });
+        this.send({ sendSnapshot: { devices } });
 
         this.adapter.log.info(`[states] Snapshot: ${sent} current device states sent.`);
     }
@@ -271,7 +256,7 @@ export class StateWatcher {
         allFunctions: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
     ): Promise<{
         room: string;
-        room_names: { [key: string]: string };
+        roomNames: { [key: string]: string };
         device: string;
         type: string;
         floor: string;
@@ -439,7 +424,7 @@ export class StateWatcher {
 
         return {
             room: roomId,
-            room_names: roomNames,
+            roomNames: roomNames,
             device:
                 readableName(deviceObj?.common?.name) ??
                 readableName(stateObj?.common?.name) ??

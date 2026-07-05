@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Changed: replaced the manually-synced `hannah.proto` files and `@grpc/proto-loader` with the published `@m1kad0/hannah-proto` npm package (typed `@grpc/grpc-js` client, no local codegen). No functional change.
+
 ### 0.30.2 (2026-07-04)
 - Added: the adapter now sends a protocol-version header with every request to Hannah Core, so version mismatches between the two are caught with a clear error instead of unexplained misbehavior
 

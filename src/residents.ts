@@ -1,15 +1,9 @@
 import type * as utils from '@iobroker/adapter-core';
+import { agent } from '@m1kad0/hannah-proto';
 import type { AgentMessageSender } from './grpc-client';
 
-// String-Enum, nicht numerisch: grpc-client.ts lädt das Proto mit `enums: String`
-// (siehe loadSync-Optionen) — eingehende Commands liefern den Enum-Namen als String,
-// kein numerischer Wert.
-enum ResidentType {
-    UNSPECIFIED = 'RESIDENT_TYPE_UNSPECIFIED',
-    ROOMIE = 'ROOMIE',
-    GUEST = 'GUEST',
-    PET = 'PET',
-}
+type ResidentType = agent.ResidentType;
+const ResidentType = agent.ResidentType;
 
 const RESIDENT_PATH_SEGMENTS: Record<string, ResidentType> = {
     roomie: ResidentType.ROOMIE,
@@ -27,14 +21,6 @@ function residentTypeToSegment(type: ResidentType): string {
             return 'roomie';
     }
 }
-
-type AgentResident = {
-    roomie_id: string;
-    name: string;
-    type: ResidentType;
-    presence_state: number;
-    mood_level?: number; // Das '?' entspricht dem 'optional' aus der Proto-Datei
-};
 
 /**
  * Watches the residents adapter presence states and forwards changes
@@ -96,9 +82,10 @@ export class ResidentsWatcher {
         this.lastSent.set(key, presenceState);
 
         this.send({
-            resident_update: {
-                roomie_id: residentId,
-                presence_state: presenceState,
+            residentUpdate: {
+                roomieId: residentId,
+                name: '',
+                presenceState: presenceState,
                 type: RESIDENT_PATH_SEGMENTS[segment],
             },
         });
@@ -186,7 +173,7 @@ export class ResidentsWatcher {
             `residents.${this.instance}.pet.*`,
         ];
 
-        const residents: AgentResident[] = [];
+        const residents: agent.AgentResident[] = [];
         let sent = 0;
 
         for (const pattern of patterns) {
@@ -205,17 +192,17 @@ export class ResidentsWatcher {
 
                 residents.push({
                     name: this._getObjectName(obj, residentId),
-                    roomie_id: residentId,
-                    mood_level: typeof moodState?.val === 'number' ? moodState.val : undefined,
+                    roomieId: residentId,
+                    moodLevel: typeof moodState?.val === 'number' ? moodState.val : undefined,
                     type: RESIDENT_PATH_SEGMENTS[parts[2]],
-                    presence_state: typeof presenceState?.val === 'number' ? presenceState.val : 0,
+                    presenceState: typeof presenceState?.val === 'number' ? presenceState.val : 0,
                 });
                 sent++;
             }
         }
 
         this.send({
-            send_residents: {
+            sendResidents: {
                 residents,
             },
         });

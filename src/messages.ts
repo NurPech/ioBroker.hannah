@@ -179,7 +179,7 @@ export class MessagesHandler {
             }
             const roomList: string[] = Array.isArray(rooms) ? rooms : rooms ? [rooms] : room ? [room] : ['all'];
             for (const r of roomList) {
-                this.send({ satellite_control: { room: r, announcement: text } });
+                this.send({ satelliteControl: { room: r, deviceId: '', announcement: text } });
             }
             this.adapter.log.debug(`[messages] announce rooms=${JSON.stringify(roomList)} text=${text}`);
             if (obj.callback) {
@@ -198,7 +198,7 @@ export class MessagesHandler {
                 this._pending.set(correlationId, { from: obj.from, command: obj.command, cb: obj.callback });
             }
             const roomValue = room || 'all';
-            this.send({ ask_resident: { correlation_id: correlationId, room: roomValue, question: text } });
+            this.send({ askResident: { correlationId, room: roomValue, question: text } });
             this.adapter.log.debug(`[messages] ask corr=${correlationId} room=${roomValue} text=${text}`);
         }
     }
@@ -207,18 +207,18 @@ export class MessagesHandler {
      * Called when Hannah sends back a resident's spoken answer for a pending ask.
      *
      * @param cmd - callback command payload
-     * @param cmd.correlation_id - correlation id for the pending ask
+     * @param cmd.correlationId - correlation id for the pending ask
      * @param cmd.answer - resident's spoken answer
      */
-    public onResidentAnswered(cmd: { correlation_id: string; answer: string }): void {
-        const { correlation_id, answer } = cmd;
-        const cb = this._pending.get(correlation_id);
+    public onResidentAnswered(cmd: { correlationId: string; answer: string }): void {
+        const { correlationId, answer } = cmd;
+        const cb = this._pending.get(correlationId);
         if (!cb) {
-            this.adapter.log.warn(`[messages] resident_answered: unknown correlation_id ${correlation_id}`);
+            this.adapter.log.warn(`[messages] resident_answered: unknown correlation_id ${correlationId}`);
             return;
         }
-        this._pending.delete(correlation_id);
-        this.adapter.log.debug(`[messages] resident_answered corr=${correlation_id} answer=${answer}`);
+        this._pending.delete(correlationId);
+        this.adapter.log.debug(`[messages] resident_answered corr=${correlationId} answer=${answer}`);
         this.adapter.sendTo(cb.from, cb.command, { answer }, cb.cb);
     }
 

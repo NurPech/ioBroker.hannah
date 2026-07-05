@@ -24,9 +24,9 @@
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",
-    "@grpc/proto-loader": "^0.8.1",
     "@iobroker/adapter-core": "^3.4.1",
     "@iobroker/dm-utils": "^3.0.19",
+    "@m1kad0/hannah-proto": "^0.3.6",
     "adm-zip": "^0.5.17"
   },
   "devDependencies": {
@@ -63,14 +63,13 @@
     "admin{,/!(src)/**}/*.{html,css,png,svg,jpg,js}",
     "admin/build/**",
     "build/",
-    "build/proto/",
     "www/",
     "io-package.json",
     "LICENSE"
   ],
   "scripts": {
     "prebuild": "rimraf build admin/build",
-    "build": "build-adapter all && node -e \"const fs=require('fs');fs.mkdirSync('build/proto',{recursive:true});for(const f of fs.readdirSync('src/proto').filter(f=>f.endsWith('.proto')||f==='PROTO_VERSION'))fs.copyFileSync('src/proto/'+f,'build/proto/'+f)\"",
+    "build": "build-adapter all",
     "watch": "build-adapter all --watch",
     "prebuild:ts": "rimraf build",
     "build:ts": "build-adapter ts",
