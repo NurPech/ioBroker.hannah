@@ -6,6 +6,21 @@ function sanitizeId(name: string): string {
 }
 
 /**
+ * Canonical, case-insensitive key for a room's object-tree path. Two raw room
+ * strings that only differ by case or letter-vs-underscore formatting (e.g.
+ * "Leonie Schlafzimmer" vs "leonie_schlafzimmer") must resolve to the exact
+ * same physical path — sanitizeId() alone preserves case, which previously
+ * let such a pair fork into two separate, both-valid object trees for the
+ * same satellite (GitHub #96). The human-readable form still gets shown via
+ * roomNames/the folder's `name`; this key is for path construction only.
+ *
+ * @param name - Raw room name as reported by Hannah Core
+ */
+function roomPathKey(name: string): string {
+    return sanitizeId(name).toLowerCase();
+}
+
+/**
  * Manages satellite states under hannah.<instance>.satellites.rooms.<room>.
  * Room-level states (dnd, mute, volume, speaking, …) are shared across all
  * satellites in a room. Per-satellite online state lives at
@@ -16,7 +31,7 @@ export class SatelliteWatcher {
     private send: AgentMessageSender;
     private getGrpc: () => GrpcClient | null;
     private deviceRooms: Map<string, string> = new Map(); // deviceId.lower → room
-    private roomNames: Map<string, string> = new Map(); // sanitizeId(room).toLowerCase() → original room
+    private roomNames: Map<string, string> = new Map(); // roomPathKey(room) → original room
     private deviceToObjectKey: Map<string, string> = new Map(); // deviceId.lower → objectKey (== deviceId since v0.34)
     private objectKeyToDeviceId: Map<string, string> = new Map(); // objectKey.lower → deviceId
 
@@ -45,7 +60,7 @@ export class SatelliteWatcher {
      * @returns true if the (now empty) room container was also removed
      */
     private async _removeSatelliteSubtree(objectKey: string, room: string): Promise<boolean> {
-        const roomBase = `satellites.rooms.${sanitizeId(room)}`;
+        const roomBase = `satellites.rooms.${roomPathKey(room)}`;
         const satBase = `${roomBase}.${sanitizeId(objectKey)}`;
 
         await this.adapter.delObjectAsync(satBase, { recursive: true });
@@ -56,7 +71,7 @@ export class SatelliteWatcher {
         const remaining = await this.adapter.getForeignObjectsAsync(`${prefix}*`, 'device');
         if (Object.keys(remaining ?? {}).length === 0) {
             await this.adapter.delObjectAsync(roomBase, { recursive: true });
-            this.roomNames.delete(sanitizeId(room).toLowerCase());
+            this.roomNames.delete(roomPathKey(room));
             return true;
         }
         return false;
@@ -124,7 +139,7 @@ export class SatelliteWatcher {
         if (online) {
             const prevRoom = this.deviceRooms.get(deviceId.toLowerCase());
             const prevObjectKey = this.deviceToObjectKey.get(deviceId.toLowerCase());
-            if (prevRoom && prevObjectKey && prevRoom.toLowerCase() !== room.toLowerCase()) {
+            if (prevRoom && prevObjectKey && roomPathKey(prevRoom) !== roomPathKey(room)) {
                 await this._removeSatelliteSubtree(prevObjectKey, prevRoom);
                 this.adapter.log.info(
                     `[satellites] ${deviceId} moved from room '${prevRoom}' to '${room}' — cleaned up old path.`,
@@ -133,9 +148,21 @@ export class SatelliteWatcher {
             this.deviceRooms.set(deviceId.toLowerCase(), room);
             this.deviceToObjectKey.set(deviceId.toLowerCase(), objectKey);
             this.objectKeyToDeviceId.set(objectKey.toLowerCase(), deviceId);
-            this.roomNames.set(sanitizeId(room).toLowerCase(), room);
+            this.roomNames.set(roomPathKey(room), room);
         } else {
+            const prevRoom = this.deviceRooms.get(deviceId.toLowerCase());
             const prevKey = this.deviceToObjectKey.get(deviceId.toLowerCase());
+            // An offline event can arrive with a differently-formatted room string than
+            // the satellite was last online with (e.g. a display-name fallback used while
+            // disconnected vs. the live technical room value) — without this, the code
+            // below unconditionally creates a new tree under `room` while the old one
+            // under `prevRoom` is orphaned, since this branch never used to clean up (#96).
+            if (prevRoom && prevKey && roomPathKey(prevRoom) !== roomPathKey(room)) {
+                await this._removeSatelliteSubtree(prevKey, prevRoom);
+                this.adapter.log.info(
+                    `[satellites] ${deviceId} went offline reporting room '${room}' (was '${prevRoom}') — cleaned up old path.`,
+                );
+            }
             this.deviceRooms.delete(deviceId.toLowerCase());
             this.deviceToObjectKey.delete(deviceId.toLowerCase());
             if (prevKey) {
@@ -147,37 +174,40 @@ export class SatelliteWatcher {
         await this._setSatelliteOnline(objectKey, room, online);
         if (online && address) {
             const ip = address.split(':')[0];
-            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.address`, {
+            await this.adapter.setState(`satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}.address`, {
                 val: ip,
                 ack: true,
             });
         }
         if (volume !== undefined) {
-            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.volume`, {
+            await this.adapter.setState(`satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}.volume`, {
                 val: volume,
                 ack: true,
             });
         }
         if (mute !== undefined) {
-            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.mute`, {
+            await this.adapter.setState(`satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}.mute`, {
                 val: mute,
                 ack: true,
             });
         }
         if (lastSeen !== undefined) {
-            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.last_seen`, {
+            await this.adapter.setState(`satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}.last_seen`, {
                 val: lastSeen,
                 ack: true,
             });
         }
         if (roomMismatch !== undefined) {
-            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.room_mismatch`, {
-                val: roomMismatch,
-                ack: true,
-            });
+            await this.adapter.setState(
+                `satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}.room_mismatch`,
+                {
+                    val: roomMismatch,
+                    ack: true,
+                },
+            );
         }
         if (ownerDisplayName !== undefined) {
-            await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.owner`, {
+            await this.adapter.setState(`satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}.owner`, {
                 val: ownerDisplayName,
                 ack: true,
             });
@@ -204,7 +234,7 @@ export class SatelliteWatcher {
             return;
         }
         const objectKey = this.deviceToObjectKey.get(deviceId.toLowerCase()) ?? deviceId;
-        const base = `satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}`;
+        const base = `satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}`;
         await this.adapter.setState(`${base}.firmware_version`, { val: version, ack: true });
         if (updateAvailable !== undefined) {
             await this.adapter.setState(`${base}.update_available`, { val: updateAvailable, ack: true });
@@ -321,7 +351,7 @@ export class SatelliteWatcher {
     }
 
     private async _ensureRoomStates(room: string): Promise<void> {
-        const base = `satellites.rooms.${sanitizeId(room)}`;
+        const base = `satellites.rooms.${roomPathKey(room)}`;
         await this.adapter.setObjectNotExistsAsync(base, {
             type: 'folder',
             common: { name: `Room ${room}` },
@@ -375,7 +405,7 @@ export class SatelliteWatcher {
     }
 
     private async _ensureSatelliteStates(objectKey: string, room: string, displayName: string): Promise<void> {
-        const base = `satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}`;
+        const base = `satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}`;
         await this.adapter.setObjectNotExistsAsync(base, {
             type: 'device',
             common: { name: `${displayName}` },
@@ -523,7 +553,7 @@ export class SatelliteWatcher {
      * @param knownSatellites - Satellites currently reported by Hannah Core
      */
     async removeUnknownSatellites(knownSatellites: Array<{ deviceId: string; room: string }>): Promise<void> {
-        const known = new Set(knownSatellites.map(s => `${sanitizeId(s.room)}.${sanitizeId(s.deviceId)}`));
+        const known = new Set(knownSatellites.map(s => `${roomPathKey(s.room)}.${sanitizeId(s.deviceId)}`));
         const objects = await this.adapter.getForeignObjectsAsync(
             `${this.adapter.namespace}.satellites.rooms.*.*`,
             'device',
@@ -557,7 +587,7 @@ export class SatelliteWatcher {
         if (!room) {
             return;
         }
-        await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.${sanitizeId(objectKey)}.online`, {
+        await this.adapter.setState(`satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}.online`, {
             val: online,
             ack: true,
         });
@@ -565,9 +595,9 @@ export class SatelliteWatcher {
 
     private async _updateAnyOnline(room: string): Promise<void> {
         // Read all <deviceId>.online states under this room and compute anyOnline
-        const pattern = `${this.adapter.namespace}.satellites.rooms.${sanitizeId(room)}.*.online`;
+        const pattern = `${this.adapter.namespace}.satellites.rooms.${roomPathKey(room)}.*.online`;
         const states = await this.adapter.getForeignStatesAsync(pattern);
         const anyOnline = Object.values(states).some(s => s?.val === true);
-        await this.adapter.setState(`satellites.rooms.${sanitizeId(room)}.anyOnline`, { val: anyOnline, ack: true });
+        await this.adapter.setState(`satellites.rooms.${roomPathKey(room)}.anyOnline`, { val: anyOnline, ack: true });
     }
 }

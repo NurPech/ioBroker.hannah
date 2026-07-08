@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: a satellite could end up with two separate room object trees (e.g. `Leonie_Schlafzimmer` and `leonie_schlafzimmer`) if its room string changed case or formatting between updates — room paths are now built from a case-insensitive canonical key, and an offline update reporting a differently-formatted room than the satellite was last online with now also cleans up the old path instead of only the online case
+
 ### 0.31.0 (2026-07-08)
 - Fixed: a satellite's object tree is now cleaned up from its old room immediately when a room reassignment arrives, instead of leaving a stale path behind until the satellite happened to reconnect
 
