@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.31.0 (2026-07-08)
 - Fixed: a satellite's object tree is now cleaned up from its old room immediately when a room reassignment arrives, instead of leaving a stale path behind until the satellite happened to reconnect
 
 ### 0.30.3 (2026-07-05)

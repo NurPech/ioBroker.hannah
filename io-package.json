@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.30.3",
+    "version": "0.31.0",
     "news": {
+      "0.31.0": {
+        "en": "Fixed: a satellite's object tree is now cleaned up from its old room immediately when a room reassignment arrives, instead of leaving a stale path behind until the satellite happened to reconnect",
+        "de": "Behoben: Der Objektbaum eines Satelliten wird nun sofort nach einer Raumzuweisung aus seinem alten Raum entfernt, anstatt einen veralteten Pfad zu hinterlassen, bis der Satellit die Verbindung wiederherstellt.",
+        "ru": "Исправлено: дерево объектов спутника теперь немедленно очищается от старого помещения при поступлении запроса на переназначение помещения, вместо того чтобы оставлять застоявшийся путь до тех пор, пока спутник не переподключится.",
+        "pt": "Corrigido: agora a árvore de objetos de um satélite é limpa imediatamente de sua sala anterior quando ocorre uma reatribuição de sala, em vez de deixar um caminho obsoleto até que o satélite se reconecte.",
+        "nl": "Opgelost: de objectstructuur van een satelliet wordt nu direct na een herindeling van de ruimte opgeschoond, in plaats van een verouderd pad achter te laten totdat de satelliet opnieuw verbinding maakt.",
+        "fr": "Corrigé : l'arborescence d'objets d'un satellite est désormais nettoyée de son ancienne salle dès qu'une réaffectation de salle survient, au lieu de laisser un chemin obsolète jusqu'à ce que le satellite se reconnecte.",
+        "it": "Risolto: l'albero degli oggetti di un satellite viene ora ripulito immediatamente dalla sua vecchia stanza quando arriva una riassegnazione della stanza, invece di lasciare un percorso obsoleto fino a quando il satellite non si riconnette.",
+        "es": "Corregido: el árbol de objetos de un satélite ahora se limpia de su antigua sala inmediatamente cuando llega una reasignación de sala, en lugar de dejar una ruta obsoleta hasta que el satélite se vuelva a conectar.",
+        "pl": "Naprawiono: drzewo obiektów satelity jest teraz natychmiast czyszczone ze starego pomieszczenia po przybyciu przydziału pomieszczenia, zamiast pozostawiać nieaktualną ścieżkę do momentu ponownego połączenia satelity",
+        "uk": "Виправлено: дерево об'єктів супутника тепер очищається від його старої кімнати негайно, коли надходить повідомлення про перепризначення кімнати, замість того, щоб залишати застарілий шлях, поки супутник випадково не підключиться знову.",
+        "zh-cn": "已修复：现在，当房间重新分配到达时，卫星的对象树会立即从其旧房间中清除，而不会像以前那样留下陈旧的路径，直到卫星重新连接后才会清除。"
+      },
       "0.30.3": {
         "en": "Changed: replaced the manually-synced `hannah.proto` files and `@grpc/proto-loader` with the published `@m1kad0/hannah-proto` npm package (typed `@grpc/grpc-js` client, no local codegen). No functional change.",
         "de": "Geändert: Die manuell synchronisierten `hannah.proto`-Dateien und `@grpc/proto-loader` wurden durch das veröffentlichte npm-Paket `@m1kad0/hannah-proto` ersetzt (Typ: `@grpc/grpc-js`-Client, keine lokale Codegenerierung). Funktionale Änderungen bestehen nicht.",
@@ -80,19 +93,6 @@
         "pl": "Dodano: blok Blockly \"Hannah announce\" ma teraz pole wejściowe \"Person (optional)\", generujące nowe pole `person`.",
         "uk": "Додано: блок Blockly «Hannah announce» тепер має поле введення «Person (optional)», яке генерує нове поле `person`.",
         "zh-cn": "新增：Blockly 的 \"Hannah announce\" 积木块现在有一个 \"Person (optional)\" 输入项，用于生成新的 `person` 字段。"
-      },
-      "0.29.0": {
-        "en": "Added: `owner` state under `satellites.rooms.<room>.<device>.*` — shows the Person a satellite is assigned to in Hannah Core, if any.\nAdded: `sendTo('announce', ...)` accepts a new optional `person` field (roomie ID, e.g. \"leonie\") to target a specific Person directly, in addition to or independent of `room`/`rooms`.",
-        "de": "Hinzugefügt: Zustand `owner` unter `satellites.rooms.<room>.<device>.*` — zeigt die Person, der ein Satellit in Hannah Core zugewiesen ist, falls vorhanden.\nHinzugefügt: `sendTo('announce', ...)` akzeptiert ein neues optionales Feld `person` (Roomie-ID, z. B. \"leonie\"), um gezielt eine bestimmte Person anzusprechen, zusätzlich zu oder unabhängig von `room`/`rooms`.",
-        "ru": "Добавлено: состояние `owner` в `satellites.rooms.<room>.<device>.*` — показывает Человека, которому назначен спутник в Hannah Core, если таковой имеется.\nДобавлено: `sendTo('announce', ...)` теперь принимает новое необязательное поле `person` (roomie ID, например \"leonie\") для прямого таргетинга конкретного человека, в дополнение к `room`/`rooms` или независимо от них.",
-        "pt": "Adicionado: estado `owner` em `satellites.rooms.<room>.<device>.*` — mostra a Pessoa à qual um satélite está atribuído no Hannah Core, se houver.\nAdicionado: `sendTo('announce', ...)` agora aceita um novo campo opcional `person` (ID do roomie, por exemplo, \"leonie\") para direcionar uma Pessoa específica diretamente, além de ou independentemente de `room`/`rooms`.",
-        "nl": "Toegevoegd: status `owner` onder `satellites.rooms.<room>.<device>.*` — toont de Persoon aan wie een satelliet is toegewezen in Hannah Core, indien aanwezig.\nToegevoegd: `sendTo('announce', ...)` accepteert een nieuw optioneel veld `person` (roomie-ID, bijv. \"leonie\") om een specifieke Persoon rechtstreeks te targeten, naast of onafhankelijk van `room`/`rooms`.",
-        "fr": "Ajouté : état `owner` sous `satellites.rooms.<room>.<device>.*` — indique la Personne à laquelle un satellite est attribué dans Hannah Core, le cas échéant.\nAjouté : `sendTo('announce', ...)` accepte désormais un nouveau champ optionnel `person` (ID roomie, par ex. \"leonie\") pour cibler directement une Personne spécifique, en plus de ou indépendamment de `room`/`rooms`.",
-        "it": "Aggiunto: stato `owner` sotto `satellites.rooms.<room>.<device>.*` — mostra la Persona a cui è assegnato un satellite in Hannah Core, se presente.\nAggiunto: `sendTo('announce', ...)` ora accetta un nuovo campo opzionale `person` (ID roomie, ad es. \"leonie\") per targetizzare direttamente una Persona specifica, in aggiunta a o indipendentemente da `room`/`rooms`.",
-        "es": "Añadido: estado `owner` bajo `satellites.rooms.<room>.<device>.*` — muestra la Persona a la que está asignado un satélite en Hannah Core, si la hay.\nAñadido: `sendTo('announce', ...)` ahora acepta un nuevo campo opcional `person` (ID de roomie, p. ej. \"leonie\") para dirigirse directamente a una Persona específica, además de o independientemente de `room`/`rooms`.",
-        "pl": "Dodano: stan `owner` w `satellites.rooms.<room>.<device>.*` — pokazuje Osobę, do której przypisany jest satelita w Hannah Core, jeśli taka istnieje.\nDodano: `sendTo('announce', ...)` akceptuje teraz nowe opcjonalne pole `person` (identyfikator roomie, np. \"leonie\"), aby bezpośrednio celować w konkretną Osobę, dodatkowo do `room`/`rooms` lub niezależnie od nich.",
-        "uk": "Додано: стан `owner` у `satellites.rooms.<room>.<device>.*` — показує Особу, якій призначено супутник у Hannah Core, якщо така є.\nДодано: `sendTo('announce', ...)` тепер приймає нове необов'язкове поле `person` (roomie ID, напр. \"leonie\") для прямого націлювання на конкретну Особу, додатково до `room`/`rooms` або незалежно від них.",
-        "zh-cn": "新增：`satellites.rooms.<room>.<device>.*` 下新增 `owner` 状态——显示该卫星在 Hannah Core 中被分配给的人员（如果有）。\n新增：`sendTo('announce', ...)` 现在接受一个新的可选字段 `person`（roomie ID，例如 \"leonie\"），可直接针对特定人员，可与 `room`/`rooms` 一起使用，也可独立使用。"
       }
     },
     "blockly": true,
