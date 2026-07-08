@@ -1,0 +1,16 @@
+{
+    // Used by mocha (test/mocha.setup.js, via ts-node/register) to run src/**/*.test.ts.
+    // Separate from tsconfig.json because that one excludes *.test.ts from the production
+    // type-check (npm run check) and doesn't know about the mocha/chai/sinon-chai globals.
+    // rootDir is set explicitly because ts-node needs one to compile in-memory even with
+    // noEmit — tsconfig.json's implied rootDir (computed from its own broader include list)
+    // isn't picked up when this file narrows "include" to just src/**/*.ts.
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "types": ["node", "mocha", "chai", "sinon-chai", "chai-as-promised"],
+        "rootDir": ".",
+        "noEmit": true
+    },
+    "include": ["src/**/*.ts"],
+    "exclude": ["build/**", "node_modules/**"]
+}
