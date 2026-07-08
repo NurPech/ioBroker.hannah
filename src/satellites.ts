@@ -32,24 +32,23 @@ export class SatelliteWatcher {
     }
 
     /**
-     * Deletes a satellite's full object tree. If it was the last satellite
-     * (device) in its room, the room container — including the shared
-     * room-level states (dnd, announcement, …) — is removed too, so empty
-     * rooms don't linger in the object database forever.
+     * Removes a satellite's object subtree from a given room. If it was the last
+     * satellite (device) in that room, the room container — including the shared
+     * room-level states (dnd, announcement, …) — is removed too, so empty rooms
+     * don't linger in the object database forever.
+     *
+     * Does NOT touch deviceRooms/deviceToObjectKey/objectKeyToDeviceId — callers
+     * that are moving/removing the device update those themselves right after.
      *
      * @param objectKey - Satellite device ID (raw, unsanitized)
-     * @param room - Room the satellite is assigned to (raw name)
+     * @param room - Room to remove the satellite's subtree from (raw name)
      * @returns true if the (now empty) room container was also removed
      */
-    async deleteSatellite(objectKey: string, room: string): Promise<boolean> {
+    private async _removeSatelliteSubtree(objectKey: string, room: string): Promise<boolean> {
         const roomBase = `satellites.rooms.${sanitizeId(room)}`;
         const satBase = `${roomBase}.${sanitizeId(objectKey)}`;
 
         await this.adapter.delObjectAsync(satBase, { recursive: true });
-        const deviceId = this.objectKeyToDeviceId.get(objectKey.toLowerCase()) ?? objectKey;
-        this.deviceRooms.delete(deviceId.toLowerCase());
-        this.deviceToObjectKey.delete(deviceId.toLowerCase());
-        this.objectKeyToDeviceId.delete(objectKey.toLowerCase());
 
         // Remove the room container only if no satellite (device) remains in it.
         // Room-level states are not of type 'device', so they don't count.
@@ -61,6 +60,25 @@ export class SatelliteWatcher {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Deletes a satellite's full object tree. If it was the last satellite
+     * (device) in its room, the room container — including the shared
+     * room-level states (dnd, announcement, …) — is removed too, so empty
+     * rooms don't linger in the object database forever.
+     *
+     * @param objectKey - Satellite device ID (raw, unsanitized)
+     * @param room - Room the satellite is assigned to (raw name)
+     * @returns true if the (now empty) room container was also removed
+     */
+    async deleteSatellite(objectKey: string, room: string): Promise<boolean> {
+        const removedRoom = await this._removeSatelliteSubtree(objectKey, room);
+        const deviceId = this.objectKeyToDeviceId.get(objectKey.toLowerCase()) ?? objectKey;
+        this.deviceRooms.delete(deviceId.toLowerCase());
+        this.deviceToObjectKey.delete(deviceId.toLowerCase());
+        this.objectKeyToDeviceId.delete(objectKey.toLowerCase());
+        return removedRoom;
     }
 
     /**
@@ -104,6 +122,14 @@ export class SatelliteWatcher {
             return;
         }
         if (online) {
+            const prevRoom = this.deviceRooms.get(deviceId.toLowerCase());
+            const prevObjectKey = this.deviceToObjectKey.get(deviceId.toLowerCase());
+            if (prevRoom && prevObjectKey && prevRoom.toLowerCase() !== room.toLowerCase()) {
+                await this._removeSatelliteSubtree(prevObjectKey, prevRoom);
+                this.adapter.log.info(
+                    `[satellites] ${deviceId} moved from room '${prevRoom}' to '${room}' — cleaned up old path.`,
+                );
+            }
             this.deviceRooms.set(deviceId.toLowerCase(), room);
             this.deviceToObjectKey.set(deviceId.toLowerCase(), objectKey);
             this.objectKeyToDeviceId.set(objectKey.toLowerCase(), deviceId);
