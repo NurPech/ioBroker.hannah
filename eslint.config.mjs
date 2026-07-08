@@ -5,6 +5,19 @@ import config from '@iobroker/eslint-config';
 export default [
     ...config,
     {
+        // tsconfig.json excludes *.test.ts (separate tsconfig.test.json is used for those,
+        // see test/mocha.setup.js) — the shared config's projectService doesn't know about
+        // that second project, so point it there explicitly for test files.
+        files: ['src/**/*.test.ts'],
+        languageOptions: {
+            parserOptions: {
+                projectService: false,
+                project: './tsconfig.test.json',
+                tsconfigRootDir: import.meta.dirname,
+            },
+        },
+    },
+    {
         // specify files to exclude from linting here
         ignores: [
             '.dev-server/',
