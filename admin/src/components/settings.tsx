@@ -48,6 +48,8 @@ export interface SatelliteDefaults {
     assetToken?: string;
     /** Skip TLS certificate validation (for self-signed certs) */
     tlsSkipVerify?: boolean;
+    /** Bearer token for the satellite's wireless POST /nvs endpoint */
+    nvsToken?: string;
 }
 
 interface SettingsProps {

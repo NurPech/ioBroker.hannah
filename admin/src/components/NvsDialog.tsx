@@ -10,6 +10,9 @@ import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import LinearProgress from '@mui/material/LinearProgress';
 import TextField from '@mui/material/TextField';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { ESPLoader, Transport, UsbJtagSerialReset } from 'esptool-js';
 import { encodeNVS } from '@m1kad0/esp-nvs-utils';
@@ -31,15 +34,19 @@ interface NvsConfig {
     assetUrl: string;
     assetToken: string;
     tlsSkipVerify: boolean;
+    nvsToken: string;
 }
 
 type NvsStep = 'config' | 'connecting' | 'flashing' | 'done' | 'error';
+type NvsMode = 'serial' | 'wireless';
 
 interface Props {
     open: boolean;
     onClose: () => void;
     deviceId: string;
     displayName?: string;
+    /** Whether the satellite currently has a live connection — gates the Wireless option. */
+    online?: boolean;
     defaults?: SatelliteDefaults;
     socket?: AdminConnection;
     adapterNamespace?: string;
@@ -48,7 +55,8 @@ interface Props {
 const NVS_OFFSET = 0x9000;
 const NVS_SIZE = 0x5000;
 
-const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defaults, socket, adapterNamespace }) => {
+const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, online, defaults, socket, adapterNamespace }) => {
+    const [mode, setMode] = useState<NvsMode>('serial');
     const [config, setConfig] = useState<NvsConfig>({
         displayName: '',
         wifiSsid: '',
@@ -63,6 +71,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
         assetUrl: '',
         assetToken: '',
         tlsSkipVerify: false,
+        nvsToken: '',
     });
 
     const [step, setStep] = useState<NvsStep>('config');
@@ -73,6 +82,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
 
     useEffect(() => {
         if (open) {
+            setMode('serial');
             setConfig({
                 displayName: displayName || deviceId,
                 wifiSsid: defaults?.wifiSsid ?? '',
@@ -87,6 +97,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
                 assetUrl: defaults?.assetUrl ?? '',
                 assetToken: defaults?.assetToken ?? '',
                 tlsSkipVerify: defaults?.tlsSkipVerify ?? false,
+                nvsToken: defaults?.nvsToken ?? '',
             });
             setStep('config');
             setLog([]);
@@ -137,6 +148,12 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
                         : []),
                     ...(config.assetToken
                         ? [{ name: 'asset_token', encoding: 'string' as const, value: config.assetToken }]
+                        : []),
+                    // Preserve the wireless POST /nvs token across a Serial rewrite — this
+                    // dialog writes the full raw NVS partition, so leaving it out would
+                    // silently erase an already-working wireless path (Refs #99).
+                    ...(config.nvsToken
+                        ? [{ name: 'nvs_token', encoding: 'string' as const, value: config.nvsToken }]
                         : []),
                     { name: 'ww_threshold', encoding: 'u8', value: 75 },
                     { name: 'tls_skip', encoding: 'u8', value: config.tlsSkipVerify ? 1 : 0 },
@@ -214,13 +231,64 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
         }
     };
 
+    // Pushes only the subset of fields the satellite's wireless POST /nvs endpoint
+    // actually accepts (Refs #136) — no seed, no mqtt_user/pass, no ota_url/asset_url,
+    // no tls_skip. Targets an already-connected satellite via updateSatelliteNvs,
+    // resolved server-side to its live IP (Refs #99).
+    const handleWirelessWrite = async (): Promise<void> => {
+        setStep('connecting');
+        setLog([]);
+        setProgress(0);
+        setErrorMsg('');
+
+        try {
+            if (!socket || !adapterNamespace) {
+                throw new Error(I18n.t('Adapter connection not available'));
+            }
+
+            const values: Record<string, string | number> = {
+                wifi_ssid: config.wifiSsid,
+                wifi_pass: config.wifiPass,
+                mqtt_broker: config.mqttBroker,
+                mqtt_port: parseInt(config.mqttPort, 10) || 1883,
+                ota_channel: config.otaChannel,
+            };
+            if (config.otaToken) {
+                values.ota_token = config.otaToken;
+            }
+            if (config.assetToken) {
+                values.asset_token = config.assetToken;
+            }
+
+            addLog(I18n.t('Sending NVS update to satellite...'));
+            const result = (await (socket as any).sendTo(adapterNamespace, 'updateSatelliteNvs', {
+                deviceId,
+                values,
+            })) as { ok?: boolean; error?: string };
+            if (result?.error || result?.ok === false) {
+                throw new Error(result?.error ?? I18n.t('unknown error'));
+            }
+
+            setProgress(100);
+            addLog(I18n.t('NVS updated. Satellite is restarting.'));
+            setStep('done');
+        } catch (err: any) {
+            setErrorMsg(err?.message ?? String(err));
+            setStep('error');
+            addLog(`${I18n.t('Error:')} ${err?.message ?? err}`);
+        }
+    };
+
     const set = (field: keyof NvsConfig) => (e: React.ChangeEvent<HTMLInputElement>) =>
         setConfig(prev => ({ ...prev, [field]: e.target.value }));
 
     const setCheck = (field: keyof NvsConfig) => (e: React.ChangeEvent<HTMLInputElement>) =>
         setConfig(prev => ({ ...prev, [field]: e.target.checked }));
 
-    const canFlash = config.displayName.trim() !== '' && config.wifiSsid.trim() !== '' && config.mqttBroker.trim() !== '';
+    const canFlash =
+        mode === 'serial'
+            ? config.displayName.trim() !== '' && config.wifiSsid.trim() !== '' && config.mqttBroker.trim() !== ''
+            : config.wifiSsid.trim() !== '' && config.mqttBroker.trim() !== '';
 
     return (
         <Dialog
@@ -235,15 +303,51 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
             <DialogContent>
                 {(step === 'config' || step === 'connecting' || step === 'flashing') && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                        <TextField
-                            label={I18n.t('Display Name')}
-                            value={config.displayName}
-                            onChange={set('displayName')}
-                            size="small"
-                            fullWidth
-                            disabled={step !== 'config'}
-                            required
-                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <ToggleButtonGroup
+                                value={mode}
+                                exclusive
+                                size="small"
+                                disabled={step !== 'config'}
+                                onChange={(_, next: NvsMode | null) => next && setMode(next)}
+                            >
+                                <ToggleButton value="serial">{I18n.t('Write via Serial')}</ToggleButton>
+                                <Tooltip
+                                    title={online ? '' : I18n.t('Satellite must be connected for wireless writes')}
+                                >
+                                    <span>
+                                        <ToggleButton
+                                            value="wireless"
+                                            disabled={!online}
+                                        >
+                                            {I18n.t('Write wireless')}
+                                        </ToggleButton>
+                                    </span>
+                                </Tooltip>
+                            </ToggleButtonGroup>
+                        </Box>
+                        {mode === 'wireless' && (
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                            >
+                                {I18n.t(
+                                    'Wireless only updates WiFi, MQTT broker/port, OTA channel and the OTA/asset tokens — everything else requires Serial.',
+                                )}
+                            </Typography>
+                        )}
+
+                        {mode === 'serial' && (
+                            <TextField
+                                label={I18n.t('Display Name')}
+                                value={config.displayName}
+                                onChange={set('displayName')}
+                                size="small"
+                                fullWidth
+                                disabled={step !== 'config'}
+                                required
+                            />
+                        )}
 
                         <Divider />
                         <Typography
@@ -298,25 +402,27 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
                                 disabled={step !== 'config'}
                             />
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            <TextField
-                                label={I18n.t('User')}
-                                value={config.mqttUser}
-                                onChange={set('mqttUser')}
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                            />
-                            <TextField
-                                label={I18n.t('Password')}
-                                value={config.mqttPass}
-                                onChange={set('mqttPass')}
-                                type="password"
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                            />
-                        </Box>
+                        {mode === 'serial' && (
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                                <TextField
+                                    label={I18n.t('User')}
+                                    value={config.mqttUser}
+                                    onChange={set('mqttUser')}
+                                    size="small"
+                                    fullWidth
+                                    disabled={step !== 'config'}
+                                />
+                                <TextField
+                                    label={I18n.t('Password')}
+                                    value={config.mqttPass}
+                                    onChange={set('mqttPass')}
+                                    type="password"
+                                    size="small"
+                                    fullWidth
+                                    disabled={step !== 'config'}
+                                />
+                            </Box>
+                        )}
 
                         <Typography
                             variant="caption"
@@ -324,14 +430,16 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
                         >
                             {I18n.t('OTA')}
                         </Typography>
-                        <TextField
-                            label={I18n.t('OTA URL')}
-                            value={config.otaUrl}
-                            onChange={set('otaUrl')}
-                            size="small"
-                            fullWidth
-                            disabled={step !== 'config'}
-                        />
+                        {mode === 'serial' && (
+                            <TextField
+                                label={I18n.t('OTA URL')}
+                                value={config.otaUrl}
+                                onChange={set('otaUrl')}
+                                size="small"
+                                fullWidth
+                                disabled={step !== 'config'}
+                            />
+                        )}
                         <Box sx={{ display: 'flex', gap: 2 }}>
                             <TextField
                                 label={I18n.t('Channel')}
@@ -358,14 +466,16 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
                         >
                             {I18n.t('Asset Server')}
                         </Typography>
-                        <TextField
-                            label={I18n.t('Asset URL')}
-                            value={config.assetUrl}
-                            onChange={set('assetUrl')}
-                            size="small"
-                            fullWidth
-                            disabled={step !== 'config'}
-                        />
+                        {mode === 'serial' && (
+                            <TextField
+                                label={I18n.t('Asset URL')}
+                                value={config.assetUrl}
+                                onChange={set('assetUrl')}
+                                size="small"
+                                fullWidth
+                                disabled={step !== 'config'}
+                            />
+                        )}
                         <TextField
                             label={I18n.t('Token')}
                             value={config.assetToken}
@@ -375,24 +485,26 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
                             fullWidth
                             disabled={step !== 'config'}
                         />
-                        <FormControlLabel
-                            control={
-                                <Checkbox
-                                    checked={config.tlsSkipVerify}
-                                    onChange={setCheck('tlsSkipVerify')}
-                                    disabled={step !== 'config'}
-                                    color="warning"
-                                />
-                            }
-                            label={
-                                <Typography
-                                    variant="body2"
-                                    color="warning.main"
-                                >
-                                    {I18n.t('Disable TLS certificate validation (insecure)')}
-                                </Typography>
-                            }
-                        />
+                        {mode === 'serial' && (
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={config.tlsSkipVerify}
+                                        onChange={setCheck('tlsSkipVerify')}
+                                        disabled={step !== 'config'}
+                                        color="warning"
+                                    />
+                                }
+                                label={
+                                    <Typography
+                                        variant="body2"
+                                        color="warning.main"
+                                    >
+                                        {I18n.t('Disable TLS certificate validation (insecure)')}
+                                    </Typography>
+                                }
+                            />
+                        )}
 
                         {(step === 'connecting' || step === 'flashing') && (
                             <Box sx={{ mt: 1 }}>
@@ -483,10 +595,10 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
                         <Button onClick={onClose}>{I18n.t('Cancel')}</Button>
                         <Button
                             variant="contained"
-                            onClick={() => void handleFlash()}
+                            onClick={() => void (mode === 'serial' ? handleFlash() : handleWirelessWrite())}
                             disabled={!canFlash}
                         >
-                            {I18n.t('Write NVS')}
+                            {mode === 'serial' ? I18n.t('Write via Serial') : I18n.t('Write wireless')}
                         </Button>
                     </>
                 )}

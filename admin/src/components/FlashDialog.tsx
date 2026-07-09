@@ -47,6 +47,7 @@ interface FlashConfig {
     assetUrl: string;
     assetToken: string;
     tlsSkipVerify: boolean;
+    nvsToken: string;
 }
 
 type FlashStep = 'config' | 'connecting' | 'flashing' | 'preparing' | 'monitoring' | 'done' | 'downloaded' | 'error';
@@ -103,6 +104,7 @@ const buildConfigFromDefaults = (defaults?: SatelliteDefaults): FlashConfig => (
     assetUrl: defaults?.assetUrl ?? '',
     assetToken: defaults?.assetToken ?? '',
     tlsSkipVerify: defaults?.tlsSkipVerify ?? false,
+    nvsToken: defaults?.nvsToken ?? '',
 });
 
 const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace, defaults }) => {
@@ -269,6 +271,11 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                     : []),
                 ...(config.assetToken
                     ? [{ name: 'asset_token', encoding: 'string' as const, value: config.assetToken }]
+                    : []),
+                // Written so the wireless POST /nvs path (Refs #99) works out of the box —
+                // without it the satellite's nvs_token stays empty and /nvs fail-closes.
+                ...(config.nvsToken
+                    ? [{ name: 'nvs_token', encoding: 'string' as const, value: config.nvsToken }]
                     : []),
                 { name: 'seed', encoding: 'string', value: seed },
                 { name: 'ww_threshold', encoding: 'u8', value: 75 },

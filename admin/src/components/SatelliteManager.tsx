@@ -83,7 +83,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
     const [objectsCache, setObjectsCache] = useState<Record<string, IoBrokerObject>>({});
     const [statesCache, setStatesCache] = useState<Record<string, IoBrokerState | null>>({});
     const [flashOpen, setFlashOpen] = useState(false);
-    const [nvsTarget, setNvsTarget] = useState<{ deviceId: string; displayName: string; room: string } | null>(null);
+    const [nvsTarget, setNvsTarget] = useState<{ deviceId: string; displayName: string; room: string; online: boolean } | null>(null);
     const [satelliteDefaults, setSatelliteDefaults] = useState<SatelliteDefaults>({});
 
     const adapterNamespace = 'hannah.0';
@@ -105,6 +105,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                     assetUrl: n.satAssetUrl,
                     assetToken: n.satAssetToken,
                     tlsSkipVerify: n.satTlsSkipVerify,
+                    nvsToken: n.satNvsToken,
                 });
             }
         });
@@ -172,6 +173,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                 onClose={() => setNvsTarget(null)}
                 deviceId={nvsTarget?.deviceId ?? ''}
                 displayName={nvsTarget?.displayName ?? ''}
+                online={nvsTarget?.online ?? false}
                 defaults={satelliteDefaults}
                 socket={socket}
                 adapterNamespace={adapterNamespace}
@@ -264,7 +266,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                         <Button
                                             size="small"
                                             variant="outlined"
-                                            onClick={() => setNvsTarget({ deviceId: sat.deviceId, displayName: sat.deviceName, room: sat.room })}
+                                            onClick={() => setNvsTarget({ deviceId: sat.deviceId, displayName: sat.deviceName, room: sat.room, online: sat.online })}
                                         >
                                             NVS
                                         </Button>
