@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.31.2 (2026-07-09)
 - Fixed: `FlashDialog`/`NvsDialog` no longer leave a permanent, unclaimed pending satellite registered with Hannah Core when a WebSerial flash fails or is never attempted (unsupported browser, missing driver, non-HTTPS page, cancelled port picker) — the satellite is now registered only once a live connection to the ESP is confirmed, right before the actual flash write
 - Changed: `NvsDialog` ("Rewrite NVS") no longer regenerates the satellite's pairing seed or re-registers it with Hannah Core on every rewrite — editing an already-known satellite's settings no longer forces an unwanted re-pairing
 
