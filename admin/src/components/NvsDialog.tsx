@@ -118,6 +118,33 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
         });
     };
 
+    // Renames an already-paired satellite in place via SetSatelliteDisplayName — unrelated
+    // to NVS, so it runs regardless of Serial/Wireless mode. Best-effort: a failure here
+    // doesn't block the NVS write, it's just logged.
+    const maybeRenameSatellite = async (): Promise<void> => {
+        const trimmed = config.displayName.trim();
+        const original = (displayName || deviceId).trim();
+        if (!trimmed || trimmed === original || !socket || !adapterNamespace) {
+            return;
+        }
+        addLog(I18n.t('Renaming satellite...'));
+        try {
+            const result = (await (socket as any).sendTo(adapterNamespace, 'setSatelliteDisplayName', {
+                deviceId,
+                displayName: trimmed,
+            })) as { ok?: boolean; error?: string; message?: string };
+            if (result?.error || result?.ok === false) {
+                addLog(
+                    `${I18n.t('Warning: could not rename satellite:')} ${result?.error ?? result?.message ?? I18n.t('unknown error')}`,
+                );
+            } else {
+                addLog(I18n.t('Satellite renamed.'));
+            }
+        } catch (err: any) {
+            addLog(`${I18n.t('Warning: could not rename satellite:')} ${err?.message ?? err}`);
+        }
+    };
+
     const handleFlash = async (): Promise<void> => {
         setStep('connecting');
         setLog([]);
@@ -125,6 +152,8 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
         setErrorMsg('');
 
         try {
+            await maybeRenameSatellite();
+
             // Rewriting NVS on an already-known, already-paired satellite must never
             // regenerate the pairing seed or re-provision it with Hannah Core — that
             // would force an unwanted re-pair handshake on every plain field edit.
@@ -246,6 +275,8 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
                 throw new Error(I18n.t('Adapter connection not available'));
             }
 
+            await maybeRenameSatellite();
+
             const values: Record<string, string | number> = {
                 wifi_ssid: config.wifiSsid,
                 wifi_pass: config.wifiPass,
@@ -286,9 +317,9 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
         setConfig(prev => ({ ...prev, [field]: e.target.checked }));
 
     const canFlash =
-        mode === 'serial'
-            ? config.displayName.trim() !== '' && config.wifiSsid.trim() !== '' && config.mqttBroker.trim() !== ''
-            : config.wifiSsid.trim() !== '' && config.mqttBroker.trim() !== '';
+        config.displayName.trim() !== '' &&
+        config.wifiSsid.trim() !== '' &&
+        config.mqttBroker.trim() !== '';
 
     return (
         <Dialog
@@ -337,17 +368,15 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
                             </Typography>
                         )}
 
-                        {mode === 'serial' && (
-                            <TextField
-                                label={I18n.t('Display Name')}
-                                value={config.displayName}
-                                onChange={set('displayName')}
-                                size="small"
-                                fullWidth
-                                disabled={step !== 'config'}
-                                required
-                            />
-                        )}
+                        <TextField
+                            label={I18n.t('Display Name')}
+                            value={config.displayName}
+                            onChange={set('displayName')}
+                            size="small"
+                            fullWidth
+                            disabled={step !== 'config'}
+                            required
+                        />
 
                         <Divider />
                         <Typography

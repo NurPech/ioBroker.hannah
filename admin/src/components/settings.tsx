@@ -533,6 +533,24 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                 >
                     {I18n.t('Disable TLS certificate validation (insecure)')}
                 </Typography>
+
+                <Divider />
+                <Typography
+                    variant="subtitle2"
+                    color="text.primary"
+                >
+                    {I18n.t('Admin Actions')}
+                </Typography>
+                <TextField
+                    label={I18n.t('Your Hannah User ID')}
+                    value={native.adminUserId ?? ''}
+                    onChange={e => onChange('adminUserId', e.target.value.replace(/\D/g, ''))}
+                    size="small"
+                    fullWidth
+                    helperText={I18n.t(
+                        'Numeric Hannah user ID (trust level 10) used as the requestor for admin actions triggered from this panel, e.g. renaming a satellite. Leave empty to disable those actions.',
+                    )}
+                />
             </Box>
         );
     }

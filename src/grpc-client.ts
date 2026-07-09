@@ -192,6 +192,36 @@ export class GrpcClient {
     }
 
     /**
+     * Rename an already-known, already-paired satellite in place.
+     *
+     * @param deviceId - The satellite's real device ID (eFuse MAC), not a pairing seed
+     * @param displayName - New human-readable name
+     * @param requestorId - Hannah user ID to authorize the rename (trust level 10, or owner at trust level 5+)
+     */
+    setSatelliteDisplayName(
+        deviceId: string,
+        displayName: string,
+        requestorId: number,
+    ): Promise<{ ok: boolean; message?: string }> {
+        return new Promise((resolve, reject) => {
+            if (!this.client) {
+                reject(new Error('not connected'));
+                return;
+            }
+            const timer = this._setTimeout(() => reject(new Error('timeout')), 5000);
+            const request: control.SetSatelliteDisplayNameRequest = { deviceId, displayName, requestorId };
+            this.client.setSatelliteDisplayName(request, (err: Error | null, response?: shared.StatusResponse) => {
+                this._clearTimeout(timer);
+                if (err || !response) {
+                    reject(err ?? new Error('no response'));
+                } else {
+                    resolve({ ok: response.ok, message: response.message });
+                }
+            });
+        });
+    }
+
+    /**
      * Send a notification to Hannah Core and wait for acknowledgement.
      * Resolves with ok=true when queued, ok=false on error, or rejects on timeout.
      *

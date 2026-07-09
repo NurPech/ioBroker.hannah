@@ -385,6 +385,37 @@ class Hannah extends utils.Adapter {
             })();
             return;
         }
+        if (obj.command === 'setSatelliteDisplayName') {
+            const params = (obj.message ?? {}) as { deviceId?: string; displayName?: string };
+            const { deviceId, displayName } = params;
+            if (!deviceId || !displayName) {
+                if (obj.callback) {
+                    this.sendTo(obj.from, obj.command, { error: 'deviceId and displayName required' }, obj.callback);
+                }
+                return;
+            }
+            const adminUserId = parseInt(this.config.adminUserId, 10);
+            if (!adminUserId) {
+                if (obj.callback) {
+                    this.sendTo(obj.from, obj.command, { error: 'adminUserId not configured' }, obj.callback);
+                }
+                return;
+            }
+            void (async (): Promise<void> => {
+                try {
+                    const result = await this.grpc!.setSatelliteDisplayName(deviceId, displayName, adminUserId);
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, { ok: result.ok, message: result.message }, obj.callback);
+                    }
+                } catch (err) {
+                    this.log.warn(`[satellites] setSatelliteDisplayName failed: ${(err as Error).message}`);
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, { error: (err as Error).message }, obj.callback);
+                    }
+                }
+            })();
+            return;
+        }
         this.messages?.onMessage(obj);
     }
 }
