@@ -93,7 +93,12 @@ jobs:
     steps:
       - uses: ioBroker/testing-action-deploy@v1
         with:
-          node-version: '24.x'
+          # Pinned to 22.x, not 24.x: the npm bundled with Node 24.18.0 on GitHub-hosted
+          # runners is missing/broken for the 'sigstore' dependency needed by
+          # 'npm publish' provenance (this job has id-token: write), failing with
+          # "Cannot find module 'sigstore'". 22.x (same as package-check below) doesn't
+          # hit this bug.
+          node-version: '22.x'
           # Uncomment the following line if your adapter cannot be installed using 'npm ci'
           # install-command: 'npm install'
           build: true
