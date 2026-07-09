@@ -14,6 +14,7 @@ declare global {
             firmwareSourceUrl: string;
             firmwareSourceToken: string;
             satNvsToken: string;
+            adminUserId: string;
         }
     }
 }
