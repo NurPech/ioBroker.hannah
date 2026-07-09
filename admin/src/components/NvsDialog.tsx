@@ -114,23 +114,10 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
         setErrorMsg('');
 
         try {
-            // Generate pairing seed and register the satellite in Hannah before flashing
-            const seed = crypto.randomUUID();
-            if (socket && adapterNamespace) {
-                addLog(I18n.t('Registering satellite with Hannah Core...'));
-                try {
-                    await (socket as any).sendTo(adapterNamespace, 'provisionSatellite', {
-                        seed,
-                        displayName: config.displayName,
-                    });
-                    addLog(I18n.t('Satellite registered.'));
-                } catch (provisionErr: any) {
-                    addLog(
-                        `${I18n.t('Warning: could not provision satellite:')} ${provisionErr?.message ?? provisionErr}`,
-                    );
-                }
-            }
-
+            // Rewriting NVS on an already-known, already-paired satellite must never
+            // regenerate the pairing seed or re-provision it with Hannah Core — that
+            // would force an unwanted re-pair handshake on every plain field edit.
+            // Re-pairing an existing satellite is out of scope for this dialog.
             addLog(I18n.t('Generating NVS partition...'));
             const nvsData = encodeNVS({
                 hannah: [
@@ -151,7 +138,6 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, defa
                     ...(config.assetToken
                         ? [{ name: 'asset_token', encoding: 'string' as const, value: config.assetToken }]
                         : []),
-                    { name: 'seed', encoding: 'string', value: seed },
                     { name: 'ww_threshold', encoding: 'u8', value: 75 },
                     { name: 'tls_skip', encoding: 'u8', value: config.tlsSkipVerify ? 1 : 0 },
                 ],

@@ -212,22 +212,10 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
         [cleanupSerial],
     );
 
-    // Fetches firmware from the adapter, registers the satellite with Hannah
-    // Core and generates the NVS partition. Shared between the WebSerial
-    // flash flow and the combined-image download.
-    const prepareFirmwareAndNvs = async (): Promise<{ fw: FirmwareResult; nvsPartition: Uint8Array }> => {
-        addLog(I18n.t('Loading firmware from adapter...'));
-        const fw = (await (socket as any).sendTo(adapterNamespace, 'getFirmwareFiles', {})) as FirmwareResult;
-
-        if (fw.error || !fw.files?.length) {
-            throw new Error(fw.error ?? I18n.t('No firmware files received'));
-        }
-        addLog(
-            `${I18n.t('Firmware loaded:')} ${fw.version ?? I18n.t('unknown version')} (${fw.files.length} ${I18n.t('files')})`,
-        );
-        setFirmwareVersion(fw.version ?? '');
-
-        const seed = crypto.randomUUID();
+    // Registers the satellite with Hannah Core under its pairing seed. Must only be
+    // called once it's certain the seed will actually reach the device — otherwise
+    // Hannah is left with a permanent, never-claimed pending satellite entry (Refs #104).
+    const registerSatellite = async (seed: string): Promise<void> => {
         addLog(I18n.t('Registering satellite with Hannah Core...'));
         try {
             const result = (await (socket as any).sendTo(adapterNamespace, 'provisionSatellite', {
@@ -242,7 +230,25 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
         } catch (provisionErr: any) {
             addLog(`${I18n.t('Warning: could not provision satellite:')} ${provisionErr?.message ?? provisionErr}`);
         }
+    };
 
+    // Fetches firmware from the adapter and generates the NVS partition (including a
+    // fresh pairing seed). Shared between the WebSerial flash flow and the combined-image
+    // download. Does NOT register the satellite with Hannah Core — callers do that once
+    // they're sure the seed will actually reach the device (Refs #104).
+    const prepareFirmwareAndNvs = async (): Promise<{ fw: FirmwareResult; nvsPartition: Uint8Array; seed: string }> => {
+        addLog(I18n.t('Loading firmware from adapter...'));
+        const fw = (await (socket as any).sendTo(adapterNamespace, 'getFirmwareFiles', {})) as FirmwareResult;
+
+        if (fw.error || !fw.files?.length) {
+            throw new Error(fw.error ?? I18n.t('No firmware files received'));
+        }
+        addLog(
+            `${I18n.t('Firmware loaded:')} ${fw.version ?? I18n.t('unknown version')} (${fw.files.length} ${I18n.t('files')})`,
+        );
+        setFirmwareVersion(fw.version ?? '');
+
+        const seed = crypto.randomUUID();
         addLog(I18n.t('Generating NVS partition...'));
         const nvsData = encodeNVS({
             hannah: [
@@ -276,7 +282,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
         nvsPartition.set(nvsData.slice(0, NVS_SIZE));
         addLog(`${I18n.t('NVS partition generated')} (${nvsData.byteLength} ${I18n.t('bytes')})`);
 
-        return { fw, nvsPartition };
+        return { fw, nvsPartition, seed };
     };
 
     const handleDownload = async (): Promise<void> => {
@@ -290,7 +296,11 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
         setErrorMsg('');
 
         try {
-            const { fw, nvsPartition } = await prepareFirmwareAndNvs();
+            const { fw, nvsPartition, seed } = await prepareFirmwareAndNvs();
+            // Registered immediately: a download is a deliberate fallback for flashing
+            // externally via esptool.py (no WebSerial support/driver/HTTPS), and it's
+            // the only way such a satellite can ever pair with Hannah Core (Refs #104).
+            await registerSatellite(seed);
 
             addLog(I18n.t('Combining image...'));
             const image = buildCombinedImage(fw.files!, nvsPartition, NVS_OFFSET);
@@ -327,7 +337,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
         setErrorMsg('');
 
         try {
-            const { fw, nvsPartition } = await prepareFirmwareAndNvs();
+            const { fw, nvsPartition, seed } = await prepareFirmwareAndNvs();
 
             // 4. Connect to ESP via WebSerial
             addLog(I18n.t('Opening WebSerial...'));
@@ -360,6 +370,11 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
             addLog(I18n.t('Connecting to ESP...'));
             const chipName = await esploader.main();
             addLog(`${I18n.t('Connected:')} ${chipName}`);
+
+            // Only register once a real device is confirmed connected and about to be
+            // flashed — never before, otherwise an aborted/failed flash leaves Hannah
+            // with a permanent, never-claimed pending satellite entry (Refs #104).
+            await registerSatellite(seed);
 
             // 5. Build file array: firmware files + NVS
             setStep('flashing');
