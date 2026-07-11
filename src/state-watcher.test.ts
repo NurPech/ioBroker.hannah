@@ -2,6 +2,7 @@ import type * as adapterCore from '@iobroker/adapter-core';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { utils } from '@iobroker/testing';
+import { shared } from '@m1kad0/hannah-proto';
 import { StateWatcher } from './state-watcher';
 
 const { createMocks } = utils.unit;
@@ -16,7 +17,10 @@ type StateWatcherInternals = {
         stateId: string,
         allRooms: { result: Record<string, any> },
         allFunctions: { result: Record<string, any> },
-    ): Promise<{ type: string }>;
+    ): Promise<{ type: string; stateType: shared.StateType; enumValues: shared.EnumValues | undefined }>;
+    _statesToEnumValues(
+        rawStates: Record<string, string> | string[] | string | undefined,
+    ): shared.EnumValues | undefined;
     _isManaged(id: string): boolean;
     _extractViewMembers(rows: Array<{ id: string; value: ioBroker.Object | null }>, selected: string[]): Set<string>;
     subscribedIds: Set<string>;
@@ -232,6 +236,109 @@ describe('StateWatcher', () => {
             const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
 
             expect(meta.type).to.equal('');
+        });
+    });
+
+    describe('_resolveDeviceMeta / resolveStateType (#117)', () => {
+        const stateId = 'javascript.0.virtualDevice.Test.Device.state';
+        const deviceId = 'javascript.0.virtualDevice.Test.Device';
+
+        function publishState(common: Partial<ioBroker.StateCommon>): void {
+            database.publishObject({
+                _id: stateId,
+                type: 'state',
+                common: common as unknown as ioBroker.StateCommon,
+                native: {},
+            });
+        }
+
+        function publishDevice(common: Record<string, unknown> = {}): void {
+            database.publishObject({
+                _id: deviceId,
+                type: 'device',
+                common: common as unknown as ioBroker.ObjectCommon,
+                native: {},
+            });
+        }
+
+        it('resolves common.type "boolean" as BOOLEAN', async () => {
+            publishState({ type: 'boolean' });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.stateType).to.equal(shared.StateType.BOOLEAN);
+            expect(meta.enumValues).to.be.undefined;
+        });
+
+        it('resolves common.type "number" as NUMERIC', async () => {
+            publishState({ type: 'number' });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.stateType).to.equal(shared.StateType.NUMERIC);
+            expect(meta.enumValues).to.be.undefined;
+        });
+
+        it('resolves common.type "string" with no common.states as TEXT', async () => {
+            publishState({ type: 'string' });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.stateType).to.equal(shared.StateType.TEXT);
+            expect(meta.enumValues).to.be.undefined;
+        });
+
+        it('resolves a state with common.states (object form) as ENUM with mapped values', async () => {
+            publishState({ type: 'number', states: { 0: 'Aus', 1: 'An', 2: 'Auto' } });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.stateType).to.equal(shared.StateType.ENUM);
+            expect(meta.enumValues?.values).to.deep.equal({ 0: 'Aus', 1: 'An', 2: 'Auto' });
+        });
+
+        // Not exercised via publishState()/_resolveDeviceMeta() like the other cases: the
+        // @iobroker/testing mock's publishObject() deep-clones common.states through
+        // alcalzone-shared's extend(), which turns a real array into a plain object with
+        // numeric-string keys ({0: 'rot', ...}) — a mock-only artifact, not real ioBroker
+        // behavior. Calling the private helper directly avoids that distortion.
+        it('resolves common.states (array form) as ENUM, value used as its own label', () => {
+            const values = internals(makeWatcher())._statesToEnumValues(['rot', 'gruen', 'blau']);
+
+            expect(values?.values).to.deep.equal({ rot: 'rot', gruen: 'gruen', blau: 'blau' });
+        });
+
+        it('resolves the deprecated "val1:text1;val2:text2" common.states string format as ENUM', async () => {
+            publishState({ type: 'number', states: '0:Aus;1:An' });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.stateType).to.equal(shared.StateType.ENUM);
+            expect(meta.enumValues?.values).to.deep.equal({ 0: 'Aus', 1: 'An' });
+        });
+
+        it('resolves a level.color role as COLOR, independent of common.type', async () => {
+            publishState({ type: 'string', role: 'level.color.rgb' });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.stateType).to.equal(shared.StateType.COLOR);
+        });
+
+        it('resolves a level.color role with common.states as COLOR, carrying the enum values', async () => {
+            publishState({ type: 'string', role: 'level.color', states: { red: 'Rot', blue: 'Blau' } });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.stateType).to.equal(shared.StateType.COLOR);
+            expect(meta.enumValues?.values).to.deep.equal({ red: 'Rot', blue: 'Blau' });
         });
     });
 

@@ -1,5 +1,6 @@
 import type * as utils from '@iobroker/adapter-core';
 import type { agent } from '@m1kad0/hannah-proto';
+import { shared } from '@m1kad0/hannah-proto';
 import type { AgentMessageSender } from './grpc-client';
 
 /**
@@ -236,6 +237,8 @@ export class StateWatcher {
                             value: JSON.stringify(state.val),
                             ack: state.ack ?? false,
                         },
+                        stateType: meta.stateType,
+                        enumValues: meta.enumValues,
                     });
 
                     sent++;
@@ -261,6 +264,8 @@ export class StateWatcher {
         type: string;
         floor: string;
         functions: string[];
+        stateType: shared.StateType;
+        enumValues: shared.EnumValues | undefined;
     }> {
         const deviceId = stateId.split('.').slice(0, -1).join('.');
 
@@ -422,6 +427,8 @@ export class StateWatcher {
             return n;
         };
 
+        const { stateType, enumValues } = this._resolveStateType(stateObj);
+
         return {
             room: roomId,
             roomNames: roomNames,
@@ -433,7 +440,74 @@ export class StateWatcher {
             type: resolveType(),
             floor,
             functions,
+            stateType,
+            enumValues,
         };
+    }
+
+    /**
+     * Classifies a state's value shape (#117) from ioBroker's own common.type/role/states —
+     * no separate discovery step needed, this metadata is already loaded alongside stateObj.
+     *
+     * @param stateObj - The state's own ioBroker object, as loaded in _resolveDeviceMeta
+     */
+    private _resolveStateType(stateObj: ioBroker.Object | null | undefined): {
+        stateType: shared.StateType;
+        enumValues: shared.EnumValues | undefined;
+    } {
+        const role = stateObj?.common?.role ?? '';
+        const rawStates = (stateObj?.common as { states?: Record<string, string> | string[] | string } | undefined)
+            ?.states;
+        const enumValues = this._statesToEnumValues(rawStates);
+
+        if (role.startsWith('level.color')) {
+            return { stateType: shared.StateType.COLOR, enumValues };
+        }
+        if (enumValues) {
+            return { stateType: shared.StateType.ENUM, enumValues };
+        }
+
+        const type = stateObj?.common?.type;
+        if (type === 'boolean') {
+            return { stateType: shared.StateType.BOOLEAN, enumValues: undefined };
+        }
+        if (type === 'number') {
+            return { stateType: shared.StateType.NUMERIC, enumValues: undefined };
+        }
+        return { stateType: shared.StateType.TEXT, enumValues: undefined };
+    }
+
+    /**
+     * Normalizes ioBroker's common.states (object map, string array, or the deprecated
+     * "val1:text1;val2:text2" string format) into the value->label shape EnumValues needs.
+     *
+     * @param rawStates - The state object's common.states field, in any of its supported shapes
+     */
+    private _statesToEnumValues(
+        rawStates: Record<string, string> | string[] | string | undefined,
+    ): shared.EnumValues | undefined {
+        if (!rawStates) {
+            return undefined;
+        }
+        if (Array.isArray(rawStates)) {
+            if (rawStates.length === 0) {
+                return undefined;
+            }
+            return { values: Object.fromEntries(rawStates.map(v => [v, v])) };
+        }
+        if (typeof rawStates === 'string') {
+            const values = Object.fromEntries(
+                rawStates
+                    .split(';')
+                    .map(pair => pair.split(':'))
+                    .filter((pair): pair is [string, string] => pair.length === 2),
+            );
+            return Object.keys(values).length > 0 ? { values } : undefined;
+        }
+        if (Object.keys(rawStates).length === 0) {
+            return undefined;
+        }
+        return { values: Object.fromEntries(Object.entries(rawStates).map(([k, v]) => [k, String(v)])) };
     }
 
     /**
