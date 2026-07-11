@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.32.0",
+    "version": "0.32.1",
     "news": {
+      "0.32.1": {
+        "en": "Changed: `@m1kad0/hannah-proto` bumped to 0.5.0. No functional change for this adapter (it never called the removed `Routine*` RPCs).",
+        "de": "Geändert: `@m1kad0/hannah-proto` wurde auf Version 0.5.0 aktualisiert. Für diesen Adapter gibt es keine funktionalen Änderungen (er hat die entfernten `Routine*`-RPCs nie aufgerufen).",
+        "ru": "Изменено: `@m1kad0/hannah-proto` обновлен до версии 0.5.0. Функциональных изменений для этого адаптера нет (он никогда не вызывал удаленные RPC-вызовы `Routine*`).",
+        "pt": "Alterado: `@m1kad0/hannah-proto` atualizado para a versão 0.5.0. Nenhuma alteração funcional para este adaptador (ele nunca chamava as RPCs `Routine*` removidas).",
+        "nl": "Gewijzigd: `@m1kad0/hannah-proto` is bijgewerkt naar 0.5.0. Geen functionele wijziging voor deze adapter (de verwijderde `Routine*` RPC's werden nooit aangeroepen).",
+        "fr": "Modifié : `@m1kad0/hannah-proto` est passé à la version 0.5.0. Aucun changement fonctionnel pour cet adaptateur (il n’a jamais appelé les RPC `Routine*` supprimés).",
+        "it": "Modificato: `@m1kad0/hannah-proto` aggiornato alla versione 0.5.0. Nessuna modifica funzionale per questo adattatore (non ha mai chiamato le RPC `Routine*` rimosse).",
+        "es": "Modificado: `@m1kad0/hannah-proto` se actualizó a la versión 0.5.0. No hay cambios funcionales para este adaptador (nunca llamó a las RPC `Routine*` eliminadas).",
+        "pl": "Zmieniono: `@m1kad0/hannah-proto` zaktualizowano do wersji 0.5.0. Brak zmian funkcjonalnych dla tego adaptera (nigdy nie wywoływał on usuniętych wywołań RPC `Routine*`).",
+        "uk": "Змінено: `@m1kad0/hannah-proto` оновлено до версії 0.5.0. Функціональних змін для цього адаптера не відбулося (він ніколи не викликав видалені RPC `Routine*`).",
+        "zh-cn": "已更改：`@m1kad0/hannah-proto` 升级到 0.5.0。此适配器的功能没有更改（它从未调用过已移除的 `Routine*` RPC）。"
+      },
       "0.32.0": {
         "en": "Added: `state-watcher.ts` now classifies each state's value type (Boolean/Numeric/Enum/Color/Text) from ioBroker's own `common.type`/`role`/`states` and sends it to Hannah Core alongside the existing snapshot data — lets Hannah build a proper trigger-editor dropdown instead of requiring a free-text state ID",
         "de": "Neu: `state-watcher.ts` klassifiziert nun den Werttyp (Boolean/Numeric/Enum/Color/Text) jedes Zustands anhand der `common.type`/`role`/`states` von ioBroker und sendet ihn zusammen mit den vorhandenen Snapshot-Daten an Hannah Core. Dadurch kann Hannah ein aussagekräftiges Trigger-Editor-Dropdown-Menü erstellen, anstatt eine Freitext-Zustands-ID zu benötigen.",
@@ -80,19 +93,6 @@
         "pl": "Zmieniono: zastąpiono ręcznie synchronizowane pliki `hannah.proto` i `@grpc/proto-loader` opublikowanym pakietem npm `@m1kad0/hannah-proto` (z typem klienta `@grpc/grpc-js`, bez lokalnego generowania kodu). Brak zmian funkcjonalnych.",
         "uk": "Змінено: замінено синхронізовані вручну файли `hannah.proto` та `@grpc/proto-loader` на опублікований npm-пакет `@m1kad0/hannah-proto` (клієнт типу `@grpc/grpc-js`, без локального генерування коду). Без функціональних змін.",
         "zh-cn": "已更改：将手动同步的 `hannah.proto` 文件和 `@grpc/proto-loader` 替换为已发布的 `@m1kad0/hannah-proto` npm 包（使用 `@grpc/grpc-js` 客户端，未进行本地代码生成）。功能上无变化。"
-      },
-      "0.30.2": {
-        "en": "Added: the adapter now sends a protocol-version header with every request to Hannah Core, so version mismatches between the two are caught with a clear error instead of unexplained misbehavior",
-        "de": "Neu: Der Adapter sendet nun mit jeder Anfrage an Hannah Core einen Header mit der Protokollversion, sodass Versionsunterschiede zwischen den beiden mit einer klaren Fehlermeldung anstatt mit unerklärlichem Fehlverhalten erkannt werden.",
-        "ru": "Добавлено: теперь адаптер отправляет заголовок protocol-version с каждым запросом к Hannah Core, поэтому несоответствия версий между ними выявляются с помощью понятной ошибки, а не необъяснимого некорректного поведения.",
-        "pt": "Adicionado: o adaptador agora envia um cabeçalho de versão do protocolo com cada solicitação para o Hannah Core, de modo que as incompatibilidades de versão entre os dois sejam detectadas com um erro claro em vez de comportamentos inesperados e inexplicáveis.",
-        "nl": "Toegevoegd: de adapter stuurt nu bij elk verzoek aan Hannah Core een protocolversieheader mee, waardoor versieverschillen tussen de twee worden opgemerkt met een duidelijke foutmelding in plaats van onverklaarbaar afwijkend gedrag.",
-        "fr": "Ajout : l'adaptateur envoie désormais un en-tête de version de protocole avec chaque requête à Hannah Core, de sorte que les incompatibilités de versions entre les deux sont détectées par une erreur claire au lieu d'un comportement anormal inexpliqué.",
-        "it": "Aggiunto: l'adattatore ora invia un'intestazione protocol-version con ogni richiesta a Hannah Core, in modo che le discrepanze di versione tra i due vengano rilevate con un errore chiaro invece di un comportamento anomalo inspiegabile.",
-        "es": "Añadido: el adaptador ahora envía un encabezado de versión de protocolo con cada solicitud a Hannah Core, por lo que las discrepancias de versión entre ambos se detectan con un error claro en lugar de un comportamiento erróneo inexplicable.",
-        "pl": "Dodano: adapter wysyła teraz nagłówek wersji protokołu z każdym żądaniem do Hannah Core, dzięki czemu niezgodności wersji między nimi są wykrywane za pomocą wyraźnego błędu, a nie niewyjaśnionego nieprawidłowego zachowania",
-        "uk": "Додано: адаптер тепер надсилає заголовок версії протоколу з кожним запитом до Hannah Core, тому невідповідності версій між ними виявляються з явною помилкою, а не з незрозумілою несправністю.",
-        "zh-cn": "新增：适配器现在会在每个向 Hannah Core 的请求中发送协议版本标头，因此当两者版本不匹配时，会以明确的错误提示而不是莫名其妙的异常行为来捕获问题。"
       }
     },
     "blockly": true,
