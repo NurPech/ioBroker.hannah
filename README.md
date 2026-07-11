@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: `state-watcher.ts` now classifies each state's value type (Boolean/Numeric/Enum/Color/Text) from ioBroker's own `common.type`/`role`/`states` and sends it to Hannah Core alongside the existing snapshot data — lets Hannah build a proper trigger-editor dropdown instead of requiring a free-text state ID
+
 ### 0.31.3 (2026-07-09)
 - Added: `NvsDialog` ("Rewrite NVS") now offers a Serial/Wireless toggle — Wireless pushes WiFi, MQTT broker/port, OTA channel and the OTA/asset tokens straight to an already-connected satellite via its `POST /nvs` endpoint, no cable needed. Wireless is only enabled for satellites that are currently online; anything outside that field set (WiFi user/pass for MQTT, OTA/asset URLs, TLS skip) still requires Serial
 - Fixed: `FlashDialog`/`NvsDialog` now also write the satellite's wireless-update bearer token (`satNvsToken` from the Satellite Defaults) into NVS during flash/rewrite — previously it was never set on a fresh flash and got silently wiped on every Serial rewrite, leaving the wireless write path permanently disabled
