@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.32.0 (2026-07-11)
 - Added: `state-watcher.ts` now classifies each state's value type (Boolean/Numeric/Enum/Color/Text) from ioBroker's own `common.type`/`role`/`states` and sends it to Hannah Core alongside the existing snapshot data — lets Hannah build a proper trigger-editor dropdown instead of requiring a free-text state ID
 
 ### 0.31.3 (2026-07-09)
