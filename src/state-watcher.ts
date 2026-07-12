@@ -239,6 +239,7 @@ export class StateWatcher {
                         },
                         stateType: meta.stateType,
                         enumValues: meta.enumValues,
+                        writable: meta.writable,
                     });
 
                     sent++;
@@ -266,6 +267,7 @@ export class StateWatcher {
         functions: string[];
         stateType: shared.StateType;
         enumValues: shared.EnumValues | undefined;
+        writable: boolean;
     }> {
         const deviceId = stateId.split('.').slice(0, -1).join('.');
 
@@ -445,6 +447,7 @@ export class StateWatcher {
             functions,
             stateType,
             enumValues,
+            writable: Boolean(stateObj?.common?.write),
         };
     }
 

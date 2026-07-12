@@ -17,7 +17,12 @@ type StateWatcherInternals = {
         stateId: string,
         allRooms: { result: Record<string, any> },
         allFunctions: { result: Record<string, any> },
-    ): Promise<{ type: string; stateType: shared.StateType; enumValues: shared.EnumValues | undefined }>;
+    ): Promise<{
+        type: string;
+        stateType: shared.StateType;
+        enumValues: shared.EnumValues | undefined;
+        writable: boolean;
+    }>;
     _statesToEnumValues(
         rawStates: Record<string, string> | string[] | string | undefined,
     ): shared.EnumValues | undefined;
@@ -240,6 +245,33 @@ describe('StateWatcher', () => {
             const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
 
             expect(meta.type).to.equal('socket');
+        });
+
+        it('marks a writable state as writable', async () => {
+            publishState({ role: 'switch.light', write: true });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.writable).to.equal(true);
+        });
+
+        it('marks a read-only state as not writable', async () => {
+            publishState({ role: 'value.temperature', write: false });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.writable).to.equal(false);
+        });
+
+        it('treats a missing write flag as not writable', async () => {
+            publishState({ role: 'value.temperature' });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.writable).to.equal(false);
         });
 
         it('returns an empty type when nothing matches', async () => {

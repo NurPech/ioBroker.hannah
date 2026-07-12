@@ -77,6 +77,10 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: device snapshot now reports whether each state is writable (`AgentDevice.writable`, from ioBroker's `common.write`) — lets Hannah/the WebUI exclude read-only states (sensors, etc.) from control actions
+- Changed: `@m1kad0/hannah-proto` bumped to 0.5.2
+
 ### 0.32.2 (2026-07-12)
 - Added: `state-watcher.ts`'s device-type detection now recognizes a "Szene"/"scene" function, resolving to type `scene` — lets room-scoped scene states be enum-discovered like any other device without being pulled into "Licht"-category group commands
 
