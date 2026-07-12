@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.32.2 (2026-07-12)
 - Added: `state-watcher.ts`'s device-type detection now recognizes a "Szene"/"scene" function, resolving to type `scene` — lets room-scoped scene states be enum-discovered like any other device without being pulled into "Licht"-category group commands
 
 ### 0.32.1 (2026-07-11)

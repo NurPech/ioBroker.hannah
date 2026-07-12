@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.32.1",
+    "version": "0.32.2",
     "news": {
+      "0.32.2": {
+        "en": "Added: `state-watcher.ts`'s device-type detection now recognizes a \"Szene\"/\"scene\" function, resolving to type `scene` — lets room-scoped scene states be enum-discovered like any other device without being pulled into \"Licht\"-category group commands",
+        "de": "Neu: Die Gerätetyperkennung in `state-watcher.ts` erkennt nun eine \"Szene\"/\"scene\"-Funktion und wird zum Typ `scene` aufgelöst – dadurch können raumbezogene Szenenzustände wie jedes andere Gerät per Enumeration ermittelt werden, ohne in Gruppenbefehle der Kategorie \"Licht\" einbezogen zu werden.",
+        "ru": "Добавлено: функция определения типа устройства в `state-watcher.ts` теперь распознает функцию \"Szene\"/\"scene\", которая преобразуется в тип `scene` — это позволяет обнаруживать состояния сцены в пределах комнаты с помощью перечисления, как и любое другое устройство, без включения в команды групп категории \"Licht\".",
+        "pt": "Adicionado: a detecção de tipo de dispositivo em `state-watcher.ts` agora reconhece uma função \"Szene\"/\"scene\", resolvendo para o tipo `scene` — permitindo que estados de cena com escopo de sala sejam descobertos por enumeração como qualquer outro dispositivo, sem serem incluídos em comandos de grupo da categoria \"Licht\".",
+        "nl": "Toegevoegd: De apparaattypedetectie van `state-watcher.ts` herkent nu een \"Szene\"/\"scene\"-functie, die wordt omgezet naar type `scene` — hiermee kunnen scènetoestanden op kamerniveau worden opgespoord zoals elk ander apparaat, zonder dat ze worden opgenomen in groepsopdrachten van de categorie \"Licht\".",
+        "fr": "Ajout : La détection du type de périphérique dans `state-watcher.ts` reconnaît désormais une fonction « Szene »/« scene », résolue en type `scene` — permet de découvrir les états de scène à l'échelle d'une pièce comme n'importe quel autre périphérique sans être inclus dans les commandes du groupe de catégorie « Licht ».",
+        "it": "Aggiunto: il rilevamento del tipo di dispositivo di `state-watcher.ts` ora riconosce una funzione \"Szene\"/\"scene\", risolvendola nel tipo `scene` — consente di scoprire gli stati di scena con ambito stanza come qualsiasi altro dispositivo senza essere trascinati nei comandi del gruppo di categoria \"Licht\".",
+        "es": "Añadido: La detección de tipo de dispositivo de `state-watcher.ts` ahora reconoce una función \"Szene\"/\"scene\", resolviendo al tipo `scene`, lo que permite que los estados de escena con ámbito de habitación se descubran mediante enumeraciones como cualquier otro dispositivo sin ser incluidos en los comandos del grupo de categoría \"Licht\".",
+        "pl": "Dodano: funkcja wykrywania typu urządzenia `state-watcher.ts` rozpoznaje teraz funkcję „Szene”/„scene”, rozstrzygając na typ `scene` — umożliwia wykrywanie stanów scen o zasięgu pomieszczenia metodą enum jak w przypadku każdego innego urządzenia bez konieczności włączania ich do poleceń grupy kategorii „Licht”",
+        "uk": "Додано: визначення типу пристрою в `state-watcher.ts` тепер розпізнає функцію \"Szene\"/\"scene\", визначаючи тип `scene` — дозволяє виявляти стани сцени в межах кімнати за допомогою перерахунку, як і будь-який інший пристрій, без потрапляння до групових команд категорії \"Licht\".",
+        "zh-cn": "新增：`state-watcher.ts` 的设备类型检测现在可以识别“Szene”/“scene”函数，并将其解析为类型“scene”——这样，房间范围内的场景状态就可以像其他任何设备一样被枚举发现，而不会被拉入“Licht”类别的组命令中。"
+      },
       "0.32.1": {
         "en": "Changed: `@m1kad0/hannah-proto` bumped to 0.5.0. No functional change for this adapter (it never called the removed `Routine*` RPCs).",
         "de": "Geändert: `@m1kad0/hannah-proto` wurde auf Version 0.5.0 aktualisiert. Für diesen Adapter gibt es keine funktionalen Änderungen (er hat die entfernten `Routine*`-RPCs nie aufgerufen).",
@@ -80,19 +93,6 @@
         "pl": "Naprawiono: drzewo obiektów satelity jest teraz natychmiast czyszczone ze starego pomieszczenia po przybyciu przydziału pomieszczenia, zamiast pozostawiać nieaktualną ścieżkę do momentu ponownego połączenia satelity",
         "uk": "Виправлено: дерево об'єктів супутника тепер очищається від його старої кімнати негайно, коли надходить повідомлення про перепризначення кімнати, замість того, щоб залишати застарілий шлях, поки супутник випадково не підключиться знову.",
         "zh-cn": "已修复：现在，当房间重新分配到达时，卫星的对象树会立即从其旧房间中清除，而不会像以前那样留下陈旧的路径，直到卫星重新连接后才会清除。"
-      },
-      "0.30.3": {
-        "en": "Changed: replaced the manually-synced `hannah.proto` files and `@grpc/proto-loader` with the published `@m1kad0/hannah-proto` npm package (typed `@grpc/grpc-js` client, no local codegen). No functional change.",
-        "de": "Geändert: Die manuell synchronisierten `hannah.proto`-Dateien und `@grpc/proto-loader` wurden durch das veröffentlichte npm-Paket `@m1kad0/hannah-proto` ersetzt (Typ: `@grpc/grpc-js`-Client, keine lokale Codegenerierung). Funktionale Änderungen bestehen nicht.",
-        "ru": "Изменения: файлы `hannah.proto` и `@grpc/proto-loader`, синхронизированные вручную, заменены опубликованным npm-пакетом `@m1kad0/hannah-proto` (использован типизированный клиент `@grpc/grpc-js`, локальная генерация кода отсутствует). Функциональных изменений нет.",
-        "pt": "Alterações: os arquivos `hannah.proto` sincronizados manualmente e o pacote `@grpc/proto-loader` foram substituídos pelo pacote npm `@m1kad0/hannah-proto` publicado (cliente tipado `@grpc/grpc-js`, sem geração de código local). Nenhuma alteração funcional.",
-        "nl": "Gewijzigd: de handmatig gesynchroniseerde `hannah.proto`-bestanden en `@grpc/proto-loader` zijn vervangen door het gepubliceerde `@m1kad0/hannah-proto` npm-pakket (client `@grpc/grpc-js` getypt, geen lokale codegeneratie). Geen functionele wijziging.",
-        "fr": "Modification : les fichiers `hannah.proto` synchronisés manuellement et `@grpc/proto-loader` ont été remplacés par le package npm `@m1kad0/hannah-proto` publié (client `@grpc/grpc-js`, sans génération de code locale). Aucune modification fonctionnelle.",
-        "it": "Modificato: sostituiti i file `hannah.proto` sincronizzati manualmente e `@grpc/proto-loader` con il pacchetto npm pubblicato `@m1kad0/hannah-proto` (client `@grpc/grpc-js` tipizzato, senza generazione di codice locale). Nessuna modifica funzionale.",
-        "es": "Modificado: se reemplazaron los archivos `hannah.proto` sincronizados manualmente y `@grpc/proto-loader` por el paquete npm publicado `@m1kad0/hannah-proto` (cliente `@grpc/grpc-js` tipado, sin generación de código local). Sin cambios funcionales.",
-        "pl": "Zmieniono: zastąpiono ręcznie synchronizowane pliki `hannah.proto` i `@grpc/proto-loader` opublikowanym pakietem npm `@m1kad0/hannah-proto` (z typem klienta `@grpc/grpc-js`, bez lokalnego generowania kodu). Brak zmian funkcjonalnych.",
-        "uk": "Змінено: замінено синхронізовані вручну файли `hannah.proto` та `@grpc/proto-loader` на опублікований npm-пакет `@m1kad0/hannah-proto` (клієнт типу `@grpc/grpc-js`, без локального генерування коду). Без функціональних змін.",
-        "zh-cn": "已更改：将手动同步的 `hannah.proto` 文件和 `@grpc/proto-loader` 替换为已发布的 `@m1kad0/hannah-proto` npm 包（使用 `@grpc/grpc-js` 客户端，未进行本地代码生成）。功能上无变化。"
       }
     },
     "blockly": true,
