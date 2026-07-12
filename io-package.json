@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.32.2",
+    "version": "0.32.3",
     "news": {
+      "0.32.3": {
+        "en": "Added: device snapshot now reports whether each state is writable (`AgentDevice.writable`, from ioBroker's `common.write`) — lets Hannah/the WebUI exclude read-only states (sensors, etc.) from control actions\nChanged: `@m1kad0/hannah-proto` bumped to 0.5.2",
+        "de": "Neu: Der Geräte-Snapshot meldet nun, ob jeder Zustand beschreibbar ist (`AgentDevice.writable`, von `common.write` des ioBrokers) – dadurch können Hannah/die WebUI schreibgeschützte Zustände (Sensoren usw.) von Steuerungsaktionen ausschließen.\nÄnderung: `@m1kad0/hannah-proto` wurde auf Version 0.5.2 aktualisiert.",
+        "ru": "Добавлено: теперь снимок состояния устройства сообщает, доступно ли для записи каждое состояние (`AgentDevice.writable`, из `common.write` объекта ioBroker) — это позволяет Hannah/веб-интерфейсу исключать состояния, доступные только для чтения (датчики и т. д.), из действий управления.\nИзменено: `@m1kad0/hannah-proto` обновлен до версии 0.5.2",
+        "pt": "Adicionado: o snapshot do dispositivo agora informa se cada estado é gravável (`AgentDevice.writable`, do `common.write` do ioBroker) — permite que Hannah/a interface web exclua estados somente leitura (sensores, etc.) das ações de controle.\nAlteração: `@m1kad0/hannah-proto` atualizado para a versão 0.5.2",
+        "nl": "Toegevoegd: de apparaatsnapshot geeft nu aan of elke status beschrijfbaar is (`AgentDevice.writable`, van ioBroker's `common.write`) — hiermee kan Hannah/de webinterface alleen-lezen statussen (sensoren, enz.) uitsluiten van besturingsacties.\nGewijzigd: `@m1kad0/hannah-proto` is bijgewerkt naar 0.5.2",
+        "fr": "Ajout : l'instantané de l'appareil indique désormais si chaque état est accessible en écriture (`AgentDevice.writable`, provenant de `common.write` d'ioBroker) — permet à Hannah/l'interface Web d'exclure les états en lecture seule (capteurs, etc.) des actions de contrôle\nModifié : `@m1kad0/hannah-proto` est passé à la version 0.5.2",
+        "it": "Aggiunto: lo snapshot del dispositivo ora segnala se ogni stato è scrivibile (`AgentDevice.writable`, da `common.write` di ioBroker) — consente a Hannah/all'interfaccia Web di escludere gli stati di sola lettura (sensori, ecc.) dalle azioni di controllo\nModificato: `@m1kad0/hannah-proto` aggiornato alla versione 0.5.2",
+        "es": "Añadido: la instantánea del dispositivo ahora informa si cada estado es escribible (`AgentDevice.writable`, de `common.write` de ioBroker), lo que permite a Hannah/la interfaz web excluir los estados de solo lectura (sensores, etc.) de las acciones de control.\nModificado: `@m1kad0/hannah-proto` se actualizó a la versión 0.5.2.",
+        "pl": "Dodano: migawka urządzenia teraz raportuje, czy każdy stan jest zapisywalny (`AgentDevice.writable`, z `common.write` ioBroker) — umożliwia Hannah/WebUI wykluczenie stanów tylko do odczytu (czujników itp.) z akcji sterujących\nZmieniono: `@m1kad0/hannah-proto` zaktualizowano do wersji 0.5.2",
+        "uk": "Додано: знімок пристрою тепер повідомляє, чи кожен стан доступний для запису (`AgentDevice.writable`, з `common.write` від ioBroker) — дозволяє Ханні/WebUI виключати стани лише для читання (датчики тощо) з дій керування.\nЗмінено: `@m1kad0/hannah-proto` підвищено до версії 0.5.2.",
+        "zh-cn": "新增：设备快照现在会报告每个状态是否可写（`AgentDevice.writable`，来自 ioBroker 的 `common.write`）——这使得 Hannah/WebUI 可以从控制操作中排除只读状态（传感器等）。\n已更改：`@m1kad0/hannah-proto` 版本升级至 0.5.2"
+      },
       "0.32.2": {
         "en": "Added: `state-watcher.ts`'s device-type detection now recognizes a \"Szene\"/\"scene\" function, resolving to type `scene` — lets room-scoped scene states be enum-discovered like any other device without being pulled into \"Licht\"-category group commands",
         "de": "Neu: Die Gerätetyperkennung in `state-watcher.ts` erkennt nun eine \"Szene\"/\"scene\"-Funktion und wird zum Typ `scene` aufgelöst – dadurch können raumbezogene Szenenzustände wie jedes andere Gerät per Enumeration ermittelt werden, ohne in Gruppenbefehle der Kategorie \"Licht\" einbezogen zu werden.",
@@ -80,19 +93,6 @@
         "pl": "Naprawiono: satelita mógł skończyć z dwoma oddzielnymi drzewami obiektów pomieszczeń (np. `Leonie_Schlafzimmer` i `leonie_schlafzimmer`), jeśli jego ciąg pomieszczeń zmienił wielkość liter lub formatowanie pomiędzy aktualizacjami — ścieżki pomieszczeń są teraz budowane na podstawie klucza kanonicznego bez uwzględniania wielkości liter, a aktualizacja offline zgłaszająca inaczej sformatowany pokój niż ten, z którym satelita był ostatnio online, teraz również oczyszcza starą ścieżkę zamiast tylko przypadku online",
         "uk": "Виправлено: супутник міг мати два окремі дерева об'єктів кімнат (наприклад, `Leonie_Schlafzimmer` та `leonie_schlafzimmer`), якщо його рядок кімнати змінював регістр або форматування між оновленнями — шляхи до кімнат тепер будуються на основі канонічного ключа без урахування регістру, а оновлення поза мережею, яке повідомляє про кімнату з іншим форматом, ніж той, з яким супутник востаннє був онлайн, тепер також очищає старий шлях, а не лише регістр онлайн.",
         "zh-cn": "已修复：如果卫星的房间字符串在更新之间更改了大小写或格式，则可能导致卫星最终拥有两个独立的房间对象树（例如 `Leonie_Schlafzimmer` 和 `leonie_schlafzimmer`）。现在，房间路径由不区分大小写的规范键构建，并且离线更新报告的房间格式与卫星上次在线时的格式不同时，现在也会清理旧路径，而不仅仅是清理在线时的路径。"
-      },
-      "0.31.0": {
-        "en": "Fixed: a satellite's object tree is now cleaned up from its old room immediately when a room reassignment arrives, instead of leaving a stale path behind until the satellite happened to reconnect",
-        "de": "Behoben: Der Objektbaum eines Satelliten wird nun sofort nach einer Raumzuweisung aus seinem alten Raum entfernt, anstatt einen veralteten Pfad zu hinterlassen, bis der Satellit die Verbindung wiederherstellt.",
-        "ru": "Исправлено: дерево объектов спутника теперь немедленно очищается от старого помещения при поступлении запроса на переназначение помещения, вместо того чтобы оставлять застоявшийся путь до тех пор, пока спутник не переподключится.",
-        "pt": "Corrigido: agora a árvore de objetos de um satélite é limpa imediatamente de sua sala anterior quando ocorre uma reatribuição de sala, em vez de deixar um caminho obsoleto até que o satélite se reconecte.",
-        "nl": "Opgelost: de objectstructuur van een satelliet wordt nu direct na een herindeling van de ruimte opgeschoond, in plaats van een verouderd pad achter te laten totdat de satelliet opnieuw verbinding maakt.",
-        "fr": "Corrigé : l'arborescence d'objets d'un satellite est désormais nettoyée de son ancienne salle dès qu'une réaffectation de salle survient, au lieu de laisser un chemin obsolète jusqu'à ce que le satellite se reconnecte.",
-        "it": "Risolto: l'albero degli oggetti di un satellite viene ora ripulito immediatamente dalla sua vecchia stanza quando arriva una riassegnazione della stanza, invece di lasciare un percorso obsoleto fino a quando il satellite non si riconnette.",
-        "es": "Corregido: el árbol de objetos de un satélite ahora se limpia de su antigua sala inmediatamente cuando llega una reasignación de sala, en lugar de dejar una ruta obsoleta hasta que el satélite se vuelva a conectar.",
-        "pl": "Naprawiono: drzewo obiektów satelity jest teraz natychmiast czyszczone ze starego pomieszczenia po przybyciu przydziału pomieszczenia, zamiast pozostawiać nieaktualną ścieżkę do momentu ponownego połączenia satelity",
-        "uk": "Виправлено: дерево об'єктів супутника тепер очищається від його старої кімнати негайно, коли надходить повідомлення про перепризначення кімнати, замість того, щоб залишати застарілий шлях, поки супутник випадково не підключиться знову.",
-        "zh-cn": "已修复：现在，当房间重新分配到达时，卫星的对象树会立即从其旧房间中清除，而不会像以前那样留下陈旧的路径，直到卫星重新连接后才会清除。"
       }
     },
     "blockly": true,

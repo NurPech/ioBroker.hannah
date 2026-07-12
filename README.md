@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.32.3 (2026-07-12)
 - Added: device snapshot now reports whether each state is writable (`AgentDevice.writable`, from ioBroker's `common.write`) — lets Hannah/the WebUI exclude read-only states (sensors, etc.) from control actions
 - Changed: `@m1kad0/hannah-proto` bumped to 0.5.2
 
