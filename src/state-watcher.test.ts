@@ -17,7 +17,12 @@ type StateWatcherInternals = {
         stateId: string,
         allRooms: { result: Record<string, any> },
         allFunctions: { result: Record<string, any> },
-    ): Promise<{ type: string; stateType: shared.StateType; enumValues: shared.EnumValues | undefined; writable: boolean }>;
+    ): Promise<{
+        type: string;
+        stateType: shared.StateType;
+        enumValues: shared.EnumValues | undefined;
+        writable: boolean;
+    }>;
     _statesToEnumValues(
         rawStates: Record<string, string> | string[] | string | undefined,
     ): shared.EnumValues | undefined;
