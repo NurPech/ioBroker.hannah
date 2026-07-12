@@ -394,6 +394,9 @@ export class StateWatcher {
             if (funcIds.some(id => id.includes('light') || id.includes('licht'))) {
                 return 'light';
             }
+            if (funcIds.some(id => id.includes('scene') || id.includes('szene'))) {
+                return 'scene';
+            }
             if (funcIds.some(id => id.includes('socket') || id.includes('stecker') || id.includes('plug'))) {
                 return 'socket';
             }

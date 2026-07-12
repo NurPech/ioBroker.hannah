@@ -220,6 +220,19 @@ describe('StateWatcher', () => {
             expect(meta.type).to.equal('light');
         });
 
+        it('resolves a state filed under a "Szene" function as scene', async () => {
+            publishState({ role: 'boolean', write: true });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(
+                stateId,
+                room(deviceId),
+                functionsFor(stateId, 'szene'),
+            );
+
+            expect(meta.type).to.equal('scene');
+        });
+
         it('resolves a writable switch/switch.power role as socket when no function matches', async () => {
             publishState({ role: 'switch.power', write: true });
             publishDevice();
