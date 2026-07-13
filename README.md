@@ -84,6 +84,8 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
 - Fixed: the virtual "all" satellite room folder no longer has a German name
 - Fixed: BLE tag states no longer have German object names, and tag labels are now sanitized before being used in object IDs
 - Fixed: sensor `pressure` state now uses unit `mbar` instead of `hPa` per the role definition, and satellite device IDs are now sanitized before being used in sensor object IDs
+- Fixed: `textCommand`/`textAnswer` states now use role `text` instead of the generic `state`, and a typo in `textCommand`'s display name was corrected
+- Fixed: a pending `ask` (`sendTo` with a `resident_answered` callback) is no longer left dangling forever if Hannah Core disconnects before an answer arrives
 
 ### 0.32.3 (2026-07-12)
 - Added: device snapshot now reports whether each state is writable (`AgentDevice.writable`, from ioBroker's `common.write`) — lets Hannah/the WebUI exclude read-only states (sensors, etc.) from control actions

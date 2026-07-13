@@ -53,9 +53,9 @@ class Hannah extends utils.Adapter {
         await this.setObjectNotExistsAsync('textCommand', {
             type: 'state',
             common: {
-                name: 'textConmand',
+                name: 'textCommand',
                 type: 'string',
-                role: 'state',
+                role: 'text',
                 read: true,
                 write: true,
                 def: '',
@@ -67,7 +67,7 @@ class Hannah extends utils.Adapter {
             common: {
                 name: 'textAnswer',
                 type: 'string',
-                role: 'state',
+                role: 'text',
                 read: true,
                 write: false,
                 def: '',
@@ -158,6 +158,7 @@ class Hannah extends utils.Adapter {
                 await this.setState('info.connection', false, true);
                 await this.states?.stop();
                 await this.residents?.unsubscribe();
+                this.messages?.onDisconnected();
             },
             onCommand: (cmd: agent.AgentCommand) => {
                 if (cmd.setState) {
