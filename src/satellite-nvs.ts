@@ -35,6 +35,9 @@ export function updateSatelliteNvs(ip: string, token: string, values: Record<str
             });
             res.on('error', reject);
         });
+        req.setTimeout(10_000, () => {
+            req.destroy(new Error(`Timeout waiting for ${ip}/nvs`));
+        });
         req.on('error', reject);
         req.write(body);
         req.end();
