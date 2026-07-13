@@ -1,4 +1,5 @@
 import type * as utils from '@iobroker/adapter-core';
+import { sanitizeId } from './satellites';
 
 /**
  * Manages BLE tag location states under hannah.<instance>.ble.<label>.
@@ -28,10 +29,11 @@ export class BleWatcher {
     async handleBleUpdate(label: string, mac: string, room: string, satellite: string, rssi: number): Promise<void> {
         await this.ensureBleFolder();
         await this._ensureStates(label, mac);
+        const ns = `ble.${sanitizeId(label)}`;
         await Promise.all([
-            this.adapter.setState(`ble.${label}.room`, { val: room || null, ack: true }),
-            this.adapter.setState(`ble.${label}.satellite`, { val: satellite || null, ack: true }),
-            this.adapter.setState(`ble.${label}.rssi`, { val: rssi || null, ack: true }),
+            this.adapter.setState(`${ns}.room`, { val: room || null, ack: true }),
+            this.adapter.setState(`${ns}.satellite`, { val: satellite || null, ack: true }),
+            this.adapter.setState(`${ns}.rssi`, { val: rssi || null, ack: true }),
         ]);
         this.adapter.log.debug(`[ble] ${label}: room=${room || 'none'} satellite=${satellite || 'none'} rssi=${rssi}`);
     }
@@ -42,7 +44,7 @@ export class BleWatcher {
         }
         this.ensuredLabels.add(label);
 
-        const ns = `ble.${label}`;
+        const ns = `ble.${sanitizeId(label)}`;
         await this.adapter.setObjectNotExistsAsync(ns, {
             type: 'channel',
             common: { name: label },
@@ -50,12 +52,12 @@ export class BleWatcher {
         });
         await this.adapter.setObjectNotExistsAsync(`${ns}.room`, {
             type: 'state',
-            common: { name: 'Aktueller Raum', type: 'string', role: 'text', read: true, write: false, def: null },
+            common: { name: 'Current Room', type: 'string', role: 'text', read: true, write: false, def: null },
             native: {},
         });
         await this.adapter.setObjectNotExistsAsync(`${ns}.satellite`, {
             type: 'state',
-            common: { name: 'Erkennender Satellit', type: 'string', role: 'text', read: true, write: false, def: null },
+            common: { name: 'Detecting Satellite', type: 'string', role: 'text', read: true, write: false, def: null },
             native: {},
         });
         await this.adapter.setObjectNotExistsAsync(`${ns}.rssi`, {
@@ -68,7 +70,7 @@ export class BleWatcher {
     private async ensureBleFolder(): Promise<void> {
         await this.adapter.setObjectNotExistsAsync('ble', {
             type: 'folder',
-            common: { name: 'BLE-Tags' },
+            common: { name: 'BLE Tags' },
             native: {},
         });
     }
