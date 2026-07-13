@@ -13,7 +13,19 @@ declare global {
             residentsInstance: string;
             firmwareSourceUrl: string;
             firmwareSourceToken: string;
+            satWifiSsid: string;
+            satWifiPass: string;
+            satMqttBroker: string;
+            satMqttPort: string;
+            satMqttUser: string;
+            satMqttPass: string;
+            satOtaUrl: string;
+            satOtaChannel: string;
+            satOtaToken: string;
+            satAssetUrl: string;
+            satAssetToken: string;
             satNvsToken: string;
+            satTlsSkipVerify: boolean;
             adminUserId: string;
         }
     }
