@@ -91,7 +91,6 @@
     "WebSerial is not supported by this browser (Chrome/Edge required)": "WebSerial não é compatível com este navegador (é necessário Chrome/Edge)",
     "WiFi": "Wi-fi",
     "Wireless only updates WiFi, MQTT broker/port, OTA channel and the OTA/asset tokens — everything else requires Serial.": "Wireless atualiza apenas WiFi, corretor/porta MQTT, canal OTA e tokens OTA/ativos – todo o resto requer Serial.",
-    "Write NVS": "Escreva NVS",
     "Write via Serial": "Escrever via serial",
     "Write wireless": "Escreva sem fio",
     "Writing NVS partition...": "Escrevendo partição NVS...",
