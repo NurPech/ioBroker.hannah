@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.32.4 (2026-07-13)
 - Fixed: `last_seen` satellite state now uses role `date` instead of `value.time` (which requires a numeric epoch timestamp, not the ISO string this adapter stores)
 - Fixed: satellite/room online indicators now use role `indicator.reachable` instead of `indicator.connected` (reserved for instances)
 - Fixed: firmware version state now uses role `info.firmware` instead of the generic `text`
