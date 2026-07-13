@@ -77,6 +77,12 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: `last_seen` satellite state now uses role `date` instead of `value.time` (which requires a numeric epoch timestamp, not the ISO string this adapter stores)
+- Fixed: satellite/room online indicators now use role `indicator.reachable` instead of `indicator.connected` (reserved for instances)
+- Fixed: firmware version state now uses role `info.firmware` instead of the generic `text`
+- Fixed: the virtual "all" satellite room folder no longer has a German name
+
 ### 0.32.3 (2026-07-12)
 - Added: device snapshot now reports whether each state is writable (`AgentDevice.writable`, from ioBroker's `common.write`) — lets Hannah/the WebUI exclude read-only states (sensors, etc.) from control actions
 - Changed: `@m1kad0/hannah-proto` bumped to 0.5.2
