@@ -1,7 +1,12 @@
 import type * as utils from '@iobroker/adapter-core';
 import type { AgentMessageSender, GrpcClient } from './grpc-client';
 
-function sanitizeId(name: string): string {
+/**
+ * Replaces characters forbidden in ioBroker object IDs with underscores.
+ *
+ * @param name - Raw name to turn into a valid object ID segment
+ */
+export function sanitizeId(name: string): string {
     return name.replace(/[^a-zA-Z0-9_,-]/g, '_');
 }
 
@@ -322,7 +327,7 @@ export class SatelliteWatcher {
         const base = 'satellites.rooms.all';
         await this.adapter.setObjectNotExistsAsync(base, {
             type: 'folder',
-            common: { name: 'Alle' },
+            common: { name: 'All' },
             native: {},
         });
         const states: Array<[string, ioBroker.StateCommon]> = [
@@ -336,6 +341,9 @@ export class SatelliteWatcher {
                 { name: 'Announcement (LLM rephrase)', type: 'string', role: 'text', read: true, write: true, def: '' },
             ],
             ['dnd', { name: 'Do not disturb', type: 'boolean', role: 'switch', read: true, write: true, def: false }],
+            // Room-level mute exists only here, not in _ensureRoomStates: real rooms mute per
+            // satellite (multiple satellites in a room may want independent control), but "all"
+            // has no per-satellite objects to toggle in bulk, so it needs its own broadcast switch.
             [
                 'mute',
                 { name: 'Mute all microphones', type: 'boolean', role: 'switch', read: true, write: true, def: false },
@@ -372,7 +380,7 @@ export class SatelliteWatcher {
                 {
                     name: 'Any satellite online',
                     type: 'boolean',
-                    role: 'indicator.connected',
+                    role: 'indicator.reachable',
                     read: true,
                     write: false,
                     def: false,
@@ -419,7 +427,7 @@ export class SatelliteWatcher {
             common: {
                 name: 'Satellite online',
                 type: 'boolean',
-                role: 'indicator.connected',
+                role: 'indicator.reachable',
                 read: true,
                 write: false,
                 def: false,
@@ -443,7 +451,7 @@ export class SatelliteWatcher {
             common: {
                 name: 'Last seen (UTC)',
                 type: 'string',
-                role: 'value.time',
+                role: 'date',
                 read: true,
                 write: false,
                 def: '',
@@ -479,7 +487,7 @@ export class SatelliteWatcher {
             common: {
                 name: 'Firmware version',
                 type: 'string',
-                role: 'text',
+                role: 'info.firmware',
                 read: true,
                 write: false,
                 def: '',

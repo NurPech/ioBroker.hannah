@@ -61,6 +61,9 @@ function fetchBuffer(url: string, token?: string): Promise<Buffer> {
             res.on('end', () => resolve(Buffer.concat(chunks)));
             res.on('error', reject);
         });
+        req.setTimeout(30_000, () => {
+            req.destroy(new Error(`Timeout fetching ${url}`));
+        });
         req.on('error', reject);
         req.end();
     });

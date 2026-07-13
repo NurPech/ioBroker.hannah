@@ -187,13 +187,37 @@
     "residentsInstance": "0",
     "textCommandStateId": "0_userdata.0.hannah.set.textCommand",
     "firmwareSourceUrl": "",
-    "firmwareSourceToken": ""
+    "firmwareSourceToken": "",
+    "satWifiSsid": "",
+    "satWifiPass": "",
+    "satMqttBroker": "",
+    "satMqttPort": "1883",
+    "satMqttUser": "",
+    "satMqttPass": "",
+    "satOtaUrl": "",
+    "satOtaChannel": "satellite-esp-stable",
+    "satOtaToken": "",
+    "satAssetUrl": "",
+    "satAssetToken": "",
+    "satNvsToken": "",
+    "satTlsSkipVerify": false,
+    "adminUserId": ""
   },
   "encryptedNative": [
-    "firmwareSourceToken"
+    "firmwareSourceToken",
+    "satWifiPass",
+    "satMqttPass",
+    "satOtaToken",
+    "satAssetToken",
+    "satNvsToken"
   ],
   "protectedNative": [
-    "firmwareSourceToken"
+    "firmwareSourceToken",
+    "satWifiPass",
+    "satMqttPass",
+    "satOtaToken",
+    "satAssetToken",
+    "satNvsToken"
   ],
   "objects": [],
   "instanceObjects": [

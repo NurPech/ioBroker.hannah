@@ -204,6 +204,20 @@ export class MessagesHandler {
     }
 
     /**
+     * Called when the gRPC connection to Hannah Core drops. Any `ask` still waiting on an answer
+     * can never receive one over the dead stream (askResident/resident_answered both travel over
+     * the AgentConnect stream) — without this, its correlation entry and the caller's sendTo
+     * callback would stay in `_pending` forever.
+     */
+    public onDisconnected(): void {
+        for (const [correlationId, cb] of this._pending) {
+            this.adapter.log.warn(`[messages] ask corr=${correlationId} abandoned — Hannah Core disconnected`);
+            this.adapter.sendTo(cb.from, cb.command, { sent: false, error: 'Hannah Core disconnected' }, cb.cb);
+        }
+        this._pending.clear();
+    }
+
+    /**
      * Called when Hannah sends back a resident's spoken answer for a pending ask.
      *
      * @param cmd - callback command payload

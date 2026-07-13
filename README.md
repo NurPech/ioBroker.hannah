@@ -77,6 +77,19 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: `last_seen` satellite state now uses role `date` instead of `value.time` (which requires a numeric epoch timestamp, not the ISO string this adapter stores)
+- Fixed: satellite/room online indicators now use role `indicator.reachable` instead of `indicator.connected` (reserved for instances)
+- Fixed: firmware version state now uses role `info.firmware` instead of the generic `text`
+- Fixed: the virtual "all" satellite room folder no longer has a German name
+- Fixed: BLE tag states no longer have German object names, and tag labels are now sanitized before being used in object IDs
+- Fixed: sensor `pressure` state now uses unit `mbar` instead of `hPa` per the role definition, and satellite device IDs are now sanitized before being used in sensor object IDs
+- Fixed: `textCommand`/`textAnswer` states now use role `text` instead of the generic `state`, and a typo in `textCommand`'s display name was corrected
+- Fixed: a pending `ask` (`sendTo` with a `resident_answered` callback) is no longer left dangling forever if Hannah Core disconnects before an answer arrives
+- Fixed: HTTP requests to a satellite's NVS endpoint and to the firmware update server now time out instead of hanging indefinitely if the target is unreachable
+- Changed: satellite default credentials (WiFi/MQTT passwords, OTA/asset/NVS tokens) are now encrypted and protected in the adapter configuration, matching the existing firmware source token
+- Fixed: removed a stale, untranslated `Write NVS` key from the non-English admin UI translations
+
 ### 0.32.3 (2026-07-12)
 - Added: device snapshot now reports whether each state is writable (`AgentDevice.writable`, from ioBroker's `common.write`) — lets Hannah/the WebUI exclude read-only states (sensors, etc.) from control actions
 - Changed: `@m1kad0/hannah-proto` bumped to 0.5.2
