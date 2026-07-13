@@ -190,10 +190,20 @@
     "firmwareSourceToken": ""
   },
   "encryptedNative": [
-    "firmwareSourceToken"
+    "firmwareSourceToken",
+    "satWifiPass",
+    "satMqttPass",
+    "satOtaToken",
+    "satAssetToken",
+    "satNvsToken"
   ],
   "protectedNative": [
-    "firmwareSourceToken"
+    "firmwareSourceToken",
+    "satWifiPass",
+    "satMqttPass",
+    "satOtaToken",
+    "satAssetToken",
+    "satNvsToken"
   ],
   "objects": [],
   "instanceObjects": [
