@@ -1,4 +1,5 @@
 import type * as utils from '@iobroker/adapter-core';
+import { sanitizeId } from './satellites';
 
 /**
  * Manages satellite sensor states under hannah.<instance>.satellites.<device>.sensors.
@@ -37,7 +38,7 @@ export class SensorWatcher {
     ): Promise<void> {
         try {
             await this._ensureStates(device, iaq > 0);
-            const ns = `satellites.sensors.${device}`;
+            const ns = `satellites.sensors.${sanitizeId(device)}`;
             const updates: Promise<unknown>[] = [
                 this.adapter.setState(`${ns}.temperature`, { val: Math.round(temperature * 10) / 10, ack: true }),
                 this.adapter.setState(`${ns}.pressure`, { val: Math.round(pressure * 10) / 10, ack: true }),
@@ -74,7 +75,7 @@ export class SensorWatcher {
      */
     async deleteSensors(device: string): Promise<void> {
         try {
-            await this.adapter.delObjectAsync(`satellites.sensors.${device}`, { recursive: true });
+            await this.adapter.delObjectAsync(`satellites.sensors.${sanitizeId(device)}`, { recursive: true });
         } catch {
             // No sensor tree for this device — nothing to delete.
         }
@@ -87,13 +88,13 @@ export class SensorWatcher {
         }
         this.ensuredDevices.add(device);
 
-        const ns = `satellites.sensors.${device}`;
+        const ns = `satellites.sensors.${sanitizeId(device)}`;
         await this.adapter.setObjectNotExistsAsync('satellites.sensors', {
             type: 'folder',
             common: { name: 'Sensor Readings' },
             native: {},
         });
-        await this.adapter.setObjectNotExistsAsync(`satellites.sensors.${device}`, {
+        await this.adapter.setObjectNotExistsAsync(ns, {
             type: 'channel',
             common: { name: `${device} Sensors` },
             native: {},
@@ -112,7 +113,14 @@ export class SensorWatcher {
         });
         await this.adapter.setObjectNotExistsAsync(`${ns}.pressure`, {
             type: 'state',
-            common: { name: 'Pressure', type: 'number', role: 'value.pressure', unit: 'hPa', read: true, write: false },
+            common: {
+                name: 'Pressure',
+                type: 'number',
+                role: 'value.pressure',
+                unit: 'mbar',
+                read: true,
+                write: false,
+            },
             native: {},
         });
         await this.adapter.setObjectNotExistsAsync(`${ns}.humidity`, {
