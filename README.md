@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.32.5 (2026-07-15)
 - Fixed: `iaq`/`iaq_accuracy`/`co2_equiv`/`voc_equiv` sensor states no longer log "has no existing object" warnings if a satellite's first sensor update arrives before BSEC2 has produced a valid IAQ reading
 
 ### 0.32.4 (2026-07-13)
