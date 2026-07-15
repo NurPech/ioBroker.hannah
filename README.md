@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: `iaq`/`iaq_accuracy`/`co2_equiv`/`voc_equiv` sensor states no longer log "has no existing object" warnings if a satellite's first sensor update arrives before BSEC2 has produced a valid IAQ reading
+
 ### 0.32.4 (2026-07-13)
 - Fixed: `last_seen` satellite state now uses role `date` instead of `value.time` (which requires a numeric epoch timestamp, not the ISO string this adapter stores)
 - Fixed: satellite/room online indicators now use role `indicator.reachable` instead of `indicator.connected` (reserved for instances)

@@ -8,6 +8,7 @@ import { sanitizeId } from './satellites';
 export class SensorWatcher {
     private adapter: utils.AdapterInstance;
     private ensuredDevices = new Set<string>();
+    private ensuredBsecDevices = new Set<string>();
 
     /** @param adapter - ioBroker adapter instance */
     constructor(adapter: utils.AdapterInstance) {
@@ -80,55 +81,65 @@ export class SensorWatcher {
             // No sensor tree for this device — nothing to delete.
         }
         this.ensuredDevices.delete(device);
+        this.ensuredBsecDevices.delete(device);
     }
 
     private async _ensureStates(device: string, hasBsec: boolean): Promise<void> {
-        if (this.ensuredDevices.has(device)) {
-            return;
-        }
-        this.ensuredDevices.add(device);
-
         const ns = `satellites.sensors.${sanitizeId(device)}`;
-        await this.adapter.setObjectNotExistsAsync('satellites.sensors', {
-            type: 'folder',
-            common: { name: 'Sensor Readings' },
-            native: {},
-        });
-        await this.adapter.setObjectNotExistsAsync(ns, {
-            type: 'channel',
-            common: { name: `${device} Sensors` },
-            native: {},
-        });
-        await this.adapter.setObjectNotExistsAsync(`${ns}.temperature`, {
-            type: 'state',
-            common: {
-                name: 'Temperature',
-                type: 'number',
-                role: 'value.temperature',
-                unit: '°C',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.adapter.setObjectNotExistsAsync(`${ns}.pressure`, {
-            type: 'state',
-            common: {
-                name: 'Pressure',
-                type: 'number',
-                role: 'value.pressure',
-                unit: 'mbar',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.adapter.setObjectNotExistsAsync(`${ns}.humidity`, {
-            type: 'state',
-            common: { name: 'Humidity', type: 'number', role: 'value.humidity', unit: '%', read: true, write: false },
-            native: {},
-        });
-        if (hasBsec) {
+
+        if (!this.ensuredDevices.has(device)) {
+            this.ensuredDevices.add(device);
+
+            await this.adapter.setObjectNotExistsAsync('satellites.sensors', {
+                type: 'folder',
+                common: { name: 'Sensor Readings' },
+                native: {},
+            });
+            await this.adapter.setObjectNotExistsAsync(ns, {
+                type: 'channel',
+                common: { name: `${device} Sensors` },
+                native: {},
+            });
+            await this.adapter.setObjectNotExistsAsync(`${ns}.temperature`, {
+                type: 'state',
+                common: {
+                    name: 'Temperature',
+                    type: 'number',
+                    role: 'value.temperature',
+                    unit: '°C',
+                    read: true,
+                    write: false,
+                },
+                native: {},
+            });
+            await this.adapter.setObjectNotExistsAsync(`${ns}.pressure`, {
+                type: 'state',
+                common: {
+                    name: 'Pressure',
+                    type: 'number',
+                    role: 'value.pressure',
+                    unit: 'mbar',
+                    read: true,
+                    write: false,
+                },
+                native: {},
+            });
+            await this.adapter.setObjectNotExistsAsync(`${ns}.humidity`, {
+                type: 'state',
+                common: {
+                    name: 'Humidity',
+                    type: 'number',
+                    role: 'value.humidity',
+                    unit: '%',
+                    read: true,
+                    write: false,
+                },
+                native: {},
+            });
+        }
+
+        if (hasBsec && !this.ensuredBsecDevices.has(device)) {
+            this.ensuredBsecDevices.add(device);
             await this.adapter.setObjectNotExistsAsync(`${ns}.iaq`, {
                 type: 'state',
                 common: {
