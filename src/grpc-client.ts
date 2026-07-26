@@ -145,18 +145,22 @@ export class GrpcClient {
 
     /**
      * Fetch the current list of registered satellites from Hannah Core.
-     * Returns an array of satellite objects or an empty array on error.
+     * Returns `null` on error (no client, or the RPC itself failed) — distinct from an empty
+     * array, which means Core was actually reached and genuinely reports zero satellites.
+     * Callers MUST treat `null` as "unknown state, don't touch anything" rather than falling
+     * back to an empty array — conflating the two previously caused every satellite object to
+     * be deleted as "stale" whenever Core was merely unreachable (Refs #<issue>).
      */
-    getSatellites(): Promise<control.Satellite[]> {
+    getSatellites(): Promise<control.Satellite[] | null> {
         return new Promise(resolve => {
             if (!this.client) {
-                resolve([]);
+                resolve(null);
                 return;
             }
             this.client.getSatellites({}, (err: Error | null, response?: control.GetSatellitesResponse) => {
                 if (err || !response) {
                     this.log.warn(`[grpc] GetSatellites failed: ${err?.message ?? 'no response'}`);
-                    resolve([]);
+                    resolve(null);
                 } else {
                     resolve(response.satellites ?? []);
                 }

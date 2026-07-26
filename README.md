@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: a failed/unreachable `GetSatellites` call was treated the same as Core reporting zero satellites, deleting every satellite object as "stale" whenever Core was merely unreachable at that moment
+
 ### 0.32.5 (2026-07-15)
 - Fixed: `iaq`/`iaq_accuracy`/`co2_equiv`/`voc_equiv` sensor states no longer log "has no existing object" warnings if a satellite's first sensor update arrives before BSEC2 has produced a valid IAQ reading
 
