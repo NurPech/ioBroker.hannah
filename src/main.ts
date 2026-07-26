@@ -134,6 +134,13 @@ class Hannah extends utils.Adapter {
                 // `connected` per-satellite instead of assuming every entry is online, and fall
                 // back to the DB-assigned room for disconnected ones (their live `room` is empty).
                 const sats = await this.grpc!.getSatellites();
+                if (sats === null) {
+                    // Connection dropped again right after onConnected fired, or the RPC itself
+                    // failed — don't touch any satellite objects on unknown state, otherwise
+                    // removeUnknownSatellites() below would delete every satellite as "stale".
+                    this.log.warn('[satellites] GetSatellites unavailable — skipping satellite sync this cycle.');
+                    return;
+                }
                 const effectiveRoom = (sat: control.Satellite): string =>
                     sat.connected ? sat.room : sat.roomDisplayName || sat.roomId || '';
                 for (const sat of sats) {
@@ -362,6 +369,9 @@ class Hannah extends utils.Adapter {
             void (async (): Promise<void> => {
                 try {
                     const satellites = await this.grpc!.getSatellites();
+                    if (satellites === null) {
+                        throw new Error('Not connected to Hannah Core');
+                    }
                     const sat = satellites.find(s => s.deviceId === deviceId);
                     if (!sat) {
                         throw new Error(`Unknown satellite '${deviceId}'`);
