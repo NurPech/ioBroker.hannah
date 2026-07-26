@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.32.6 (2026-07-26)
 - Fixed: a failed/unreachable `GetSatellites` call was treated the same as Core reporting zero satellites, deleting every satellite object as "stale" whenever Core was merely unreachable at that moment
 
 ### 0.32.5 (2026-07-15)
