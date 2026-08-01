@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.33.2 (2026-08-01)
 - Changed: satellite cards in the Device Manager now show the satellite's display name as the title and its MAC as the identifier ("MAC:") instead of the room; the room is now shown as its own field on the card
 
 ### 0.33.1 (2026-08-01)

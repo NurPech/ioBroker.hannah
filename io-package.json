@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.33.1",
+    "version": "0.33.2",
     "news": {
+      "0.33.2": {
+        "en": "Changed: satellite cards in the Device Manager now show the satellite's display name as the title and its MAC as the identifier (\"MAC:\") instead of the room; the room is now shown as its own field on the card",
+        "de": "Geändert: Satellitenkarten im Geräte-Manager zeigen nun den Anzeigenamen des Satelliten als Titel und seinen MAC als Identifikator (\"MAC:\") anstelle des Raumes an; der Raum wird nun als eigenes Feld auf der Karte angezeigt",
+        "ru": "Спутниковые карты в диспетчере устройств теперь показывают отображаемое имя спутника в качестве заголовка и его MAC в качестве идентификатора («MAC:») вместо комнаты; комната теперь отображается как собственное поле на карте",
+        "pt": "Modificado: as placas de satélite no Gerenciador de Dispositivos agora mostram o nome do satélite como o título e seu MAC como o identificador (\"MAC:\") em vez da sala; a sala é agora mostrada como seu próprio campo no cartão",
+        "nl": "Veranderd: satellietkaarten in de Apparaatbeheer tonen nu de naam van de satellietweergave als titel en de MAC als identificatiecode (\"MAC:\") in plaats van de ruimte; de ruimte wordt nu getoond als een eigen veld op de kaart",
+        "fr": "Changed: les cartes satellite dans le Gestionnaire de périphériques affichent maintenant le nom d'affichage du satellite comme titre et son MAC comme identifiant (\"MAC:\") au lieu de la pièce; la pièce est maintenant affichée comme son propre champ sur la carte",
+        "it": "Cambiato: le schede satellitari nel Gestione dispositivi ora mostrano il nome del display del satellite come il titolo e il suo MAC come l'identificatore (\"MAC:\") invece della stanza; la stanza è ora mostrata come il suo campo sulla scheda",
+        "es": "Cambiado: las tarjetas de satélite en el Administrador de dispositivos ahora muestran el nombre de la pantalla del satélite como el título y su MAC como el identificador (\"MAC:\") en lugar de la habitación; la habitación se muestra ahora como su propio campo en la tarjeta",
+        "pl": "Zmienione: karty satelitarne w menedżerze urządzeń pokazują teraz nazwę wyświetlacza satelity jako tytuł i jego MAC jako identyfikator (\"MAC:\") zamiast pokoju; pokój jest teraz pokazany jako własne pole na karcie",
+        "uk": "Змінено: супутникові картки в диспетчері пристроїв тепер відображають ім’я відображення супутника як назву та її MAC як ідентифікатор (\"MAC:\") замість приміщення; приміщення тепер відображається як власне поле на карті",
+        "zh-cn": "更改:设备管理器中的卫星卡现在显示卫星的显示名称为标题,其MAC显示为标识符(\"MAC:\")而不是房间;该房间现在显示为卡片上自己的字段"
+      },
       "0.33.1": {
         "en": "Added: satellites in the Device Manager now show an update indicator (firmware version + available-update badge) and two card actions — \"Update firmware\" and \"Restart satellite\" (with confirmation) — instead of only being reachable through the states tree\nAdded: satellite detail panel now also shows last seen, firmware version and update-available status",
         "de": "Hinzugefügt: Satelliten im Geräte-Manager zeigen jetzt einen Update-Indikator (Firmware-Version + verfügbares Update-Badge) und zwei Kartenaktionen - \"Firmware aktualisieren\" und \"Satellit neu starten\" (mit Bestätigung) - anstatt nur über den Statusbaum erreichbar zu sein\nHinzugefügt: Satelliten-Detail-Panel zeigt jetzt auch zuletzt gesehen, Firmware-Version und Update-verfügbaren Status",
@@ -80,19 +93,6 @@
         "pl": "Dodano: migawka urządzenia teraz raportuje, czy każdy stan jest zapisywalny (`AgentDevice.writable`, z `common.write` ioBroker) — umożliwia Hannah/WebUI wykluczenie stanów tylko do odczytu (czujników itp.) z akcji sterujących\nZmieniono: `@m1kad0/hannah-proto` zaktualizowano do wersji 0.5.2",
         "uk": "Додано: знімок пристрою тепер повідомляє, чи кожен стан доступний для запису (`AgentDevice.writable`, з `common.write` від ioBroker) — дозволяє Ханні/WebUI виключати стани лише для читання (датчики тощо) з дій керування.\nЗмінено: `@m1kad0/hannah-proto` підвищено до версії 0.5.2.",
         "zh-cn": "新增：设备快照现在会报告每个状态是否可写（`AgentDevice.writable`，来自 ioBroker 的 `common.write`）——这使得 Hannah/WebUI 可以从控制操作中排除只读状态（传感器等）。\n已更改：`@m1kad0/hannah-proto` 版本升级至 0.5.2"
-      },
-      "0.32.2": {
-        "en": "Added: `state-watcher.ts`'s device-type detection now recognizes a \"Szene\"/\"scene\" function, resolving to type `scene` — lets room-scoped scene states be enum-discovered like any other device without being pulled into \"Licht\"-category group commands",
-        "de": "Neu: Die Gerätetyperkennung in `state-watcher.ts` erkennt nun eine \"Szene\"/\"scene\"-Funktion und wird zum Typ `scene` aufgelöst – dadurch können raumbezogene Szenenzustände wie jedes andere Gerät per Enumeration ermittelt werden, ohne in Gruppenbefehle der Kategorie \"Licht\" einbezogen zu werden.",
-        "ru": "Добавлено: функция определения типа устройства в `state-watcher.ts` теперь распознает функцию \"Szene\"/\"scene\", которая преобразуется в тип `scene` — это позволяет обнаруживать состояния сцены в пределах комнаты с помощью перечисления, как и любое другое устройство, без включения в команды групп категории \"Licht\".",
-        "pt": "Adicionado: a detecção de tipo de dispositivo em `state-watcher.ts` agora reconhece uma função \"Szene\"/\"scene\", resolvendo para o tipo `scene` — permitindo que estados de cena com escopo de sala sejam descobertos por enumeração como qualquer outro dispositivo, sem serem incluídos em comandos de grupo da categoria \"Licht\".",
-        "nl": "Toegevoegd: De apparaattypedetectie van `state-watcher.ts` herkent nu een \"Szene\"/\"scene\"-functie, die wordt omgezet naar type `scene` — hiermee kunnen scènetoestanden op kamerniveau worden opgespoord zoals elk ander apparaat, zonder dat ze worden opgenomen in groepsopdrachten van de categorie \"Licht\".",
-        "fr": "Ajout : La détection du type de périphérique dans `state-watcher.ts` reconnaît désormais une fonction « Szene »/« scene », résolue en type `scene` — permet de découvrir les états de scène à l'échelle d'une pièce comme n'importe quel autre périphérique sans être inclus dans les commandes du groupe de catégorie « Licht ».",
-        "it": "Aggiunto: il rilevamento del tipo di dispositivo di `state-watcher.ts` ora riconosce una funzione \"Szene\"/\"scene\", risolvendola nel tipo `scene` — consente di scoprire gli stati di scena con ambito stanza come qualsiasi altro dispositivo senza essere trascinati nei comandi del gruppo di categoria \"Licht\".",
-        "es": "Añadido: La detección de tipo de dispositivo de `state-watcher.ts` ahora reconoce una función \"Szene\"/\"scene\", resolviendo al tipo `scene`, lo que permite que los estados de escena con ámbito de habitación se descubran mediante enumeraciones como cualquier otro dispositivo sin ser incluidos en los comandos del grupo de categoría \"Licht\".",
-        "pl": "Dodano: funkcja wykrywania typu urządzenia `state-watcher.ts` rozpoznaje teraz funkcję „Szene”/„scene”, rozstrzygając na typ `scene` — umożliwia wykrywanie stanów scen o zasięgu pomieszczenia metodą enum jak w przypadku każdego innego urządzenia bez konieczności włączania ich do poleceń grupy kategorii „Licht”",
-        "uk": "Додано: визначення типу пристрою в `state-watcher.ts` тепер розпізнає функцію \"Szene\"/\"scene\", визначаючи тип `scene` — дозволяє виявляти стани сцени в межах кімнати за допомогою перерахунку, як і будь-який інший пристрій, без потрапляння до групових команд категорії \"Licht\".",
-        "zh-cn": "新增：`state-watcher.ts` 的设备类型检测现在可以识别“Szene”/“scene”函数，并将其解析为类型“scene”——这样，房间范围内的场景状态就可以像其他任何设备一样被枚举发现，而不会被拉入“Licht”类别的组命令中。"
       }
     },
     "blockly": true,
