@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.33.1 (2026-08-01)
 - Added: satellites in the Device Manager now show an update indicator (firmware version + available-update badge) and two card actions — "Update firmware" and "Restart satellite" (with confirmation) — instead of only being reachable through the states tree
 - Added: satellite detail panel now also shows last seen, firmware version and update-available status
 

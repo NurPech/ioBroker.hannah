@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.33.0",
+    "version": "0.33.1",
     "news": {
+      "0.33.1": {
+        "en": "Added: satellites in the Device Manager now show an update indicator (firmware version + available-update badge) and two card actions — \"Update firmware\" and \"Restart satellite\" (with confirmation) — instead of only being reachable through the states tree\nAdded: satellite detail panel now also shows last seen, firmware version and update-available status",
+        "de": "Hinzugefügt: Satelliten im Geräte-Manager zeigen jetzt einen Update-Indikator (Firmware-Version + verfügbares Update-Badge) und zwei Kartenaktionen - \"Firmware aktualisieren\" und \"Satellit neu starten\" (mit Bestätigung) - anstatt nur über den Statusbaum erreichbar zu sein\nHinzugefügt: Satelliten-Detail-Panel zeigt jetzt auch zuletzt gesehen, Firmware-Version und Update-verfügbaren Status",
+        "ru": "Спутники в диспетчере устройств теперь показывают индикатор обновления (версия программного обеспечения + значок обновления) и два действия карты - «Обновить прошивку» и «Перезагрузить спутник» (с подтверждением) - вместо того, чтобы быть доступным только через дерево состояний\nДобавлено: панель спутниковых данных теперь также показывает последнюю увиденную версию прошивки и статус обновления",
+        "pt": "Adicionado: os satélites no Gerenciador de Dispositivos agora mostram um indicador de atualização (versão do firmware + emblema de atualização disponível) e duas ações de cartão – \"Atualizar firmware\" e \"Reiniciar satélite\" (com confirmação) – em vez de ser acessível apenas através da árvore de estados\nAdicionado: painel de detalhes de satélite agora também mostra a última versão vista, firmware e status disponível para atualização",
+        "nl": "Toegevoegd: satellieten in de Apparaat Manager tonen nu een update indicator (firmware versie + beschikbaar-update badge) en twee kaart acties \nToegevoegd: satelliet detail paneel nu ook laat laatst gezien, firmware versie en update beschikbaar status",
+        "fr": "Ajouté : les satellites du Device Manager affichent désormais un indicateur de mise à jour (version du logiciel de confirmation + badge de mise à jour disponible) et deux actions de cartes – « Update firmware » et « Redémarrer le satellite » (avec confirmation) – au lieu d'être seulement accessible par l'arborescence des états\nAjouté : le panneau de détails satellite montre également la dernière vue, la version firmware et l'état de mise à jour disponible",
+        "it": "Aggiunto: satelliti in Gestione dispositivi ora mostrano un indicatore di aggiornamento (versione firmware + badge disponibile-update) e due azioni di carte — \"Aggiorna firmware\" e \"Riavvia satellite\" (con conferma) — invece di essere raggiungibili solo attraverso l'albero stati\nAggiunto: pannello dettaglio satellite ora mostra anche ultimo visto, versione firmware e stato di aggiornamento-disponibile",
+        "es": "Añadido: satélites en el Administrador de Dispositivos ahora muestran un indicador de actualización (versión de firmware + placa de actualización disponible) y dos acciones de tarjetas: \"Actualizar firmware\" y \"Restart satellite\" (con confirmación) en lugar de ser accesibles a través del árbol de estados\nAñadido: panel de detalles de satélite ahora también muestra la última vista, versión de firmware y estado disponible de actualización",
+        "pl": "Dodano: satelity w Menedżerze urządzeń pokazują teraz wskaźnik aktualizacji (wersja firmware + dostępne-update- update) i dwie akcje karciane - \"Aktualizacja firmware\" i \"Restart satellite\" (z potwierdzeniem) - zamiast być dostępne tylko przez drzewo stanów\nDodano: panel detali satelitarnych pokazuje również ostatnio widziany, wersję firmware i status update-available",
+        "uk": "Додано: супутники в диспетчері пристроїв тепер показують індикатор оновлення (версія програмного забезпечення + доступна значка) і два дії карт - \"Оновити прошивку\" і \"Restart супутник\" (з підтвердженням) - замість того, що тільки досягається через дерево станів\nДодано: Панель деталей супутника тепер також показує останні видимі, версію прошивки і оновлений статус",
+        "zh-cn": "添加:设备管理器中的卫星现在显示一个更新指标(软件版本+可用更新徽章)和两个卡片动作——\"更新固件\"和\"重新启动卫星\"(经确认)——而不是只通过州树可以到达\n添加:卫星详细面板现在还显示最后一次看到、固件版本和更新可用状态"
+      },
       "0.33.0": {
         "en": "Added: \"Restart satellite\" button per satellite (`satellites.rooms.<room>.<device>.restart`), triggers an ordered remote restart over MQTT — no more walking over to the device or pulling power\nFixed: satellite `last_seen` no longer freezes after a device (re-)registers — it now keeps advancing in step with Hannah's live heartbeat instead of only reflecting the last connect/reconnect",
         "de": "Hinzugefügt: Die Schaltfläche \"Satellit neu starten\" pro Satellit (\"satellites.rooms.<room>.<device>.restart\") löst einen bestellten Remote-Neustart über MQTT aus - nicht mehr zum Gerät laufen oder Strom ziehen\nFixed: Satellit 'last seen' friert nicht mehr ein, nachdem sich ein Gerät (neu) registriert hat - er bewegt sich jetzt im Einklang mit Hannahs Live-Herzschlag, anstatt nur den letzten Connect / Reconnect zu reflektieren",
@@ -80,19 +93,6 @@
         "pl": "Dodano: funkcja wykrywania typu urządzenia `state-watcher.ts` rozpoznaje teraz funkcję „Szene”/„scene”, rozstrzygając na typ `scene` — umożliwia wykrywanie stanów scen o zasięgu pomieszczenia metodą enum jak w przypadku każdego innego urządzenia bez konieczności włączania ich do poleceń grupy kategorii „Licht”",
         "uk": "Додано: визначення типу пристрою в `state-watcher.ts` тепер розпізнає функцію \"Szene\"/\"scene\", визначаючи тип `scene` — дозволяє виявляти стани сцени в межах кімнати за допомогою перерахунку, як і будь-який інший пристрій, без потрапляння до групових команд категорії \"Licht\".",
         "zh-cn": "新增：`state-watcher.ts` 的设备类型检测现在可以识别“Szene”/“scene”函数，并将其解析为类型“scene”——这样，房间范围内的场景状态就可以像其他任何设备一样被枚举发现，而不会被拉入“Licht”类别的组命令中。"
-      },
-      "0.32.1": {
-        "en": "Changed: `@m1kad0/hannah-proto` bumped to 0.5.0. No functional change for this adapter (it never called the removed `Routine*` RPCs).",
-        "de": "Geändert: `@m1kad0/hannah-proto` wurde auf Version 0.5.0 aktualisiert. Für diesen Adapter gibt es keine funktionalen Änderungen (er hat die entfernten `Routine*`-RPCs nie aufgerufen).",
-        "ru": "Изменено: `@m1kad0/hannah-proto` обновлен до версии 0.5.0. Функциональных изменений для этого адаптера нет (он никогда не вызывал удаленные RPC-вызовы `Routine*`).",
-        "pt": "Alterado: `@m1kad0/hannah-proto` atualizado para a versão 0.5.0. Nenhuma alteração funcional para este adaptador (ele nunca chamava as RPCs `Routine*` removidas).",
-        "nl": "Gewijzigd: `@m1kad0/hannah-proto` is bijgewerkt naar 0.5.0. Geen functionele wijziging voor deze adapter (de verwijderde `Routine*` RPC's werden nooit aangeroepen).",
-        "fr": "Modifié : `@m1kad0/hannah-proto` est passé à la version 0.5.0. Aucun changement fonctionnel pour cet adaptateur (il n’a jamais appelé les RPC `Routine*` supprimés).",
-        "it": "Modificato: `@m1kad0/hannah-proto` aggiornato alla versione 0.5.0. Nessuna modifica funzionale per questo adattatore (non ha mai chiamato le RPC `Routine*` rimosse).",
-        "es": "Modificado: `@m1kad0/hannah-proto` se actualizó a la versión 0.5.0. No hay cambios funcionales para este adaptador (nunca llamó a las RPC `Routine*` eliminadas).",
-        "pl": "Zmieniono: `@m1kad0/hannah-proto` zaktualizowano do wersji 0.5.0. Brak zmian funkcjonalnych dla tego adaptera (nigdy nie wywoływał on usuniętych wywołań RPC `Routine*`).",
-        "uk": "Змінено: `@m1kad0/hannah-proto` оновлено до версії 0.5.0. Функціональних змін для цього адаптера не відбулося (він ніколи не викликав видалені RPC `Routine*`).",
-        "zh-cn": "已更改：`@m1kad0/hannah-proto` 升级到 0.5.0。此适配器的功能没有更改（它从未调用过已移除的 `Routine*` RPC）。"
       }
     },
     "blockly": true,
