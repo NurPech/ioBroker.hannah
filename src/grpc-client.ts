@@ -353,6 +353,29 @@ export class GrpcClient {
     }
 
     /**
+     * Trigger an ordered remote restart (`esp_restart()`) of a satellite over MQTT.
+     *
+     * @param device - Satellite device ID
+     */
+    triggerSatelliteRestart(device: string): Promise<{ ok: boolean; message?: string }> {
+        return new Promise((resolve, reject) => {
+            if (!this.client) {
+                reject(new Error('not connected'));
+                return;
+            }
+            const timer = this._setTimeout(() => reject(new Error('timeout')), 5000);
+            this.client.triggerSatelliteRestart({ device }, (err: Error | null, response?: shared.StatusResponse) => {
+                this._clearTimeout(timer);
+                if (err || !response) {
+                    reject(err ?? new Error('no response'));
+                } else {
+                    resolve({ ok: response.ok, message: response.message });
+                }
+            });
+        });
+    }
+
+    /**
      * Send a message to Hannah Core.
      *
      * @param msg - AgentMessage frame
