@@ -178,6 +178,12 @@ class Hannah extends utils.Adapter {
                     void this.residents?.handleSetResidentMood(r.residentId, r.mood, r.type);
                 } else if (cmd.satelliteUpdate) {
                     const s = cmd.satelliteUpdate;
+                    // Core pushes this on every proxy heartbeat now (~10s), not just on
+                    // register/gone (hannah-Monorepo #185) — that push arriving IS the
+                    // "seen" signal, so last_seen is stamped with the adapter's own clock
+                    // here rather than plumbing a timestamp through the proto. Only for
+                    // the online case: a gone push isn't evidence of freshness.
+                    const lastSeen = s.online ? new Date().toISOString().slice(0, 19).replace('T', ' ') : undefined;
                     void this.satellites?.handleSatelliteUpdate(
                         s.deviceId,
                         s.room,
@@ -186,6 +192,7 @@ class Hannah extends utils.Adapter {
                         s.volume ?? undefined,
                         s.mute ?? undefined,
                         s.displayName || undefined,
+                        lastSeen,
                     );
                 } else if (cmd.watchMore?.stateIds) {
                     void this.states?.watchMore(cmd.watchMore.stateIds);
