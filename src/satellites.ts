@@ -284,6 +284,20 @@ export class SatelliteWatcher {
                             `[satellites] TriggerFirmwareUpdate ${actualDeviceId} failed: ${err.message}`,
                         );
                     });
+            } else if (key === 'restart' && state.val === true) {
+                void this.adapter.setState(id, { val: false, ack: true });
+                void this.getGrpc()
+                    ?.triggerSatelliteRestart(actualDeviceId)
+                    .then(res => {
+                        this.adapter.log.info(
+                            `[satellites] TriggerSatelliteRestart ${actualDeviceId}: ${res.message ?? 'ok'}`,
+                        );
+                    })
+                    .catch(err => {
+                        this.adapter.log.warn(
+                            `[satellites] TriggerSatelliteRestart ${actualDeviceId} failed: ${err.message}`,
+                        );
+                    });
             } else if (key === 'volume' || key === 'mute') {
                 this.send({ satelliteControl: { room: originalRoom, deviceId: actualDeviceId, [key]: state.val } });
                 this.adapter.log.debug(
@@ -510,6 +524,18 @@ export class SatelliteWatcher {
             type: 'state',
             common: {
                 name: 'Update firmware now',
+                type: 'boolean',
+                role: 'button',
+                read: false,
+                write: true,
+                def: false,
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.restart`, {
+            type: 'state',
+            common: {
+                name: 'Restart satellite',
                 type: 'boolean',
                 role: 'button',
                 read: false,
