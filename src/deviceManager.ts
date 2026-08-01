@@ -26,6 +26,7 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
         return {
             apiVersion: 'v3',
             smallCards: true,
+            identifierLabel: { en: 'MAC', de: 'MAC' },
         };
     }
 
@@ -122,13 +123,27 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
             const info: DeviceInfo<string> = {
                 id: device._id,
                 name: device.common.name || deviceId,
-                identifier: room,
+                identifier: deviceId,
                 status: { connection: isOnline ? 'connected' : 'disconnected' },
                 update: {
                     available: { stateId: `${ns}.satellites.rooms.${room}.${deviceId}.update_available` },
                     version: { stateId: `${ns}.satellites.rooms.${room}.${deviceId}.firmware_version` },
                 },
                 hasDetails: true,
+                customInfo: {
+                    id: device._id,
+                    schema: {
+                        type: 'panel',
+                        items: {
+                            room: {
+                                type: 'staticInfo',
+                                label: { en: 'Room', de: 'Raum' },
+                                data: room,
+                                addColon: true,
+                            },
+                        },
+                    },
+                },
                 controls,
                 actions,
             };
