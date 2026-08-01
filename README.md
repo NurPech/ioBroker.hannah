@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.33.0 (2026-08-01)
 - Added: "Restart satellite" button per satellite (`satellites.rooms.<room>.<device>.restart`), triggers an ordered remote restart over MQTT — no more walking over to the device or pulling power
 - Fixed: satellite `last_seen` no longer freezes after a device (re-)registers — it now keeps advancing in step with Hannah's live heartbeat instead of only reflecting the last connect/reconnect
 
