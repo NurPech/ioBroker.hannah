@@ -1,5 +1,7 @@
 import {
+    ACTIONS,
     DeviceManagement,
+    type DeviceAction,
     type DeviceControl,
     type DeviceDetails,
     type DeviceInfo,
@@ -51,6 +53,38 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
                 `${ns}.satellites.rooms.${room}.${deviceId}.volume`,
             );
 
+            // Fire-and-forget: the actual RPC call + result logging already lives in
+            // satellites.ts' onStateChange (update_now/restart) — reuse it instead of
+            // duplicating the gRPC call here, which would need its own getGrpc() wiring.
+            const pressButton = async (button: 'update_now' | 'restart'): Promise<void> => {
+                await this.adapter.setStateAsync(`satellites.rooms.${room}.${deviceId}.${button}`, {
+                    val: true,
+                    ack: false,
+                });
+            };
+
+            const actions: DeviceAction<string>[] = [
+                {
+                    id: ACTIONS.UPDATE,
+                    icon: 'update',
+                    description: { en: 'Update firmware', de: 'Firmware aktualisieren' },
+                    handler: async () => {
+                        await pressButton('update_now');
+                        return { refresh: 'none' };
+                    },
+                },
+                {
+                    id: 'restart',
+                    icon: 'refresh',
+                    description: { en: 'Restart satellite', de: 'Satellit neu starten' },
+                    confirmation: { en: 'Restart this satellite now?', de: 'Diesen Satelliten jetzt neu starten?' },
+                    handler: async () => {
+                        await pressButton('restart');
+                        return { refresh: 'none' };
+                    },
+                },
+            ];
+
             const controls: DeviceControl<string>[] = [
                 {
                     id: 'mute',
@@ -90,9 +124,13 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
                 name: device.common.name || deviceId,
                 identifier: room,
                 status: { connection: isOnline ? 'connected' : 'disconnected' },
+                update: {
+                    available: { stateId: `${ns}.satellites.rooms.${room}.${deviceId}.update_available` },
+                    version: { stateId: `${ns}.satellites.rooms.${room}.${deviceId}.firmware_version` },
+                },
                 hasDetails: true,
                 controls,
-                actions: [],
+                actions,
             };
 
             context.addDevice(info);
@@ -132,6 +170,27 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
                         oid: `satellites.rooms.${room}.${deviceId}.online`,
                         control: 'text',
                         label: { en: 'Online', de: 'Online' },
+                        addColon: true,
+                    },
+                    lastSeen: {
+                        type: 'state',
+                        oid: `satellites.rooms.${room}.${deviceId}.last_seen`,
+                        control: 'text',
+                        label: { en: 'Last seen (UTC)', de: 'Zuletzt gesehen (UTC)' },
+                        addColon: true,
+                    },
+                    firmwareVersion: {
+                        type: 'state',
+                        oid: `satellites.rooms.${room}.${deviceId}.firmware_version`,
+                        control: 'text',
+                        label: { en: 'Firmware version', de: 'Firmware-Version' },
+                        addColon: true,
+                    },
+                    updateAvailable: {
+                        type: 'state',
+                        oid: `satellites.rooms.${room}.${deviceId}.update_available`,
+                        control: 'text',
+                        label: { en: 'Update available', de: 'Update verfügbar' },
                         addColon: true,
                     },
                 },
