@@ -16,8 +16,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { ESPLoader, Transport, UsbJtagSerialReset } from 'esptool-js';
 import { encodeNVS } from '@m1kad0/esp-nvs-utils';
-import { I18n } from '@iobroker/adapter-react-v5';
-import type { AdminConnection } from '@iobroker/adapter-react-v5';
+import { I18n } from '@iobroker/gui-components';
+import type { AdminConnection } from '@iobroker/gui-components';
 import type { SatelliteDefaults } from './settings';
 
 interface FirmwareFile {
@@ -488,7 +488,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
             onClose={
                 step === 'flashing' || step === 'connecting' || step === 'preparing' ? undefined : handleClose
             }
-            PaperProps={{ sx: { minHeight: step === 'monitoring' ? 420 : undefined } }}
+            slotProps={{ paper: { sx: { minHeight: step === 'monitoring' ? 420 : undefined } } }}
             maxWidth="sm"
             fullWidth
         >
@@ -540,16 +540,14 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                         >
                             <Typography
                                 variant="subtitle2"
-                                color="text.secondary"
-                                sx={{ flex: 1 }}
+                                sx={{ flex: 1, color: 'text.secondary' }}
                             >
                                 {I18n.t('Configuration')}
                                 {!configExpanded && config.wifiSsid && (
                                     <Typography
                                         component="span"
                                         variant="caption"
-                                        color="text.disabled"
-                                        sx={{ ml: 1 }}
+                                        sx={{ ml: 1, color: 'text.disabled' }}
                                     >
                                         {I18n.t('WiFi')}: {config.wifiSsid}
                                         {config.mqttBroker ? `, MQTT: ${config.mqttBroker}` : ''}
@@ -558,8 +556,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                             </Typography>
                             <Typography
                                 variant="caption"
-                                color="text.secondary"
-                                sx={{ ml: 1 }}
+                                sx={{ ml: 1, color: 'text.secondary' }}
                             >
                                 {configExpanded ? '▴' : '▾'}
                             </Typography>
@@ -568,7 +565,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                 <Typography
                                     variant="caption"
-                                    color="text.secondary"
+                                    sx={{ color: 'text.secondary' }}
                                 >
                                     {I18n.t('WiFi')}
                                 </Typography>
@@ -595,7 +592,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
 
                                 <Typography
                                     variant="caption"
-                                    color="text.secondary"
+                                    sx={{ color: 'text.secondary' }}
                                 >
                                     {I18n.t('MQTT')}
                                 </Typography>
@@ -641,7 +638,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
 
                                 <Typography
                                     variant="caption"
-                                    color="text.secondary"
+                                    sx={{ color: 'text.secondary' }}
                                 >
                                     {I18n.t('OTA')}
                                 </Typography>
@@ -676,7 +673,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
 
                                 <Typography
                                     variant="caption"
-                                    color="text.secondary"
+                                    sx={{ color: 'text.secondary' }}
                                 >
                                     {I18n.t('Asset Server')}
                                 </Typography>
@@ -710,7 +707,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                                     label={
                                         <Typography
                                             variant="body2"
-                                            color="warning.main"
+                                            sx={{ color: 'warning.main' }}
                                         >
                                             {I18n.t('Disable TLS certificate validation (insecure)')}
                                         </Typography>
@@ -757,8 +754,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                     <Box sx={{ py: 1 }}>
                         <Typography
                             variant="subtitle2"
-                            color="text.secondary"
-                            sx={{ mb: 1 }}
+                            sx={{ mb: 1, color: 'text.secondary' }}
                         >
                             {I18n.t('Serial monitor — ESP booting...')}
                         </Typography>
@@ -788,23 +784,21 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                     <Box sx={{ textAlign: 'center', py: 2 }}>
                         <Typography
                             variant="h6"
-                            color="success.main"
-                            sx={{ mb: 1 }}
+                            sx={{ mb: 1, color: 'success.main' }}
                         >
                             {I18n.t('Flash successful!')}
                         </Typography>
                         {firmwareVersion && (
                             <Typography
                                 variant="body2"
-                                color="text.secondary"
+                                sx={{ color: 'text.secondary' }}
                             >
                                 {I18n.t('Firmware:')} {firmwareVersion}
                             </Typography>
                         )}
                         <Typography
                             variant="body2"
-                            color="text.secondary"
-                            sx={{ mt: 1 }}
+                            sx={{ mt: 1, color: 'text.secondary' }}
                         >
                             {I18n.t('The satellite is now starting and connecting to WiFi.')}
                         </Typography>
@@ -836,23 +830,21 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                     <Box sx={{ textAlign: 'center', py: 2 }}>
                         <Typography
                             variant="h6"
-                            color="success.main"
-                            sx={{ mb: 1 }}
+                            sx={{ mb: 1, color: 'success.main' }}
                         >
                             {I18n.t('Image ready!')}
                         </Typography>
                         {firmwareVersion && (
                             <Typography
                                 variant="body2"
-                                color="text.secondary"
+                                sx={{ color: 'text.secondary' }}
                             >
                                 {I18n.t('Firmware:')} {firmwareVersion}
                             </Typography>
                         )}
                         <Typography
                             variant="body2"
-                            color="text.secondary"
-                            sx={{ mt: 1 }}
+                            sx={{ mt: 1, color: 'text.secondary' }}
                         >
                             {I18n.t(
                                 'The combined image was downloaded. Flash it with esptool.py or the ESP Flash Download Tool.',
