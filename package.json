@@ -41,7 +41,7 @@
     "@iobroker/dev-server": "^0.8.0",
     "@iobroker/eslint-config": "^2.3.4",
     "@iobroker/testing": "^5.2.2",
-    "@m1kad0/esp-nvs-utils": "0.2.1",
+    "@m1kad0/esp-nvs-utils": "^0.2.1",
     "@mui/material": "^9.0.0",
     "@tsconfig/node22": "^22.0.5",
     "@types/adm-zip": "^0.5.8",
