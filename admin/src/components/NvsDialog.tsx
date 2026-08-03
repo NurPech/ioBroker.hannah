@@ -16,8 +16,8 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { ESPLoader, Transport, UsbJtagSerialReset } from 'esptool-js';
 import { encodeNVS } from '@m1kad0/esp-nvs-utils';
-import { I18n } from '@iobroker/adapter-react-v5';
-import type { AdminConnection } from '@iobroker/adapter-react-v5';
+import { I18n } from '@iobroker/gui-components';
+import type { AdminConnection } from '@iobroker/gui-components';
 import type { SatelliteDefaults } from './settings';
 
 interface NvsConfig {
@@ -360,7 +360,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
                         {mode === 'wireless' && (
                             <Typography
                                 variant="caption"
-                                color="text.secondary"
+                                sx={{ color: 'text.secondary' }}
                             >
                                 {I18n.t(
                                     'Wireless only updates WiFi, MQTT broker/port, OTA channel and the OTA/asset tokens — everything else requires Serial.',
@@ -381,7 +381,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
                         <Divider />
                         <Typography
                             variant="caption"
-                            color="text.secondary"
+                            sx={{ color: 'text.secondary' }}
                         >
                             {I18n.t('WiFi')}
                         </Typography>
@@ -408,7 +408,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
 
                         <Typography
                             variant="caption"
-                            color="text.secondary"
+                            sx={{ color: 'text.secondary' }}
                         >
                             {I18n.t('MQTT')}
                         </Typography>
@@ -455,7 +455,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
 
                         <Typography
                             variant="caption"
-                            color="text.secondary"
+                            sx={{ color: 'text.secondary' }}
                         >
                             {I18n.t('OTA')}
                         </Typography>
@@ -491,7 +491,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
 
                         <Typography
                             variant="caption"
-                            color="text.secondary"
+                            sx={{ color: 'text.secondary' }}
                         >
                             {I18n.t('Asset Server')}
                         </Typography>
@@ -527,7 +527,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
                                 label={
                                     <Typography
                                         variant="body2"
-                                        color="warning.main"
+                                        sx={{ color: 'warning.main' }}
                                     >
                                         {I18n.t('Disable TLS certificate validation (insecure)')}
                                     </Typography>
@@ -574,14 +574,13 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
                     <Box sx={{ textAlign: 'center', py: 2 }}>
                         <Typography
                             variant="h6"
-                            color="success.main"
-                            sx={{ mb: 1 }}
+                            sx={{ mb: 1, color: 'success.main' }}
                         >
                             {I18n.t('NVS successfully written!')}
                         </Typography>
                         <Typography
                             variant="body2"
-                            color="text.secondary"
+                            sx={{ color: 'text.secondary' }}
                         >
                             {I18n.t('The satellite is restarting and connecting to WiFi.')}
                         </Typography>

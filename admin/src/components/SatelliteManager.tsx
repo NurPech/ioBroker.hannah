@@ -9,8 +9,8 @@ import Fab from '@mui/material/Fab';
 import Grid from '@mui/material/Grid';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { I18n } from '@iobroker/adapter-react-v5';
-import type { AdminConnection } from '@iobroker/adapter-react-v5';
+import { I18n } from '@iobroker/gui-components';
+import type { AdminConnection } from '@iobroker/gui-components';
 import FlashDialog from './FlashDialog';
 import NvsDialog from './NvsDialog';
 import type { SatelliteDefaults } from './settings';
@@ -180,13 +180,12 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
             />
             <Typography
                 variant="h5"
-                color="text.primary"
-                sx={{ mb: 3, fontWeight: 600 }}
+                sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}
             >
                 {I18n.t('Satellites')}
             </Typography>
             {satellites.length === 0 ? (
-                <Typography color="text.secondary">{I18n.t('No satellites known.')}</Typography>
+                <Typography sx={{ color: 'text.secondary' }}>{I18n.t('No satellites known.')}</Typography>
             ) : (
                 <Grid
                     container
@@ -194,12 +193,8 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                 >
                     {satellites.map(sat => (
                         <Grid
-                            item
                             key={sat.objectId}
-                            xs={12}
-                            sm={6}
-                            md={4}
-                            lg={3}
+                            size={{ xs: 12, sm: 6, md: 4, lg: 3 }}
                         >
                             <Card
                                 variant="outlined"
@@ -209,7 +204,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                         <Typography
                                             variant="h6"
-                                            sx={{ flexGrow: 1 }}
+                                            sx={{ flexGrow: 1, color: 'text.primary' }}
                                         >
                                             {sat.deviceName}
                                         </Typography>
@@ -221,8 +216,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                     </Box>
                                     <Typography
                                         variant="body2"
-                                        color="text.secondary"
-                                        sx={{ mb: 1 }}
+                                        sx={{ mb: 1, color: 'text.secondary' }}
                                     >
                                         {sat.room}
                                     </Typography>
@@ -230,7 +224,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <Typography
                                                 variant="caption"
-                                                color="text.secondary"
+                                                sx={{ color: 'text.secondary' }}
                                             >
                                                 {I18n.t('Firmware:')} {sat.firmwareVersion}
                                             </Typography>

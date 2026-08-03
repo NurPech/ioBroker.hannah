@@ -1,6 +1,6 @@
 import React from 'react';
-import { GenericApp } from '@iobroker/adapter-react-v5';
-import type { GenericAppProps, GenericAppSettings, GenericAppState } from '@iobroker/adapter-react-v5';
+import { GenericApp } from '@iobroker/gui-components';
+import type { GenericAppProps, GenericAppSettings, GenericAppState } from '@iobroker/gui-components';
 import Settings from './components/settings';
 
 import enI18n from './i18n/en.json';

@@ -19,7 +19,7 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { I18n } from '@iobroker/adapter-react-v5';
+import { I18n } from '@iobroker/gui-components';
 import type { EnumItem } from '../app';
 
 /** Default NVS values pre-filled when flashing or rewriting a satellite. */
@@ -171,16 +171,14 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                     {!enumsLoaded ? (
                         <Typography
                             variant="body2"
-                            color="text.secondary"
-                            sx={{ p: 2 }}
+                            sx={{ p: 2, color: 'text.secondary' }}
                         >
                             {I18n.t('Loading...')}
                         </Typography>
                     ) : items.length === 0 ? (
                         <Typography
                             variant="body2"
-                            color="text.secondary"
-                            sx={{ p: 2 }}
+                            sx={{ p: 2, color: 'text.secondary' }}
                         >
                             {I18n.t('No entries found')}
                         </Typography>
@@ -192,15 +190,14 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                                         <Typography
                                             variant="body2"
                                             noWrap
-                                            fontWeight={selected.includes(item.id) ? 600 : 400}
+                                            sx={{ fontWeight: selected.includes(item.id) ? 600 : 400 }}
                                         >
                                             {item.name}
                                         </Typography>
                                         <Typography
                                             variant="caption"
-                                            color="text.secondary"
                                             noWrap
-                                            sx={{ display: 'block' }}
+                                            sx={{ display: 'block', color: 'text.secondary' }}
                                         >
                                             {item.id}
                                         </Typography>
@@ -227,7 +224,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Typography
                     variant="body2"
-                    color="text.secondary"
+                    sx={{ color: 'text.secondary' }}
                 >
                     {I18n.t(
                         'Select which rooms and functions Hannah should know about. Leave all off to include everything.',
@@ -240,15 +237,13 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                 <Box>
                     <Typography
                         variant="subtitle2"
-                        color="text.primary"
-                        sx={{ mb: 0.5 }}
+                        sx={{ mb: 0.5, color: 'text.primary' }}
                     >
                         {I18n.t('Extra State Prefixes')}
                     </Typography>
                     <Typography
                         variant="body2"
-                        color="text.secondary"
-                        sx={{ mb: 1 }}
+                        sx={{ mb: 1, color: 'text.secondary' }}
                     >
                         {I18n.t('Additional state ID prefixes to stream to Hannah (e.g. 0_userdata.0)')}
                     </Typography>
@@ -296,15 +291,13 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                 <Box>
                     <Typography
                         variant="subtitle2"
-                        color="text.primary"
-                        sx={{ mb: 0.5 }}
+                        sx={{ mb: 0.5, color: 'text.primary' }}
                     >
                         {I18n.t('Floor Mappings')}
                     </Typography>
                     <Typography
                         variant="body2"
-                        color="text.secondary"
-                        sx={{ mb: 1 }}
+                        sx={{ mb: 1, color: 'text.secondary' }}
                     >
                         {I18n.t(
                             'Map floor labels or abbreviations found in state IDs to a canonical abbreviation (e.g. "Erdgeschoss" → "EG"). Leave empty to use built-in defaults (EG, OG, UG, DG, KG, ZG).',
@@ -371,7 +364,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 600 }}>
                 <Typography
                     variant="body2"
-                    color="text.secondary"
+                    sx={{ color: 'text.secondary' }}
                 >
                     {I18n.t(
                         'Default values pre-filled when flashing a new satellite or rewriting its NVS. Can be overridden per device.',
@@ -380,7 +373,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
 
                 <Typography
                     variant="subtitle2"
-                    color="text.primary"
+                    sx={{ color: 'text.primary' }}
                 >
                     {I18n.t('WiFi')}
                 </Typography>
@@ -405,7 +398,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                 <Divider />
                 <Typography
                     variant="subtitle2"
-                    color="text.primary"
+                    sx={{ color: 'text.primary' }}
                 >
                     {I18n.t('MQTT')}
                 </Typography>
@@ -447,7 +440,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                 <Divider />
                 <Typography
                     variant="subtitle2"
-                    color="text.primary"
+                    sx={{ color: 'text.primary' }}
                 >
                     {I18n.t('OTA')}
                 </Typography>
@@ -480,7 +473,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                 <Divider />
                 <Typography
                     variant="subtitle2"
-                    color="text.primary"
+                    sx={{ color: 'text.primary' }}
                 >
                     {I18n.t('Asset Server')}
                 </Typography>
@@ -504,7 +497,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                 <Divider />
                 <Typography
                     variant="subtitle2"
-                    color="text.primary"
+                    sx={{ color: 'text.primary' }}
                 >
                     {I18n.t('NVS Update API')}
                 </Typography>
@@ -528,8 +521,8 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                 />
                 <Typography
                     variant="body2"
-                    color="warning.main"
                     component="span"
+                    sx={{ color: 'warning.main' }}
                 >
                     {I18n.t('Disable TLS certificate validation (insecure)')}
                 </Typography>
@@ -537,7 +530,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                 <Divider />
                 <Typography
                     variant="subtitle2"
-                    color="text.primary"
+                    sx={{ color: 'text.primary' }}
                 >
                     {I18n.t('Admin Actions')}
                 </Typography>
@@ -561,7 +554,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 600 }}>
                 <Typography
                     variant="body2"
-                    color="text.secondary"
+                    sx={{ color: 'text.secondary' }}
                 >
                     {I18n.t(
                         'URL to the firmware ZIP file (served as .bin). Supports Hannah Update Server, GitHub/GitLab releases, or any direct URL. The file must contain a manifest.json and the binary files.',

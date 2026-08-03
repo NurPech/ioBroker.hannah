@@ -1,11 +1,17 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
-import { Utils, Theme } from '@iobroker/adapter-react-v5';
-import type { ThemeName } from '@iobroker/adapter-react-v5';
+import { Utils, Theme } from '@iobroker/gui-components';
+import type { ThemeName } from '@iobroker/gui-components';
 import App from './app';
 
-let themeName = Utils.getThemeName();
+// ioBroker passes the admin's active theme as a URL param when embedding tabs — `theme=`
+// on admin 8+, but the legacy adapter-react `react=` (e.g. "?newReact=true&react=dark") on
+// admin 7 and earlier. Without either, Utils.getThemeName() falls back to matchMedia/
+// localStorage guesswork that can disagree with the real admin theme.
+const params = new URLSearchParams(window.location.search);
+const themeParam = (params.get('theme') || params.get('react')) as ThemeName | null;
+let themeName = Utils.getThemeName(themeParam);
 
 function build(): void {
     const container = document.getElementById('root');
