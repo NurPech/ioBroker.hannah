@@ -13,14 +13,6 @@ updates:
     cooldown:
       default-days: 7
     ignore:
-      - dependency-name: "@mui/material"
-        versions: [ ">=7.0.0" ]
-      - dependency-name: "@mui/icons-material"
-        versions: [ ">=7.0.0" ]
-      - dependency-name: "react-dom"
-        versions: [ ">=19.0.0" ]
-      - dependency-name: "@types/react-dom"
-        versions: [ ">=19.0.0" ]
       - dependency-name: "@types/node"
         update-types:
           - version-update:semver-major
