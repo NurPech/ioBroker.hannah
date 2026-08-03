@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.33.3 (2026-08-03)
 - Changed: admin UI migrated from the deprecated `@iobroker/adapter-react-v5` to `@iobroker/gui-components`
 
 ### 0.33.2 (2026-08-01)
