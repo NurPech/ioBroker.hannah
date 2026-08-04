@@ -84,7 +84,8 @@ export class ResidentsWatcher {
         this.send({
             residentUpdate: {
                 roomieId: residentId,
-                name: '',
+                // name bewusst weggelassen (nicht ''): presence-only Update, Core soll den zuletzt
+                // per Snapshot bekannten Namen nicht mit einem Leerstring überschreiben (#206).
                 presenceState: presenceState,
                 type: RESIDENT_PATH_SEGMENTS[segment],
             },
