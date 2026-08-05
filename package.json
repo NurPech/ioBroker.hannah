@@ -1,6 +1,6 @@
 {
   "name": "iobroker.hannah",
-  "version": "0.34.0",
+  "version": "0.34.1",
   "description": "Connects ioBroker to Hannah voice assistant via bidirectional gRPC — streams device states, presence and commands in real time.",
   "author": {
     "name": "M1kad0",

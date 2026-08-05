@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.34.1 (2026-08-05)
 - Fixed: forecast weather ("Wie wird das Wetter morgen?" and week overviews) always came back empty on openweathermap, even the "today" max temperature — forecast-day states carry a `.forecast.N` suffix on their role that wasn't recognized, so none of them ever matched. Current conditions were unaffected
 
 ### 0.34.0 (2026-08-05)

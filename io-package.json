@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "0.34.0",
+    "version": "0.34.1",
     "news": {
+      "0.34.1": {
+        "en": "Fixed: forecast weather (\"Wie wird das Wetter morgen?\" and week overviews) always came back empty on openweathermap, even the \"today\" max temperature — forecast-day states carry a `.forecast.N` suffix on their role that wasn't recognized, so none of them ever matched. Current conditions were unaffected",
+        "de": "Behoben: Die Wettervorhersage („Wie wird das Wetter morgen?“ und Wochenübersichten) lieferte auf OpenWeatherMap immer leere Ergebnisse, selbst die Höchsttemperatur für den heutigen Tag. Die Vorhersage-Tageszustände haben das Suffix `.forecast.N` in ihrer Rollenbezeichnung, das nicht erkannt wurde, sodass keine Übereinstimmung gefunden wurde. Die aktuellen Bedingungen waren davon nicht betroffen.",
+        "ru": "Исправлено: прогноз погоды (\"Wie wird das Wetter morgen?\" и обзоры на неделю) всегда отображался пустым на openweathermap, даже максимальная температура \"сегодня\" — состояния прогнозируемых дней имеют суффикс `.forecast.N` в своей роли, который не распознавался, поэтому ни одно из них никогда не совпадало. Текущие условия остались без изменений.",
+        "pt": "Corrigido: a previsão do tempo (\"Wie wird das Wetter morgen?\" e os resumos da semana) sempre retornavam vazios no OpenWeatherMap, inclusive a temperatura máxima de \"hoje\" — os estados de previsão diária possuem um sufixo `.forecast.N` em sua função que não era reconhecido, portanto, nenhum deles correspondia. As condições atuais não foram afetadas.",
+        "nl": "Opgelost: de weersvoorspellingen (\"Wie wird das Wetter morgen?\" en weekoverzichten) op OpenWeatherMap gaven altijd geen resultaten weer, zelfs niet voor de maximumtemperatuur van \"vandaag\". De statussen voor de voorspellingsdag hebben namelijk een `.forecast.N`-achtervoegsel dat niet werd herkend, waardoor er geen enkele overeenkomst werd gevonden. De actuele omstandigheden bleven ongewijzigd.",
+        "fr": "Corrigé : les prévisions météo (« Wie wird das Wetter morgen ? » et les aperçus hebdomadaires) étaient systématiquement vides sur openweathermap, même la température maximale du jour. Les états des jours de prévision comportent un suffixe `.forecast.N` dans leur rôle qui n’était pas reconnu, ce qui empêchait toute correspondance. Les conditions actuelles restaient inchangées.",
+        "it": "Risolto: le previsioni meteo (\"Wie wird das Wetter morgen?\" e le panoramiche settimanali) risultavano sempre vuote su openweathermap, persino la temperatura massima \"di oggi\" — gli stati del giorno di previsione hanno un suffisso `.forecast.N` nel loro ruolo che non veniva riconosciuto, quindi nessuno di essi corrispondeva mai. Le condizioni attuali non erano interessate.",
+        "es": "Solucionado: el pronóstico del tiempo (\"Wie wird das Wetter morgen?\" y los resúmenes semanales) siempre aparecían vacíos en openweathermap, incluso la temperatura máxima de \"hoy\". Los estados del día del pronóstico llevan un sufijo `.forecast.N` en su función que no se reconocía, por lo que ninguno coincidía. Las condiciones actuales no se vieron afectadas.",
+        "pl": "Naprawiono: prognoza pogody („Jak będzie pogoda rano?” i przegląd tygodnia) zawsze zwracała puste dane na OpenWeatherMap, nawet maksymalna temperatura „dzisiaj” — stany z prognozą dnia mają w swojej roli sufiks `.forecast.N`, który nie był rozpoznawany, więc żaden z nich nigdy nie został dopasowany. Bieżące warunki nie uległy zmianie.",
+        "uk": "Виправлено: прогноз погоди («Як буде ранкова погода?» та огляди тижня) завжди повертав порожній результат на openweathermap, навіть максимальна температура «сьогодні» — стани прогнозованого дня мають суфікс `.forecast.N` у своїй ролі, який не розпізнався, тому жоден з них ніколи не збігався. Поточні умови не змінилися.",
+        "zh-cn": "已修复：OpenWeatherMap 上的天气预报（“明天天气如何？”和一周概览）始终显示为空，甚至包括“今天”的最高气温——预报日的状态在其角色中带有 `.forecast.N` 后缀，但 OpenWeatherMap 无法识别，因此始终无法匹配。当前天气状况不受影响。"
+      },
       "0.34.0": {
         "en": "New: generic weather-source discovery — a new \"Weather\" settings tab lets you pick a known ioBroker weather adapter (openweathermap, accuweather, daswetter) or map your own state IDs manually (\"Custom\"), and forwards current conditions + a multi-day forecast to Hannah. Replaces Hannah's previous hardcoded openweathermap-only MQTT parsing with a generic, vendor-independent path",
         "de": "Neu: Generische Wetterquellenerkennung – Über den neuen Reiter „Wetter“ in den Einstellungen können Sie einen bekannten ioBroker-Wetteradapter (OpenWeatherMap, AccuWeather, DasWetter) auswählen oder Ihre eigenen Bundesstaats-IDs manuell zuordnen („Benutzerdefiniert“). Die aktuellen Wetterbedingungen und eine Mehrtagesvorhersage werden an Hannah weitergeleitet. Hannahs bisherige, fest codierte MQTT-Analyse, die ausschließlich OpenWeatherMap unterstützte, wird durch einen generischen, herstellerunabhängigen Pfad ersetzt.",
@@ -80,19 +93,6 @@
         "pl": "Dodano: przycisk \"Restart satelity\" na satelitę ('satellites.rooms < room >. < device > .restart'), uruchamia zamówiony restart zdalny nad MQTT - koniec z przejściem do urządzenia lub ciągnięciem mocy\nNaprawiono: satelita 'last _ seen' nie zamarzł już po rejestracji urządzenia (re-) - teraz posuwa się krok w krok z żywym biciem serca Hannah zamiast tylko odzwierciedlać ostatnie połączenie / ponowne połączenie",
         "uk": "Додано: \"Restart супутниковий\" кнопка на супутник (`satellites.rooms.<room>.<device>.restart`), що замовляється від дистанційного перезаряджання над MQTT - не більше ходьби від пристрою або витягування потужності\nВиправлено: супутник `last seen` більше не замерзає після пристрою (re-)registers — він тепер зберігає прилипання в крокі з живим серцем Ганна, замість того, щоб тільки відобразити останнє підключення/від'єднання",
         "zh-cn": "添加:每颗卫星的“重新启动卫星”按钮(`卫星.room.<room>.<device>.restart'),触发MQTT上空命令的远程重启——不再走过设备或牵引电源\n固定:卫星`Last  Seen'在设备(重新)登记后不再冻结——它现在继续与汉娜的活心跳同步前进,而不是只反映最后的连接/重新连接"
-      },
-      "0.32.6": {
-        "en": "Fixed: a failed/unreachable `GetSatellites` call was treated the same as Core reporting zero satellites, deleting every satellite object as \"stale\" whenever Core was merely unreachable at that moment",
-        "de": "Fixed: Ein fehlgeschlagener/unerreichbarer \"GetSatellites\"-Aufruf wurde genauso behandelt wie Core, der Null-Satelliten meldete, wobei jedes Satellitenobjekt als \"still\" gelöscht wurde, wenn Core in diesem Moment nur unerreichbar war",
-        "ru": "Исправлено: неудавшийся / недостижимый вызов «GetSatellites» рассматривался так же, как Core, сообщающий о нулевых спутниках, удаляя каждый спутниковый объект как «стабильный», когда Core был просто недостижим в тот момент",
-        "pt": "Corrigido: uma chamada falha/inalcançável `GetSatellites' foi tratada como sendo o mesmo que o Core relatando satélites zero, excluindo cada objeto de satélite como \"stale\" sempre que o Core era meramente inacessível naquele momento",
-        "nl": "Fixed: een defecte / ",
-        "fr": "Correction : l'appel `GetSatellites` a été traité de la même manière que celui de Core signalant zéro satellite, supprimant chaque objet satellite comme étant \"stale\" lorsque Core était tout simplement inaccessible à ce moment-là",
-        "it": "Risolto: una chiamata `GetSatellites` fallita/non raggiungibile è stata trattata allo stesso modo dei satelliti Core reporting zero, eliminando ogni oggetto satellite come \"stale\" ogni volta che Core era semplicemente irraggiungibile in quel momento",
-        "es": "Fijado: una llamada de `GetSatellites' fallida e inalcanzable fue tratada de la misma manera que Core informando de satélites cero, eliminando cada objeto de satélite como \"stale\" cuando Core era simplemente inalcanzable en ese momento",
-        "pl": "Naprawiono: nieudany / nieosiągalny telefon 'GetSatellites' był traktowany tak samo jak Core raportujące zero satelitów, usuwając każdy obiekt satelity jako \"nieświeży\", gdy Core był tylko nieosiągalny w tym momencie",
-        "uk": "Виправлено: не вдалося / нездатний `GetSatellites` виклику був оброблений таким же чином, як Core звітності нульових супутників, що видалив кожен супутниковий об'єкт, як \"сталь\", коли Core був просто ненадійним в той момент",
-        "zh-cn": "固定:一个失败/无法接通的`GetSatellites ' 电话与核心报告零号卫星一样,只要核心当时仅无法接通,就删除每个卫星物体的 \" stale\""
       }
     },
     "blockly": true,
