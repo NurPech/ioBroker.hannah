@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: forecast weather ("Wie wird das Wetter morgen?" and week overviews) always came back empty on openweathermap, even the "today" max temperature — forecast-day states carry a `.forecast.N` suffix on their role that wasn't recognized, so none of them ever matched. Current conditions were unaffected
+
 ### 0.34.0 (2026-08-05)
 - New: generic weather-source discovery — a new "Weather" settings tab lets you pick a known ioBroker weather adapter (openweathermap, accuweather, daswetter) or map your own state IDs manually ("Custom"), and forwards current conditions + a multi-day forecast to Hannah. Replaces Hannah's previous hardcoded openweathermap-only MQTT parsing with a generic, vendor-independent path
 
