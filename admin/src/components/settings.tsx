@@ -56,10 +56,21 @@ interface SettingsProps {
     native: Record<string, any>;
     onChange: (attr: string, value: any) => void;
     residentsInstances: string[];
+    weatherInstancesByType: Record<string, string[]>;
     allRooms: EnumItem[];
     allFunctions: EnumItem[];
     enumsLoaded: boolean;
 }
+
+/** weatherCustomMapping field → example state ID shown as placeholder. */
+const WEATHER_CUSTOM_FIELDS: Array<{ key: string; label: string; placeholder: string }> = [
+    { key: 'temperature', label: 'Temperature', placeholder: 'openweathermap.0.forecast.current.temperature' },
+    { key: 'humidity', label: 'Humidity', placeholder: 'openweathermap.0.forecast.current.humidity' },
+    { key: 'conditionText', label: 'Condition text', placeholder: 'openweathermap.0.forecast.current.state' },
+    { key: 'precipitationMm', label: 'Precipitation (mm)', placeholder: 'openweathermap.0.forecast.current.precipitationRain' },
+    { key: 'windSpeedMs', label: 'Wind speed (m/s)', placeholder: 'openweathermap.0.forecast.current.windSpeed' },
+    { key: 'windDirectionText', label: 'Wind direction (text)', placeholder: 'openweathermap.0.forecast.current.windDirectionText' },
+];
 
 interface SettingsState {
     activeTab: number;
@@ -617,6 +628,96 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
         );
     }
 
+    private updateWeatherMapping(field: string, value: string): void {
+        this.props.onChange('weatherCustomMapping', {
+            ...(this.props.native.weatherCustomMapping || {}),
+            [field]: value,
+        });
+    }
+
+    private renderWeatherTab(): React.JSX.Element {
+        const { native, onChange, weatherInstancesByType } = this.props;
+        const adapterType: string = native.weatherAdapterType || '';
+        const isKnownVendor = adapterType !== '' && adapterType !== 'custom';
+        const instances = weatherInstancesByType[adapterType] || [];
+
+        return (
+            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 500 }}>
+                <FormControl size="small">
+                    <InputLabel>{I18n.t('Weather Source')}</InputLabel>
+                    <Select
+                        value={adapterType}
+                        label={I18n.t('Weather Source')}
+                        onChange={e => onChange('weatherAdapterType', e.target.value)}
+                    >
+                        <MenuItem value="">{I18n.t('Disabled')}</MenuItem>
+                        <MenuItem value="openweathermap">openweathermap</MenuItem>
+                        <MenuItem value="accuweather">accuweather</MenuItem>
+                        <MenuItem value="daswetter">daswetter</MenuItem>
+                        <MenuItem value="custom">{I18n.t('Custom')}</MenuItem>
+                    </Select>
+                </FormControl>
+
+                {isKnownVendor && (
+                    <FormControl size="small">
+                        <InputLabel>{I18n.t('Instance')}</InputLabel>
+                        <Select
+                            value={native.weatherInstance || ''}
+                            label={I18n.t('Instance')}
+                            onChange={e => onChange('weatherInstance', e.target.value)}
+                        >
+                            {instances.length === 0 ? (
+                                <MenuItem
+                                    value=""
+                                    disabled
+                                >
+                                    {I18n.t('No %s instance found', adapterType)}
+                                </MenuItem>
+                            ) : (
+                                instances.map(inst => (
+                                    <MenuItem
+                                        key={inst}
+                                        value={inst}
+                                    >
+                                        {adapterType}.{inst}
+                                    </MenuItem>
+                                ))
+                            )}
+                        </Select>
+                    </FormControl>
+                )}
+
+                {adapterType === 'custom' && (
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>{I18n.t('Field')}</TableCell>
+                                <TableCell>{I18n.t('State ID')}</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {WEATHER_CUSTOM_FIELDS.map(({ key, label, placeholder }) => (
+                                <TableRow key={key}>
+                                    <TableCell>{I18n.t(label)}</TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            value={native.weatherCustomMapping?.[key] || ''}
+                                            onChange={e => this.updateWeatherMapping(key, e.target.value)}
+                                            placeholder={placeholder}
+                                            variant="outlined"
+                                            size="small"
+                                            fullWidth
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </Box>
+        );
+    }
+
     /** @inheritdoc */
     render(): React.JSX.Element {
         const { activeTab } = this.state;
@@ -638,6 +739,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                         <Tab label={I18n.t('Integrations')} />
                         <Tab label={I18n.t('Firmware')} />
                         <Tab label={I18n.t('Satellite Defaults')} />
+                        <Tab label={I18n.t('Weather')} />
                     </Tabs>
                 </AppBar>
                 <Box sx={{ flex: 1, overflowY: 'auto', pb: '70px' }}>
@@ -646,6 +748,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                     {activeTab === 2 && this.renderIntegrationsTab()}
                     {activeTab === 3 && this.renderFirmwareTab()}
                     {activeTab === 4 && this.renderSatelliteDefaultsTab()}
+                    {activeTab === 5 && this.renderWeatherTab()}
                 </Box>
             </Box>
         );

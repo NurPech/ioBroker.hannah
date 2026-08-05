@@ -102,5 +102,19 @@
     "Configure": "Configure",
     "Online": "Online",
     "Offline": "Offline",
-    "Update available": "Update available"
+    "Update available": "Update available",
+    "Weather": "Weather",
+    "Weather Source": "Weather Source",
+    "Disabled": "Disabled",
+    "Custom": "Custom",
+    "Instance": "Instance",
+    "No %s instance found": "No %s instance found",
+    "Field": "Field",
+    "State ID": "State ID",
+    "Temperature": "Temperature",
+    "Humidity": "Humidity",
+    "Condition text": "Condition text",
+    "Precipitation (mm)": "Precipitation (mm)",
+    "Wind speed (m/s)": "Wind speed (m/s)",
+    "Wind direction (text)": "Wind direction (text)"
 }

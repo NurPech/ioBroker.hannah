@@ -185,6 +185,16 @@
     "extraStatePrefixes": [],
     "floorMappings": [],
     "residentsInstance": "0",
+    "weatherAdapterType": "",
+    "weatherInstance": "0",
+    "weatherCustomMapping": {
+      "temperature": "",
+      "humidity": "",
+      "conditionText": "",
+      "precipitationMm": "",
+      "windSpeedMs": "",
+      "windDirectionText": ""
+    },
     "textCommandStateId": "0_userdata.0.hannah.set.textCommand",
     "firmwareSourceUrl": "",
     "firmwareSourceToken": "",
