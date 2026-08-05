@@ -11,6 +11,16 @@ declare global {
             extraStatePrefixes: Array<{ prefix: string }>;
             floorMappings: Array<{ label: string; abbreviation: string }>;
             residentsInstance: string;
+            weatherAdapterType: string;
+            weatherInstance: string;
+            weatherCustomMapping: {
+                temperature?: string;
+                humidity?: string;
+                conditionText?: string;
+                precipitationMm?: string;
+                windSpeedMs?: string;
+                windDirectionText?: string;
+            };
             firmwareSourceUrl: string;
             firmwareSourceToken: string;
             satWifiSsid: string;

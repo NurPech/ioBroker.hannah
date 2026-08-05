@@ -3,6 +3,7 @@ import type { agent, control } from '@m1kad0/hannah-proto';
 import { GrpcClient } from './grpc-client';
 import { StateWatcher } from './state-watcher';
 import { ResidentsWatcher } from './residents';
+import { WeatherWatcher } from './weather-watcher';
 import { SatelliteWatcher } from './satellites';
 import { MessagesHandler } from './messages';
 import HannahDeviceManagement from './deviceManager';
@@ -15,6 +16,7 @@ class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
     private states: StateWatcher | null = null;
     private residents: ResidentsWatcher | null = null;
+    private weather: WeatherWatcher | null = null;
     private satellites: SatelliteWatcher | null = null;
     private messages: MessagesHandler | null = null;
     private dm: HannahDeviceManagement | null = null;
@@ -100,6 +102,7 @@ class Hannah extends utils.Adapter {
 
         this.states = new StateWatcher(this, send);
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
+        this.weather = cfg.weatherAdapterType ? new WeatherWatcher(this, send) : null;
         this.satellites = new SatelliteWatcher(this, send, () => this.grpc);
         await this.satellites.ensureVirtualRooms();
         this.ble = new BleWatcher(this);
@@ -126,6 +129,11 @@ class Hannah extends utils.Adapter {
                     floorMappings: cfg.floorMappings || [],
                 });
                 await this.residents?.subscribe();
+                await this.weather?.subscribe({
+                    adapterType: cfg.weatherAdapterType || '',
+                    instance: cfg.weatherInstance || '0',
+                    customMapping: cfg.weatherCustomMapping || {},
+                });
                 await this.subscribeStatesAsync('satellites.rooms.*');
                 await this.subscribeForeignObjectsAsync('enum.rooms.*');
                 await this.subscribeForeignObjectsAsync('enum.functions.*');
@@ -237,6 +245,7 @@ class Hannah extends utils.Adapter {
     /** @inheritdoc */
     private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
         this.residents?.onStateChange(id, state);
+        this.weather?.onStateChange(id, state);
         this.states?.onStateChange(id, state);
         this.satellites?.onStateChange(id, state);
     }
@@ -290,6 +299,7 @@ class Hannah extends utils.Adapter {
                 clearTimeout(this.enumReloadTimer);
             }
             this.grpc?.disconnect();
+            void this.weather?.unsubscribe();
             callback();
         } catch (e) {
             this.log.error(`Error during shutdown: ${(e as Error).message}`);

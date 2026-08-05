@@ -23,8 +23,12 @@ export interface EnumItem {
     name: string;
 }
 
+/** ioBroker weather adapters the "known adapter" role-scan supports. */
+const WEATHER_ADAPTER_TYPES = ['openweathermap', 'accuweather', 'daswetter'] as const;
+
 interface AppState extends GenericAppState {
     residentsInstances: string[];
+    weatherInstancesByType: Record<string, string[]>;
     allRooms: EnumItem[];
     allFunctions: EnumItem[];
     enumsLoaded: boolean;
@@ -64,16 +68,24 @@ class App extends GenericApp<GenericAppProps, AppState> {
             },
         };
         super(props, extendedProps);
-        this.state = { ...this.state, residentsInstances: [], allRooms: [], allFunctions: [], enumsLoaded: false };
+        this.state = {
+            ...this.state,
+            residentsInstances: [],
+            weatherInstancesByType: {},
+            allRooms: [],
+            allFunctions: [],
+            enumsLoaded: false,
+        };
     }
 
     /** @inheritdoc */
     async onConnectionReady(): Promise<void> {
         try {
-            const [roomEnums, funcEnums, resInstances] = await Promise.all([
+            const [roomEnums, funcEnums, resInstances, ...weatherInstanceLists] = await Promise.all([
                 this.socket.getEnums('rooms'),
                 this.socket.getEnums('functions'),
                 this.socket.getAdapterInstances('residents'),
+                ...WEATHER_ADAPTER_TYPES.map(type => this.socket.getAdapterInstances(type)),
             ]);
 
             const toList = (enums: Record<string, any>): EnumItem[] =>
@@ -81,15 +93,27 @@ class App extends GenericApp<GenericAppProps, AppState> {
                     .map(e => ({ id: e._id, name: enumName(e.common.name) }))
                     .sort((a, b) => a.name.localeCompare(b.name));
 
+            const weatherInstancesByType: Record<string, string[]> = {};
+            WEATHER_ADAPTER_TYPES.forEach((type, i) => {
+                weatherInstancesByType[type] = weatherInstanceLists[i].map(inst => inst._id.split('.').pop() as string);
+            });
+
             this.setState({
                 allRooms: toList(roomEnums),
                 allFunctions: toList(funcEnums),
                 residentsInstances: resInstances.map(inst => inst._id.split('.').pop() as string),
+                weatherInstancesByType,
                 enumsLoaded: true,
             });
         } catch (e) {
             console.error('Hannah: failed to load enums', e);
-            this.setState({ allRooms: [], allFunctions: [], residentsInstances: [], enumsLoaded: true });
+            this.setState({
+                allRooms: [],
+                allFunctions: [],
+                residentsInstances: [],
+                weatherInstancesByType: {},
+                enumsLoaded: true,
+            });
         }
     }
 
@@ -105,6 +129,7 @@ class App extends GenericApp<GenericAppProps, AppState> {
                     native={this.state.native}
                     onChange={(attr, value) => this.updateNativeValue(attr, value)}
                     residentsInstances={this.state.residentsInstances}
+                    weatherInstancesByType={this.state.weatherInstancesByType}
                     allRooms={this.state.allRooms}
                     allFunctions={this.state.allFunctions}
                     enumsLoaded={this.state.enumsLoaded}
