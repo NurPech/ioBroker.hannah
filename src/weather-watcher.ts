@@ -210,14 +210,20 @@ export class WeatherWatcher {
             if (!role) {
                 continue;
             }
+            // Forecast-day states carry the same base role as their "current" counterpart
+            // but with a ".forecast.N" suffix appended (e.g. "value.temperature.max" on
+            // current becomes "value.temperature.max.forecast.0" on day0) — strip it before
+            // matching so both buckets share the same lookup. No-op for "current" states,
+            // which never carry the suffix.
+            const baseRole = role.replace(/\.forecast\.\d+$/, '');
             // value.direction.wind is ambiguous — shared by numeric + text variants of the
             // same role — disambiguate via the state's own declared common.type.
             const field: BucketField | undefined =
-                role === 'value.direction.wind'
+                baseRole === 'value.direction.wind'
                     ? common?.type === 'number'
                         ? 'windDirectionDeg'
                         : 'windDirectionText'
-                    : ROLE_FIELD_MAP[role];
+                    : ROLE_FIELD_MAP[baseRole];
             if (!field) {
                 continue;
             }

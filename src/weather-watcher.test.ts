@@ -69,12 +69,16 @@ describe('WeatherWatcher', () => {
         });
 
         it('maps day-suffixed weather.forecast channels to forecast days, sorted by day_offset', async () => {
+            // Real openweathermap forecast-day roles carry a ".forecast.N" suffix on top of
+            // the base role (e.g. "value.temperature.max.forecast.1") — using the real,
+            // suffixed form here so this test actually exercises that stripping logic
+            // instead of silently passing against a synthetic role that was never real (#152).
             const { watcher, send } = makeWatcher();
             publishChannel('openweathermap.0.forecast.day2', 'weather.forecast');
-            publishState('openweathermap.0.forecast.day2.temperatureMax', 'value.temperature.max', 6.0);
+            publishState('openweathermap.0.forecast.day2.temperatureMax', 'value.temperature.max.forecast.2', 6.0);
             publishChannel('openweathermap.0.forecast.day1', 'weather.forecast');
-            publishState('openweathermap.0.forecast.day1.temperatureMax', 'value.temperature.max', 9.0);
-            publishState('openweathermap.0.forecast.day1.temperatureMin', 'value.temperature.min', 3.0);
+            publishState('openweathermap.0.forecast.day1.temperatureMax', 'value.temperature.max.forecast.1', 9.0);
+            publishState('openweathermap.0.forecast.day1.temperatureMin', 'value.temperature.min.forecast.1', 3.0);
 
             await watcher.subscribe({ adapterType: 'openweathermap', instance: '0', customMapping: {} });
 
@@ -82,6 +86,38 @@ describe('WeatherWatcher', () => {
             expect(msg.weatherUpdate.forecast.map((d: any) => d.dayOffset)).to.deep.equal([1, 2]);
             expect(msg.weatherUpdate.forecast[0]).to.deep.include({ temperatureMin: 3.0, temperatureMax: 9.0 });
             expect(msg.weatherUpdate.forecast[1]).to.deep.include({ temperatureMax: 6.0 });
+        });
+
+        it('strips the .forecast.N role suffix for condition/precipitation/wind on a forecast day (#152)', async () => {
+            const { watcher, send } = makeWatcher();
+            publishChannel('openweathermap.0.forecast.day1', 'weather.forecast');
+            publishState('openweathermap.0.forecast.day1.state', 'weather.state.forecast.1', 'Regen');
+            publishState('openweathermap.0.forecast.day1.title', 'weather.title.forecast.1', 'Rain');
+            publishState(
+                'openweathermap.0.forecast.day1.precipitationRain',
+                'weather.precipitation.rain.forecast.1',
+                2.5,
+            );
+            publishState('openweathermap.0.forecast.day1.windSpeed', 'value.speed.wind.forecast.1', 8.0);
+            publishState(
+                'openweathermap.0.forecast.day1.windDirectionText',
+                'value.direction.wind.forecast.1',
+                'Westen',
+                'string',
+            );
+
+            await watcher.subscribe({ adapterType: 'openweathermap', instance: '0', customMapping: {} });
+
+            const msg = send.firstCall.args[0];
+            // WeatherForecastDay (unlike WeatherCurrentData) has no windDirectionDeg field on
+            // the wire — only windDirectionText — so only the string variant is asserted here.
+            expect(msg.weatherUpdate.forecast[0]).to.deep.include({
+                conditionDetail: 'Regen',
+                conditionSummary: 'Rain',
+                precipitationMm: 2.5,
+                windSpeedMs: 8.0,
+                windDirectionText: 'Westen',
+            });
         });
 
         it('excludes periodN channels (openweathermap 3-hourly, not day-granularity)', async () => {
