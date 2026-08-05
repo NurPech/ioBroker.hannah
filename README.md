@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: forecast weather for tomorrow/the week was still empty after 0.34.1 — openweathermap only creates an object for day0's forecast, day1+ are bare states with no parent object at all, so the channel-based discovery never found them. Discovery now scans states directly instead of walking channel objects, so it no longer depends on one existing
+
 ### 0.34.1 (2026-08-05)
 - Fixed: forecast weather ("Wie wird das Wetter morgen?" and week overviews) always came back empty on openweathermap, even the "today" max temperature — forecast-day states carry a `.forecast.N` suffix on their role that wasn't recognized, so none of them ever matched. Current conditions were unaffected
 

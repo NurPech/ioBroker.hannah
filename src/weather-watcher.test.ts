@@ -30,10 +30,9 @@ describe('WeatherWatcher', () => {
         return { watcher: new WeatherWatcher(adapterInstance, send), send };
     }
 
-    function publishChannel(id: string, role: string): void {
-        database.publishObject({ _id: id, type: 'channel', common: { role }, native: {} });
-    }
-
+    // Real openweathermap only ever creates a channel object for "current" (and,
+    // inconsistently, day0) — day1+ are bare states with no parent object at all
+    // (#154). Discovery is state-only, so tests deliberately never publish a channel.
     function publishState(id: string, role: string, val: unknown, type?: string): void {
         database.publishObject({
             _id: id,
@@ -45,9 +44,8 @@ describe('WeatherWatcher', () => {
     }
 
     describe('known-adapter discovery', () => {
-        it('maps a weather.current channel to AgentWeatherUpdate.current via role-scan', async () => {
+        it('maps current-conditions states via role-scan', async () => {
             const { watcher, send } = makeWatcher();
-            publishChannel('openweathermap.0.forecast.current', 'weather.current');
             publishState('openweathermap.0.forecast.current.temperature', 'value.temperature', 8.4);
             publishState('openweathermap.0.forecast.current.state', 'weather.state', 'Regen');
             publishState('openweathermap.0.forecast.current.title', 'weather.title', 'Rain');
@@ -68,15 +66,12 @@ describe('WeatherWatcher', () => {
             expect(msg.weatherUpdate.forecast).to.deep.equal([]);
         });
 
-        it('maps day-suffixed weather.forecast channels to forecast days, sorted by day_offset', async () => {
+        it('maps dayN-suffixed states to forecast days, sorted by day_offset, with no channel object needed (#154)', async () => {
             // Real openweathermap forecast-day roles carry a ".forecast.N" suffix on top of
             // the base role (e.g. "value.temperature.max.forecast.1") — using the real,
-            // suffixed form here so this test actually exercises that stripping logic
-            // instead of silently passing against a synthetic role that was never real (#152).
+            // suffixed form here so this test actually exercises that stripping logic (#152).
             const { watcher, send } = makeWatcher();
-            publishChannel('openweathermap.0.forecast.day2', 'weather.forecast');
             publishState('openweathermap.0.forecast.day2.temperatureMax', 'value.temperature.max.forecast.2', 6.0);
-            publishChannel('openweathermap.0.forecast.day1', 'weather.forecast');
             publishState('openweathermap.0.forecast.day1.temperatureMax', 'value.temperature.max.forecast.1', 9.0);
             publishState('openweathermap.0.forecast.day1.temperatureMin', 'value.temperature.min.forecast.1', 3.0);
 
@@ -90,7 +85,6 @@ describe('WeatherWatcher', () => {
 
         it('strips the .forecast.N role suffix for condition/precipitation/wind on a forecast day (#152)', async () => {
             const { watcher, send } = makeWatcher();
-            publishChannel('openweathermap.0.forecast.day1', 'weather.forecast');
             publishState('openweathermap.0.forecast.day1.state', 'weather.state.forecast.1', 'Regen');
             publishState('openweathermap.0.forecast.day1.title', 'weather.title.forecast.1', 'Rain');
             publishState(
@@ -120,10 +114,9 @@ describe('WeatherWatcher', () => {
             });
         });
 
-        it('excludes periodN channels (openweathermap 3-hourly, not day-granularity)', async () => {
+        it('excludes periodN states (openweathermap 3-hourly, not day-granularity)', async () => {
             const { watcher, send } = makeWatcher();
-            publishChannel('openweathermap.0.forecast.period3', 'weather.forecast');
-            publishState('openweathermap.0.forecast.period3.temperatureMax', 'value.temperature.max', 99);
+            publishState('openweathermap.0.forecast.period3.temperatureMax', 'value.temperature.max.forecast.3', 99);
 
             await watcher.subscribe({ adapterType: 'openweathermap', instance: '0', customMapping: {} });
 
@@ -131,10 +124,13 @@ describe('WeatherWatcher', () => {
             expect(msg.weatherUpdate.forecast).to.deep.equal([]);
         });
 
-        it('excludes a forecast.undefined channel (buggy role suffix)', async () => {
+        it('excludes forecast.undefined states (buggy role suffix)', async () => {
             const { watcher, send } = makeWatcher();
-            publishChannel('openweathermap.0.forecast.forecast.undefined', 'weather.forecast');
-            publishState('openweathermap.0.forecast.forecast.undefined.temperatureMax', 'value.temperature.max', 99);
+            publishState(
+                'openweathermap.0.forecast.forecast.undefined.temperatureMax',
+                'value.temperature.max.forecast.undefined',
+                99,
+            );
 
             await watcher.subscribe({ adapterType: 'openweathermap', instance: '0', customMapping: {} });
 
@@ -144,7 +140,6 @@ describe('WeatherWatcher', () => {
 
         it('maps a numeric value.direction.wind state to windDirectionDeg', async () => {
             const { watcher, send } = makeWatcher();
-            publishChannel('openweathermap.0.forecast.current', 'weather.current');
             publishState('openweathermap.0.forecast.current.windDirection', 'value.direction.wind', 270, 'number');
 
             await watcher.subscribe({ adapterType: 'openweathermap', instance: '0', customMapping: {} });
@@ -156,7 +151,6 @@ describe('WeatherWatcher', () => {
 
         it('maps a string value.direction.wind state to windDirectionText', async () => {
             const { watcher, send } = makeWatcher();
-            publishChannel('openweathermap.0.forecast.current', 'weather.current');
             publishState(
                 'openweathermap.0.forecast.current.windDirectionText',
                 'value.direction.wind',
@@ -205,7 +199,6 @@ describe('WeatherWatcher', () => {
     describe('onStateChange', () => {
         it('forwards a live update on an already-subscribed state (debounced send)', async () => {
             const { watcher, send } = makeWatcher();
-            publishChannel('openweathermap.0.forecast.current', 'weather.current');
             publishState('openweathermap.0.forecast.current.temperature', 'value.temperature', 8.0);
 
             await watcher.subscribe({ adapterType: 'openweathermap', instance: '0', customMapping: {} });

@@ -168,43 +168,26 @@ export class WeatherWatcher {
 
     private async _subscribeKnownAdapter(adapterType: string, instance: string): Promise<void> {
         const prefix = `${adapterType}.${instance}`;
-        let channels: Record<string, ioBroker.Object>;
+        let states: Record<string, ioBroker.Object>;
         try {
-            channels = await this.adapter.getForeignObjectsAsync(`${prefix}.*`, 'channel');
+            states = await this.adapter.getForeignObjectsAsync(`${prefix}.*`, 'state');
         } catch (e) {
             this.adapter.log.error(`[weather] getForeignObjectsAsync failed for ${prefix}: ${(e as Error).message}`);
             return;
         }
 
-        for (const [channelId, obj] of Object.entries(channels)) {
-            const role = (obj?.common as { role?: string } | undefined)?.role;
-            if (role === 'weather.current') {
-                await this._subscribeChannel(channelId, 'current');
-            } else if (role === 'weather.forecast') {
-                const match = channelId.match(/\.day(\d+)$/);
-                if (match) {
-                    await this._subscribeChannel(channelId, Number(match[1]));
-                } else if (/\.(period\d+|forecast\.undefined)$/.test(channelId)) {
-                    this.adapter.log.debug(`[weather] Excluding non-day forecast channel: ${channelId}`);
-                }
-            }
-        }
-
-        this.adapter.log.info(
-            `[weather] Known-adapter discovery (${prefix}): ${this.subscribedIds.size} states subscribed.`,
-        );
-    }
-
-    private async _subscribeChannel(channelId: string, bucket: 'current' | number): Promise<void> {
-        let states: Record<string, ioBroker.Object>;
-        try {
-            states = await this.adapter.getForeignObjectsAsync(`${channelId}.*`, 'state');
-        } catch (e) {
-            this.adapter.log.warn(`[weather] getForeignObjectsAsync failed for ${channelId}: ${(e as Error).message}`);
-            return;
-        }
-
         for (const [stateId, obj] of Object.entries(states)) {
+            // Bucket comes from the state's own ID, not a parent channel object — real
+            // openweathermap only creates a channel object for day0, day1+ are bare states
+            // with no parent object at all (#154). "current.<field>"/"dayN.<field>" also
+            // naturally excludes 3-hourly "periodN"/"forecast.undefined" paths, since those
+            // match neither pattern.
+            const bucketMatch = stateId.match(/\.(current|day(\d+))\.[^.]+$/);
+            if (!bucketMatch) {
+                continue;
+            }
+            const bucket: 'current' | number = bucketMatch[1] === 'current' ? 'current' : Number(bucketMatch[2]);
+
             const common = obj?.common as { role?: string; type?: string } | undefined;
             const role = common?.role;
             if (!role) {
@@ -214,7 +197,7 @@ export class WeatherWatcher {
             // but with a ".forecast.N" suffix appended (e.g. "value.temperature.max" on
             // current becomes "value.temperature.max.forecast.0" on day0) — strip it before
             // matching so both buckets share the same lookup. No-op for "current" states,
-            // which never carry the suffix.
+            // which never carry the suffix (#152).
             const baseRole = role.replace(/\.forecast\.\d+$/, '');
             // value.direction.wind is ambiguous — shared by numeric + text variants of the
             // same role — disambiguate via the state's own declared common.type.
@@ -237,6 +220,10 @@ export class WeatherWatcher {
                 this._setField(target, field, initial.val);
             }
         }
+
+        this.adapter.log.info(
+            `[weather] Known-adapter discovery (${prefix}): ${this.subscribedIds.size} states subscribed.`,
+        );
     }
 
     private _forecastBucket(dayOffset: number): WeatherBucket {
