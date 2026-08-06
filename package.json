@@ -26,7 +26,7 @@
     "@grpc/grpc-js": "^1.14.4",
     "@iobroker/adapter-core": "^3.4.3",
     "@iobroker/dm-utils": "^3.2.0",
-    "@m1kad0/hannah-proto": "^1.1.0",
+    "@m1kad0/hannah-proto": "^2.0.1",
     "adm-zip": "^0.6.0"
   },
   "devDependencies": {
