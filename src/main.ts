@@ -159,6 +159,7 @@ class Hannah extends utils.Adapter {
                         sat.connected ?? false,
                         undefined,
                         undefined,
+                        undefined,
                         sat.displayName || undefined,
                         sat.lastSeen || undefined,
                         sat.roomMismatch,
@@ -199,6 +200,7 @@ class Hannah extends utils.Adapter {
                         s.online,
                         s.volume ?? undefined,
                         s.mute ?? undefined,
+                        s.dnd ?? undefined,
                         s.displayName || undefined,
                         lastSeen,
                     );

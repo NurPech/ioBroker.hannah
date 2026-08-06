@@ -114,6 +114,7 @@ export class SatelliteWatcher {
      * @param online - true = registered, false = gone
      * @param volume - Current volume level (0–100), if reported
      * @param mute - Current mute state, if reported
+     * @param dnd - Current do-not-disturb state, if reported
      * @param displayName - Optional satellite display name (for object naming); falls back to deviceId if not provided
      * @param lastSeen - UTC timestamp (Core DB format) of the last time this satellite was seen, if known
      * @param roomMismatch - true if the satellite is currently reporting a different room than assigned
@@ -126,6 +127,7 @@ export class SatelliteWatcher {
         online: boolean,
         volume?: number,
         mute?: boolean,
+        dnd?: boolean,
         displayName?: string,
         lastSeen?: string,
         roomMismatch?: boolean,
@@ -196,6 +198,12 @@ export class SatelliteWatcher {
         if (mute !== undefined) {
             await this.adapter.setState(`satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}.mute`, {
                 val: mute,
+                ack: true,
+            });
+        }
+        if (dnd !== undefined) {
+            await this.adapter.setState(`satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}.dnd`, {
+                val: dnd,
                 ack: true,
             });
         }
