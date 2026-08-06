@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "hannah",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "news": {
+      "1.0.1": {
+        "en": "Fixed: the per-satellite do-not-disturb state stayed unconfirmed (`ack:false`) forever after a write — no way to tell whether it actually took effect. Now confirmed with `ack:true`, matching mute/volume",
+        "de": "Behoben: Der „Nicht stören“-Status pro Satellit blieb nach einem Schreibvorgang dauerhaft unbestätigt („ack:false“) – es gab keine Möglichkeit festzustellen, ob er tatsächlich wirksam wurde. Jetzt wird er mit „ack:true“ bestätigt, passend zu Stummschaltung/Lautstärke.",
+        "ru": "Исправлено: состояние «не беспокоить» для каждого спутника оставалось неподтвержденным (`ack:false`) навсегда после записи — невозможно было определить, вступило ли оно в силу на самом деле. Теперь подтверждается с помощью `ack:true`, что соответствует отключению звука/громкости.",
+        "pt": "Corrigido: o estado \"não perturbe\" por satélite permanecia não confirmado (`ack:false`) indefinidamente após uma gravação — não havia como saber se a alteração realmente surtia efeito. Agora, a confirmação é feita com `ack:true`, correspondendo ao silenciamento/volume.",
+        "nl": "Opgelost: de niet-storen-status per satelliet bleef na een schrijfbewerking permanent onbevestigd (`ack:false`) — er was geen manier om te controleren of deze daadwerkelijk van kracht was. Nu bevestigd met `ack:true`, overeenkomend met dempen/volume",
+        "fr": "Corrigé : l’état « Ne pas déranger » par satellite restait indéfiniment non confirmé (« ack:false ») après une écriture, empêchant de savoir s’il avait été pris en compte. Désormais confirmé avec « ack:true », correspondant à la mise en sourdine et au volume.",
+        "it": "Risolto: lo stato \"non disturbare\" per satellite rimaneva non confermato (`ack:false`) per sempre dopo una scrittura, senza possibilità di sapere se avesse effettivamente avuto effetto. Ora confermato con `ack:true`, corrispondente a mute/volume",
+        "es": "Solucionado: el estado de no molestar por satélite permanecía sin confirmar (`ack:false`) indefinidamente después de una escritura; no había forma de saber si realmente surtía efecto. Ahora se confirma con `ack:true`, coincidiendo con el silencio/volumen.",
+        "pl": "Naprawiono: stan „Nie przeszkadzać” dla każdego satelity pozostawał niepotwierdzony (`ack:false`) na zawsze po zapisie — nie było sposobu, aby stwierdzić, czy faktycznie zadziałał. Teraz potwierdzany za pomocą `ack:true`, zgodnie z ustawieniami wyciszenia/głośności.",
+        "uk": "Виправлено: стан «не турбувати» для кожного супутника залишався непідтвердженим (`ack:false`) назавжди після запису — неможливо було визначити, чи він справді набув чинності. Тепер підтверджується за допомогою `ack:true`, що відповідає вимкненню звуку/гучності.",
+        "zh-cn": "已修复：写入后，每个卫星的“请勿打扰”状态一直保持未确认状态（`ack:false`），无法判断是否实际生效。现在已确认为 `ack:true`，与静音/音量设置一致。"
+      },
       "1.0.0": {
         "en": "Changed: announcement, do-not-disturb, \"Hannah is speaking\" and \"last transcript\" now live on each satellite individually (`satellites.rooms.<room>.<device>.*`), not just shared per room — matches how mute/volume already worked. Room-level announcement/dnd/mute stay available as a convenience to control every satellite in a room at once. \"Hannah is speaking\"/\"last transcript\" per satellite are not wired up to live data yet (planned separately)",
         "de": "Geändert: Ansagen, „Bitte nicht stören“, „Hannah spricht“ und „Letztes Transkript“ sind jetzt auf jedem Satelliten einzeln verfügbar (`satellites.rooms.<room>.<device>.*`), nicht mehr nur raumweit – entspricht der bisherigen Funktionsweise von Stummschaltung/Lautstärkeregelung. Raumweite Ansagen/„Bitte nicht stören“/Stummschaltung bleiben weiterhin verfügbar, um alle Satelliten in einem Raum gleichzeitig zu steuern. „Hannah spricht“/„Letztes Transkript“ sind noch nicht mit Live-Daten verbunden (separat geplant).",
@@ -80,19 +93,6 @@
         "pl": "Zmieniono: interfejs użytkownika administratora został przeniesiony z przestarzałego `@iobroker/adapter-react-v5` do `@iobroker/gui-components`",
         "uk": "Змінено: інтерфейс адміністратора перенесено з застарілої версії `@iobroker/adapter-react-v5` на `@iobroker/gui-components`",
         "zh-cn": "已更改：管理界面已从已弃用的 `@iobroker/adapter-react-v5` 迁移到 `@iobroker/gui-components`"
-      },
-      "0.33.2": {
-        "en": "Changed: satellite cards in the Device Manager now show the satellite's display name as the title and its MAC as the identifier (\"MAC:\") instead of the room; the room is now shown as its own field on the card",
-        "de": "Geändert: Satellitenkarten im Geräte-Manager zeigen nun den Anzeigenamen des Satelliten als Titel und seinen MAC als Identifikator (\"MAC:\") anstelle des Raumes an; der Raum wird nun als eigenes Feld auf der Karte angezeigt",
-        "ru": "Спутниковые карты в диспетчере устройств теперь показывают отображаемое имя спутника в качестве заголовка и его MAC в качестве идентификатора («MAC:») вместо комнаты; комната теперь отображается как собственное поле на карте",
-        "pt": "Modificado: as placas de satélite no Gerenciador de Dispositivos agora mostram o nome do satélite como o título e seu MAC como o identificador (\"MAC:\") em vez da sala; a sala é agora mostrada como seu próprio campo no cartão",
-        "nl": "Veranderd: satellietkaarten in de Apparaatbeheer tonen nu de naam van de satellietweergave als titel en de MAC als identificatiecode (\"MAC:\") in plaats van de ruimte; de ruimte wordt nu getoond als een eigen veld op de kaart",
-        "fr": "Changed: les cartes satellite dans le Gestionnaire de périphériques affichent maintenant le nom d'affichage du satellite comme titre et son MAC comme identifiant (\"MAC:\") au lieu de la pièce; la pièce est maintenant affichée comme son propre champ sur la carte",
-        "it": "Cambiato: le schede satellitari nel Gestione dispositivi ora mostrano il nome del display del satellite come il titolo e il suo MAC come l'identificatore (\"MAC:\") invece della stanza; la stanza è ora mostrata come il suo campo sulla scheda",
-        "es": "Cambiado: las tarjetas de satélite en el Administrador de dispositivos ahora muestran el nombre de la pantalla del satélite como el título y su MAC como el identificador (\"MAC:\") en lugar de la habitación; la habitación se muestra ahora como su propio campo en la tarjeta",
-        "pl": "Zmienione: karty satelitarne w menedżerze urządzeń pokazują teraz nazwę wyświetlacza satelity jako tytuł i jego MAC jako identyfikator (\"MAC:\") zamiast pokoju; pokój jest teraz pokazany jako własne pole na karcie",
-        "uk": "Змінено: супутникові картки в диспетчері пристроїв тепер відображають ім’я відображення супутника як назву та її MAC як ідентифікатор (\"MAC:\") замість приміщення; приміщення тепер відображається як власне поле на карті",
-        "zh-cn": "更改:设备管理器中的卫星卡现在显示卫星的显示名称为标题,其MAC显示为标识符(\"MAC:\")而不是房间;该房间现在显示为卡片上自己的字段"
       }
     },
     "blockly": true,

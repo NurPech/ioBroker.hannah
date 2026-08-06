@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.0.1 (2026-08-06)
 - Fixed: the per-satellite do-not-disturb state stayed unconfirmed (`ack:false`) forever after a write — no way to tell whether it actually took effect. Now confirmed with `ack:true`, matching mute/volume
 
 ### 1.0.0 (2026-08-06)
