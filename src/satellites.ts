@@ -27,9 +27,12 @@ function roomPathKey(name: string): string {
 
 /**
  * Manages satellite states under hannah.<instance>.satellites.rooms.<room>.
- * Room-level states (dnd, mute, volume, speaking, …) are shared across all
- * satellites in a room. Per-satellite online state lives at
- * satellites.rooms.<room>.<deviceId>.online.
+ * Functions (announcement, dnd, mute, volume, speaking, …) live primarily on the
+ * satellite (hannah#56) — a satellite is required to have a room, but the room
+ * itself is conceptually just another (mandatory) grouping. Room-level announcement/
+ * announcementSsml/announcementRephrase/dnd/mute are kept as a broadcast convenience
+ * (UX decision): writing them fans out to every satellite currently in that room, see
+ * onStateChange. anyOnline aggregates per-satellite online state.
  */
 export class SatelliteWatcher {
     private adapter: utils.AdapterInstance;
@@ -298,8 +301,14 @@ export class SatelliteWatcher {
                             `[satellites] TriggerSatelliteRestart ${actualDeviceId} failed: ${err.message}`,
                         );
                     });
-            } else if (key === 'volume' || key === 'mute') {
+            } else if (key === 'volume' || key === 'mute' || key === 'dnd') {
                 this.send({ satelliteControl: { room: originalRoom, deviceId: actualDeviceId, [key]: state.val } });
+                this.adapter.log.debug(
+                    `[satellites] satellite_control device='${actualDeviceId}' room='${originalRoom}' ${key}=${state.val}`,
+                );
+            } else if (key === 'announcement' || key === 'announcementSsml' || key === 'announcementRephrase') {
+                this.send({ satelliteControl: { room: originalRoom, deviceId: actualDeviceId, [key]: state.val } });
+                void this.adapter.setState(id, { val: '', ack: true });
                 this.adapter.log.debug(
                     `[satellites] satellite_control device='${actualDeviceId}' room='${originalRoom}' ${key}=${state.val}`,
                 );
@@ -322,11 +331,22 @@ export class SatelliteWatcher {
         if (!writableKeys.includes(key)) {
             return false;
         }
-        this.send({ satelliteControl: { room: originalRoom, deviceId: '', [key]: state.val } });
+        // Broadcast-Convenience (hannah#56/#156): Funktionen leben primär am Satelliten,
+        // der Adapter löst den Raum selbst zu seinen aktuell bekannten Satelliten auf und
+        // sendet pro Satellit ein eigenes satelliteControl — Core sieht keinen Raum-Broadcast.
+        for (const [deviceIdLower, deviceRoom] of this.deviceRooms) {
+            if (roomPathKey(deviceRoom) !== roomId.toLowerCase()) {
+                continue;
+            }
+            const actualDeviceId = this.deviceToObjectKey.get(deviceIdLower) ?? deviceIdLower;
+            this.send({ satelliteControl: { room: deviceRoom, deviceId: actualDeviceId, [key]: state.val } });
+        }
         if (resetKeys.includes(key)) {
             void this.adapter.setState(id, { val: '', ack: true });
         }
-        this.adapter.log.debug(`[satellites] satellite_control room='${originalRoom}' ${key}=${state.val}`);
+        this.adapter.log.debug(
+            `[satellites] satellite_control (room broadcast) room='${originalRoom}' ${key}=${state.val}`,
+        );
         return true;
     }
 
@@ -355,9 +375,6 @@ export class SatelliteWatcher {
                 { name: 'Announcement (LLM rephrase)', type: 'string', role: 'text', read: true, write: true, def: '' },
             ],
             ['dnd', { name: 'Do not disturb', type: 'boolean', role: 'switch', read: true, write: true, def: false }],
-            // Room-level mute exists only here, not in _ensureRoomStates: real rooms mute per
-            // satellite (multiple satellites in a room may want independent control), but "all"
-            // has no per-satellite objects to toggle in bulk, so it needs its own broadcast switch.
             [
                 'mute',
                 { name: 'Mute all microphones', type: 'boolean', role: 'switch', read: true, write: true, def: false },
@@ -401,20 +418,13 @@ export class SatelliteWatcher {
                 },
             ],
             ['dnd', { name: 'Do not disturb', type: 'boolean', role: 'switch', read: true, write: true, def: false }],
+            // Broadcast-Convenience (hannah#56/#156): fächert beim Schreiben auf alle
+            // Satelliten im Raum auf (siehe onStateChange) — im Gegensatz zu speaking/
+            // lastTranscript (nur noch pro Satellit) bleiben announcement/announcementSsml/
+            // announcementRephrase/dnd/mute bewusst auch auf Raumebene bestehen (UX-Entscheidung).
             [
-                'speaking',
-                {
-                    name: 'Hannah is speaking',
-                    type: 'boolean',
-                    role: 'indicator',
-                    read: true,
-                    write: false,
-                    def: false,
-                },
-            ],
-            [
-                'lastTranscript',
-                { name: 'Last transcript', type: 'string', role: 'text', read: true, write: false, def: '' },
+                'mute',
+                { name: 'Mute all microphones', type: 'boolean', role: 'switch', read: true, write: true, def: false },
             ],
         ];
         for (const [key, common] of states) {
@@ -567,6 +577,66 @@ export class SatelliteWatcher {
                 read: true,
                 write: true,
                 def: false,
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.announcement`, {
+            type: 'state',
+            common: { name: 'Announcement', type: 'string', role: 'text', read: true, write: true, def: '' },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.announcementSsml`, {
+            type: 'state',
+            common: {
+                name: 'Announcement (SSML)',
+                type: 'string',
+                role: 'text',
+                read: true,
+                write: true,
+                def: '',
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.announcementRephrase`, {
+            type: 'state',
+            common: {
+                name: 'Announcement (LLM rephrase)',
+                type: 'string',
+                role: 'text',
+                read: true,
+                write: true,
+                def: '',
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.dnd`, {
+            type: 'state',
+            common: { name: 'Do not disturb', type: 'boolean', role: 'switch', read: true, write: true, def: false },
+            native: {},
+        });
+        // Strukturell angelegt, aber aktuell unverdrahtet — weder Core noch Adapter
+        // schreiben hier rein. Live-Anbindung ist ein Folgeticket (siehe #156).
+        await this.adapter.setObjectNotExistsAsync(`${base}.speaking`, {
+            type: 'state',
+            common: {
+                name: 'Hannah is speaking',
+                type: 'boolean',
+                role: 'indicator',
+                read: true,
+                write: false,
+                def: false,
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.lastTranscript`, {
+            type: 'state',
+            common: {
+                name: 'Last transcript',
+                type: 'string',
+                role: 'text',
+                read: true,
+                write: false,
+                def: '',
             },
             native: {},
         });
