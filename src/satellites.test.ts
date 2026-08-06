@@ -120,6 +120,24 @@ describe('SatelliteWatcher', () => {
         }
     });
 
+    it('confirms a reported dnd state with ack:true, mirroring mute (hannah#213)', async () => {
+        const watcher = makeWatcher();
+
+        await watcher.handleSatelliteUpdate(
+            'e072a1d01adc',
+            'kueche',
+            '10.0.0.5:5005',
+            true,
+            undefined,
+            undefined,
+            true,
+        );
+
+        const state = await adapter.getStateAsync('hannah.0.satellites.rooms.kueche.e072a1d01adc.dnd');
+        expect(state?.val).to.equal(true);
+        expect(state?.ack).to.equal(true);
+    });
+
     it('no longer creates speaking/lastTranscript at room level (moved to per-satellite only)', async () => {
         const watcher = makeWatcher();
 
