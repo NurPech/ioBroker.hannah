@@ -1,6 +1,6 @@
 import * as grpc from '@grpc/grpc-js';
-import { PROTO_VERSION, agent, hannah } from '@m1kad0/hannah-proto';
-import type { control, shared, satellite_provisioning, user_registry } from '@m1kad0/hannah-proto';
+import { PROTO_VERSION, agent, hannah, compat_interceptor } from '@m1kad0/hannah-proto';
+import type { control, satellite, shared, satellite_provisioning, user_registry } from '@m1kad0/hannah-proto';
 
 /**
  * Haengt die PROTO_VERSION der installierten hannah-proto npm-Version als `x-proto-version`-Metadata
@@ -100,8 +100,12 @@ export class GrpcClient {
 
         const addr = `${host}:${port}`;
         this.log.info(`[grpc] Connecting to Hannah Core: ${addr}`);
+        // compat_interceptor (hannah-proto#9/hannah#217) laeuft additiv neben
+        // protocolVersionInterceptor, nicht als Ersatz — ein Breaking Change,
+        // der auf eine Message begrenzt ist, muss nicht mehr jeden Client
+        // ablehnen, sondern nur Calls, die diese Message tatsaechlich nutzen.
         this.client = new hannah.HannahServiceClient(addr, grpc.credentials.createInsecure(), {
-            interceptors: [protocolVersionInterceptor],
+            interceptors: [protocolVersionInterceptor, compat_interceptor.compatVersionInterceptor],
         });
         this.stream = this.client.agentConnect();
 
@@ -151,13 +155,13 @@ export class GrpcClient {
      * back to an empty array — conflating the two previously caused every satellite object to
      * be deleted as "stale" whenever Core was merely unreachable (Refs #<issue>).
      */
-    getSatellites(): Promise<control.Satellite[] | null> {
+    getSatellites(): Promise<satellite.Satellite[] | null> {
         return new Promise(resolve => {
             if (!this.client) {
                 resolve(null);
                 return;
             }
-            this.client.getSatellites({}, (err: Error | null, response?: control.GetSatellitesResponse) => {
+            this.client.getSatellites({}, (err: Error | null, response?: satellite.GetSatellitesResponse) => {
                 if (err || !response) {
                     this.log.warn(`[grpc] GetSatellites failed: ${err?.message ?? 'no response'}`);
                     resolve(null);
@@ -213,7 +217,7 @@ export class GrpcClient {
                 return;
             }
             const timer = this._setTimeout(() => reject(new Error('timeout')), 5000);
-            const request: control.SetSatelliteDisplayNameRequest = { deviceId, displayName, requestorId };
+            const request: satellite.SetSatelliteDisplayNameRequest = { deviceId, displayName, requestorId };
             this.client.setSatelliteDisplayName(request, (err: Error | null, response?: shared.StatusResponse) => {
                 this._clearTimeout(timer);
                 if (err || !response) {
