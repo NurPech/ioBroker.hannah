@@ -1,5 +1,5 @@
 import * as utils from '@iobroker/adapter-core';
-import type { agent, control } from '@m1kad0/hannah-proto';
+import type { agent, satellite } from '@m1kad0/hannah-proto';
 import { GrpcClient } from './grpc-client';
 import { StateWatcher } from './state-watcher';
 import { ResidentsWatcher } from './residents';
@@ -149,7 +149,7 @@ class Hannah extends utils.Adapter {
                     this.log.warn('[satellites] GetSatellites unavailable — skipping satellite sync this cycle.');
                     return;
                 }
-                const effectiveRoom = (sat: control.Satellite): string =>
+                const effectiveRoom = (sat: satellite.Satellite): string =>
                     sat.connected ? sat.room : sat.roomDisplayName || sat.roomId || '';
                 for (const sat of sats) {
                     await this.satellites!.handleSatelliteUpdate(
