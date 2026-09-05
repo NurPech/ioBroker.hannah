@@ -22,6 +22,8 @@ type StateWatcherInternals = {
         stateType: shared.StateType;
         enumValues: shared.EnumValues | undefined;
         writable: boolean;
+        deviceId: string;
+        canonicalKey: string;
     }>;
     _statesToEnumValues(
         rawStates: Record<string, string> | string[] | string | undefined,
@@ -170,6 +172,87 @@ describe('StateWatcher', () => {
                 expect(meta.type).to.equal(expectedType);
             });
         }
+
+        const canonicalKeyCases: Array<[string, string]> = [
+            ['level.dimmer', 'level'],
+            ['switch.light', 'on'],
+            ['level.color.rgb', 'color'],
+            ['level.temperature', 'expected'],
+            ['value.temperature', 'current'],
+            ['value.humidity', 'current'],
+            ['value.brightness', 'illuminance'],
+            ['value.power', 'power'],
+            ['sensor.door', 'open'],
+            ['indicator.open', 'open'],
+            ['sensor.window', 'open'],
+            ['level.blind', 'level'],
+            ['level.curtain', 'level'],
+            ['value.blind', 'level'],
+            ['value.curtain', 'level'],
+        ];
+        for (const [role, expectedCanonicalKey] of canonicalKeyCases) {
+            it(`resolves role "${role}" to canonicalKey "${expectedCanonicalKey}" (hannah#257)`, async () => {
+                publishState({ role });
+                publishDevice();
+
+                const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+                expect(meta.canonicalKey).to.equal(expectedCanonicalKey);
+            });
+        }
+
+        it('resolves a writable switch/switch.power role to canonicalKey "on" when no function matches', async () => {
+            publishState({ role: 'switch.power', write: true });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.canonicalKey).to.equal('on');
+        });
+
+        it('leaves canonicalKey empty when type is resolved via function-name fallback (no role match)', async () => {
+            publishState({});
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(
+                stateId,
+                room(deviceId),
+                functionsFor(stateId, 'stecker'),
+            );
+
+            expect(meta.type).to.equal('socket');
+            expect(meta.canonicalKey).to.equal('');
+        });
+
+        it('prefers a common.custom canonicalKey override on the state object', async () => {
+            publishState({
+                role: 'switch.light',
+                custom: { 'hannah.0': { enabled: true, canonicalKey: 'custom_key' } },
+            });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.canonicalKey).to.equal('custom_key');
+        });
+
+        it('ignores a common.custom canonicalKey override on the device object (state-level only)', async () => {
+            publishState({ role: 'switch.light' });
+            publishDevice({ custom: { 'hannah.0': { enabled: true, canonicalKey: 'device_key' } } });
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.canonicalKey).to.equal('on');
+        });
+
+        it("reports deviceId as the state's parent object id (hannah#257)", async () => {
+            publishState({ role: 'switch.light' });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.deviceId).to.equal(deviceId);
+        });
 
         const functionNameCases: Array<[string, string]> = [
             ['licht', 'light'],

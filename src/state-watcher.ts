@@ -240,6 +240,8 @@ export class StateWatcher {
                         stateType: meta.stateType,
                         enumValues: meta.enumValues,
                         writable: meta.writable,
+                        deviceId: meta.deviceId,
+                        canonicalKey: meta.canonicalKey,
                     });
 
                     sent++;
@@ -268,6 +270,8 @@ export class StateWatcher {
         stateType: shared.StateType;
         enumValues: shared.EnumValues | undefined;
         writable: boolean;
+        deviceId: string;
+        canonicalKey: string;
     }> {
         const deviceId = stateId.split('.').slice(0, -1).join('.');
 
@@ -342,45 +346,58 @@ export class StateWatcher {
             String(obj.common?.name?.de ?? obj.common?.name ?? obj._id),
         );
 
-        const resolveType = (): string => {
+        // Rolle → {Kategorie, kanonischer State-Key}. Die Kategorie wird pro Gerät aggregiert
+        // (erster nicht-leerer Wert über alle Sibling-States gewinnt, siehe hannah#133 auf
+        // Core-Seite); der kanonische Key wird dagegen direkt pro State übernommen, ohne
+        // Aggregation — ein Thermostat trägt z.B. gleichzeitig "current" (value.temperature)
+        // und "expected" (level.temperature) auf zwei verschiedenen Sibling-States desselben
+        // Geräts (hannah#257). Roh-Suffixe ohne passende Rolle liefern hier canonicalKey='' —
+        // Core fällt dafür auf sein eigenes iobroker.state_names-Default zurück (hannah#256).
+        const ROLE_TABLE: Record<string, { type: string; canonicalKey: string }> = {
+            'level.dimmer': { type: 'light', canonicalKey: 'level' },
+            'switch.light': { type: 'light', canonicalKey: 'on' },
+            'level.temperature': { type: 'thermostat', canonicalKey: 'expected' },
+            'value.temperature': { type: 'temperature_sensor', canonicalKey: 'current' },
+            'value.humidity': { type: 'humidity_sensor', canonicalKey: 'current' },
+            'value.brightness': { type: 'illuminance_sensor', canonicalKey: 'illuminance' },
+            'value.power': { type: '', canonicalKey: 'power' },
+            'sensor.door': { type: 'door', canonicalKey: 'open' },
+            'indicator.open': { type: 'door', canonicalKey: 'open' },
+            'sensor.window': { type: 'window', canonicalKey: 'open' },
+            'level.blind': { type: 'blind', canonicalKey: 'level' },
+            'level.curtain': { type: 'blind', canonicalKey: 'level' },
+            'value.blind': { type: 'blind', canonicalKey: 'level' },
+            'value.curtain': { type: 'blind', canonicalKey: 'level' },
+        };
+
+        const resolveTypeAndCanonicalKey = (): { type: string; canonicalKey: string } => {
             const ns = this.adapter.namespace; // e.g. "hannah.0"
             const stateCustom = (stateObj?.common?.custom as any)?.[ns];
             const deviceCustom = (deviceObj?.common?.custom as any)?.[ns];
-            const override =
+            const typeOverride =
                 (stateCustom?.enabled && stateCustom?.type) || (deviceCustom?.enabled && deviceCustom?.type);
-            if (override) {
-                return String(override);
-            }
+            // Nur State-Level, nie Device-Level — anders als die Kategorie ist der kanonische
+            // Key pro State unterschiedlich (s.o.), ein Device-weiter Override ergäbe keinen Sinn.
+            const canonicalKeyOverride = stateCustom?.enabled && stateCustom?.canonicalKey;
 
             const role = stateObj?.common?.role ?? '';
-            if (role.startsWith('level.color') || role === 'level.dimmer' || role === 'switch.light') {
-                return 'light';
+            const roleMatch = ROLE_TABLE[role];
+
+            if (role.startsWith('level.color')) {
+                return {
+                    type: String(typeOverride || 'light'),
+                    canonicalKey: String(canonicalKeyOverride || 'color'),
+                };
             }
-            if (role === 'level.temperature') {
-                return 'thermostat';
+            if (roleMatch) {
+                return {
+                    type: String(typeOverride || roleMatch.type),
+                    canonicalKey: String(canonicalKeyOverride || roleMatch.canonicalKey),
+                };
             }
-            if (role === 'value.temperature') {
-                return 'temperature_sensor';
-            }
-            if (role === 'value.humidity') {
-                return 'humidity_sensor';
-            }
-            if (role === 'value.brightness') {
-                return 'illuminance_sensor';
-            }
-            if (role === 'sensor.door' || role === 'indicator.open') {
-                return 'door';
-            }
-            if (role === 'sensor.window') {
-                return 'window';
-            }
-            if (
-                role === 'level.blind' ||
-                role === 'level.curtain' ||
-                role === 'value.blind' ||
-                role === 'value.curtain'
-            ) {
-                return 'blind';
+
+            if (typeOverride) {
+                return { type: String(typeOverride), canonicalKey: String(canonicalKeyOverride || '') };
             }
 
             const funcIds = matchingFunctionObjs.map((obj: any) => (obj._id as string).toLowerCase());
@@ -391,38 +408,38 @@ export class StateWatcher {
                 stateObj?.common?.write === false &&
                 funcIds.some(id => id.includes('helligkeit') || id.includes('lux'))
             ) {
-                return 'illuminance_sensor';
+                return { type: 'illuminance_sensor', canonicalKey: String(canonicalKeyOverride || '') };
             }
             if (funcIds.some(id => id.includes('light') || id.includes('licht'))) {
-                return 'light';
+                return { type: 'light', canonicalKey: String(canonicalKeyOverride || '') };
             }
             if (funcIds.some(id => id.includes('scene') || id.includes('szene'))) {
-                return 'scene';
+                return { type: 'scene', canonicalKey: String(canonicalKeyOverride || '') };
             }
             if (funcIds.some(id => id.includes('socket') || id.includes('stecker') || id.includes('plug'))) {
-                return 'socket';
+                return { type: 'socket', canonicalKey: String(canonicalKeyOverride || '') };
             }
             if (funcIds.some(id => id.includes('heat') || id.includes('heiz') || id.includes('therm'))) {
-                return 'thermostat';
+                return { type: 'thermostat', canonicalKey: String(canonicalKeyOverride || '') };
             }
             if (funcIds.some(id => id.includes('window') || id.includes('fenster'))) {
-                return 'window';
+                return { type: 'window', canonicalKey: String(canonicalKeyOverride || '') };
             }
             if (funcIds.some(id => id.includes('door') || id.includes('tuer') || id.includes('türen'))) {
-                return 'door';
+                return { type: 'door', canonicalKey: String(canonicalKeyOverride || '') };
             }
             if (funcIds.some(id => id.includes('temp'))) {
-                return 'temperature_sensor';
+                return { type: 'temperature_sensor', canonicalKey: String(canonicalKeyOverride || '') };
             }
             if (funcIds.some(id => id.includes('klima') || id.includes('aircon') || id.includes('climate'))) {
-                return 'climate';
+                return { type: 'climate', canonicalKey: String(canonicalKeyOverride || '') };
             }
 
             if ((role === 'switch' || role === 'switch.power') && stateObj?.common?.write) {
-                return 'socket';
+                return { type: 'socket', canonicalKey: String(canonicalKeyOverride || 'on') };
             }
 
-            return '';
+            return { type: '', canonicalKey: String(canonicalKeyOverride || '') };
         };
 
         const readableName = (n: unknown): string | null => {
@@ -433,6 +450,7 @@ export class StateWatcher {
         };
 
         const { stateType, enumValues } = this._resolveStateType(stateObj);
+        const { type, canonicalKey } = resolveTypeAndCanonicalKey();
 
         return {
             room: roomId,
@@ -442,12 +460,14 @@ export class StateWatcher {
                 readableName(stateObj?.common?.name) ??
                 deviceId.split('.').at(-1) ??
                 '',
-            type: resolveType(),
+            type,
             floor,
             functions,
             stateType,
             enumValues,
             writable: Boolean(stateObj?.common?.write),
+            deviceId,
+            canonicalKey,
         };
     }
 
