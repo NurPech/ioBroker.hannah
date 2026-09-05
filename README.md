@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.1.0 (2026-09-05)
 - Changed: updated to hannah-proto 3.8.0 — the adapter now tells Hannah directly which device a state belongs to and what role it plays (on/off, dimmer level, color, ...), instead of Hannah having to guess both from the ioBroker object ID. Devices with unusual or missing role information can still be corrected via a `common.custom` override on the state, same as the existing device-type override.
 
 ### 1.0.2 (2026-08-09)
