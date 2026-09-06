@@ -150,7 +150,8 @@
     "dataSource": "poll",
     "adminUI": {
       "config": "html",
-      "tab": "html"
+      "tab": "html",
+      "custom": "json"
     },
     "adminTab": {
       "singleton": true,

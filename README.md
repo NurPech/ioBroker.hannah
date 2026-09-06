@@ -77,6 +77,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: the `enabled`/`type`/`canonicalKey` override for Hannah (previously only settable by hand-editing the object in Expert Mode) now shows up in the regular "Custom settings" dialog of any state, with a proper form and autocomplete suggestions for known device categories/state keys
+
 ### 1.1.0 (2026-09-05)
 - Changed: updated to hannah-proto 3.8.0 — the adapter now tells Hannah directly which device a state belongs to and what role it plays (on/off, dimmer level, color, ...), instead of Hannah having to guess both from the ioBroker object ID. Devices with unusual or missing role information can still be corrected via a `common.custom` override on the state, same as the existing device-type override.
 

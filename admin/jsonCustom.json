@@ -1,0 +1,47 @@
+{
+    "type": "panel",
+    "items": {
+        "enabled": {
+            "type": "checkbox",
+            "label": {
+                "en": "Override for Hannah",
+                "de": "Override für Hannah"
+            }
+        },
+        "type": {
+            "type": "autocomplete",
+            "label": {
+                "en": "Device category",
+                "de": "Gerätekategorie"
+            },
+            "help": {
+                "en": "Overrides the device category Hannah would otherwise guess from common.role/functions. Pick a suggestion or type your own — this list is not exhaustive.",
+                "de": "Überschreibt die Gerätekategorie, die Hannah sonst aus common.role/Funktionen erraten würde. Vorschlag wählen oder eigenen Wert eingeben — die Liste ist nicht abschließend."
+            },
+            "options": [
+                "light", "socket", "climate", "blind", "window", "door",
+                "thermostat", "temperature_sensor", "humidity_sensor",
+                "illuminance_sensor", "air_quality_sensor"
+            ],
+            "freeSolo": true,
+            "hidden": "!data.enabled"
+        },
+        "canonicalKey": {
+            "type": "autocomplete",
+            "label": {
+                "en": "Canonical state key",
+                "de": "Kanonischer State-Key"
+            },
+            "help": {
+                "en": "Overrides the semantic role of this state (on/level/color/...) Hannah would otherwise guess from common.role. State-level only — doesn't apply to channels/devices.",
+                "de": "Überschreibt die semantische Rolle dieses States (on/level/color/...), die Hannah sonst aus common.role erraten würde. Nur auf State-Ebene — gilt nicht für Kanäle/Geräte."
+            },
+            "options": [
+                "on", "level", "color", "colorTemp", "current", "expected",
+                "illuminance", "open", "iaq", "co2_equiv", "voc_equiv", "power"
+            ],
+            "freeSolo": true,
+            "hidden": "!data.enabled"
+        }
+    }
+}
