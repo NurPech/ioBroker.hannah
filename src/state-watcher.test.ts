@@ -18,6 +18,7 @@ type StateWatcherInternals = {
         allRooms: { result: Record<string, any> },
         allFunctions: { result: Record<string, any> },
     ): Promise<{
+        device: string;
         type: string;
         stateType: shared.StateType;
         enumValues: shared.EnumValues | undefined;
@@ -243,6 +244,65 @@ describe('StateWatcher', () => {
             const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
 
             expect(meta.canonicalKey).to.equal('on');
+        });
+
+        it('prefers a common.custom name override on the state object (hannah#164)', async () => {
+            publishState({
+                role: 'switch.light',
+                name: 'Technical_Name_1',
+                custom: { 'hannah.0': { enabled: true, name: 'Stehlampe' } },
+            });
+            publishDevice({ name: 'Technical_Device_Name' });
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.device).to.equal('Stehlampe');
+        });
+
+        it('falls back to a common.custom name override on the device object (hannah#164)', async () => {
+            publishState({ role: 'switch.light', name: 'Technical_Name_1' });
+            publishDevice({
+                name: 'Technical_Device_Name',
+                custom: { 'hannah.0': { enabled: true, name: 'Stehlampe' } },
+            });
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.device).to.equal('Stehlampe');
+        });
+
+        it('ignores a common.custom name override that is not enabled (hannah#164)', async () => {
+            publishState({
+                role: 'switch.light',
+                name: 'Technical_Name_1',
+                custom: { 'hannah.0': { enabled: false, name: 'Stehlampe' } },
+            });
+            publishDevice({ name: 'Technical_Device_Name' });
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.device).to.equal('Technical_Device_Name');
+        });
+
+        it('falls back to the device object name when there is no name override (hannah#164)', async () => {
+            publishState({ role: 'switch.light', name: 'Technical_Name_1' });
+            publishDevice({ name: 'Technical_Device_Name' });
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.device).to.equal('Technical_Device_Name');
+        });
+
+        it('falls back to the last id segment when neither object nor override has a usable name (hannah#164)', async () => {
+            // MockDatabase.publishObject() deep-merges onto a template whose common.name
+            // defaults to "an object" — set it explicitly empty to simulate objects with
+            // genuinely no usable name, rather than relying on that mock default.
+            publishState({ role: 'switch.light', name: '' });
+            publishDevice({ name: '' });
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.device).to.equal('Device');
         });
 
         it("reports deviceId as the state's parent object id (hannah#257)", async () => {
