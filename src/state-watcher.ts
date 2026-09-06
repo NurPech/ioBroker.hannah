@@ -280,6 +280,13 @@ export class StateWatcher {
             this.adapter.getForeignObjectAsync(deviceId),
         ]);
 
+        // hannah#164/#256/#257: common.custom["hannah.0"] overrides — shared here so both
+        // the type/canonicalKey resolution below and the device-name fallback chain read
+        // the same enabled/state-vs-device lookup instead of duplicating it.
+        const ns = this.adapter.namespace; // e.g. "hannah.0"
+        const stateCustom = (stateObj?.common?.custom as any)?.[ns];
+        const deviceCustom = (deviceObj?.common?.custom as any)?.[ns];
+
         const rawFloorFromObj =
             typeof deviceObj?.common?.floor === 'string' && deviceObj.common.floor ? deviceObj.common.floor : null;
 
@@ -371,9 +378,6 @@ export class StateWatcher {
         };
 
         const resolveTypeAndCanonicalKey = (): { type: string; canonicalKey: string } => {
-            const ns = this.adapter.namespace; // e.g. "hannah.0"
-            const stateCustom = (stateObj?.common?.custom as any)?.[ns];
-            const deviceCustom = (deviceObj?.common?.custom as any)?.[ns];
             const typeOverride =
                 (stateCustom?.enabled && stateCustom?.type) || (deviceCustom?.enabled && deviceCustom?.type);
             // Nur State-Level, nie Device-Level — anders als die Kategorie ist der kanonische
@@ -449,6 +453,13 @@ export class StateWatcher {
             return n;
         };
 
+        // hannah#164: lets users fix Hannah's voice-matching name for devices whose
+        // ioBroker friendly name is unsuited for it (too long, technical prefixes,
+        // duplicates across rooms, ...) without renaming the actual object. Same
+        // enabled/state-vs-device precedence as the type override above.
+        const nameOverride =
+            (stateCustom?.enabled && stateCustom?.name) || (deviceCustom?.enabled && deviceCustom?.name);
+
         const { stateType, enumValues } = this._resolveStateType(stateObj);
         const { type, canonicalKey } = resolveTypeAndCanonicalKey();
 
@@ -456,6 +467,7 @@ export class StateWatcher {
             room: roomId,
             roomNames: roomNames,
             device:
+                readableName(nameOverride) ??
                 readableName(deviceObj?.common?.name) ??
                 readableName(stateObj?.common?.name) ??
                 deviceId.split('.').at(-1) ??

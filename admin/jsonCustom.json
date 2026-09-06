@@ -8,6 +8,18 @@
                 "de": "Override für Hannah"
             }
         },
+        "name": {
+            "type": "text",
+            "label": {
+                "en": "Voice-matching name",
+                "de": "Name für Sprachsteuerung"
+            },
+            "help": {
+                "en": "Overrides the name Hannah uses for voice commands and announcements, instead of this object's ioBroker name (or its parent device's). Doesn't rename the ioBroker object itself.",
+                "de": "Überschreibt den Namen, den Hannah für Sprachbefehle und Ansagen verwendet, statt des ioBroker-Namens dieses Objekts (bzw. seines übergeordneten Geräts). Benennt das ioBroker-Objekt selbst nicht um."
+            },
+            "hidden": "!data.enabled"
+        },
         "type": {
             "type": "autocomplete",
             "label": {
