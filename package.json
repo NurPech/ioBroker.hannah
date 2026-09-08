@@ -39,7 +39,7 @@
     "@iobroker/adapter-dev": "^1.5.0",
     "@iobroker/dev-server": "^0.8.0",
     "@iobroker/eslint-config": "^2.3.4",
-    "@iobroker/gui-components": "^10.0.0",
+    "@iobroker/gui-components": "^10.2.1",
     "@iobroker/testing": "^5.3.0",
     "@m1kad0/esp-nvs-utils": "^0.2.4",
     "@mui/material": "^9.0.0",
