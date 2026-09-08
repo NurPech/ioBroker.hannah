@@ -149,8 +149,13 @@ class Hannah extends utils.Adapter {
                     this.log.warn('[satellites] GetSatellites unavailable — skipping satellite sync this cycle.');
                     return;
                 }
+                // roomId must win over roomDisplayName: it's the same technical/ASCII form
+                // that live `satelliteUpdate` pushes use as `s.room`. Falling back to the
+                // (German, possibly umlaut-containing) display name here sanitizes to a
+                // different object path than the live one, forking a stale duplicate tree
+                // once the satellite reconnects (hannah-Adapter#169).
                 const effectiveRoom = (sat: satellite.Satellite): string =>
-                    sat.connected ? sat.room : sat.roomDisplayName || sat.roomId || '';
+                    sat.connected ? sat.room : sat.roomId || sat.roomDisplayName || '';
                 for (const sat of sats) {
                     await this.satellites!.handleSatelliteUpdate(
                         sat.deviceId,
