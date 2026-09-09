@@ -25,6 +25,7 @@ type StateWatcherInternals = {
         writable: boolean;
         deviceId: string;
         canonicalKey: string;
+        inverted: boolean | undefined;
     }>;
     _statesToEnumValues(
         rawStates: Record<string, string> | string[] | string | undefined,
@@ -244,6 +245,74 @@ describe('StateWatcher', () => {
             const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
 
             expect(meta.canonicalKey).to.equal('on');
+        });
+
+        // hannah#177/hannah-proto#4: shutterInverted-Override, nur für über die ROLE_TABLE als
+        // 'blind' aufgelöste States relevant.
+        it('reports inverted=true when shutterInverted is set on the state object of a blind role', async () => {
+            publishState({
+                role: 'level.blind',
+                custom: { 'hannah.0': { enabled: true, shutterInverted: true } },
+            });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.inverted).to.equal(true);
+        });
+
+        it('falls back to a shutterInverted override on the device object', async () => {
+            publishState({ role: 'level.curtain' });
+            publishDevice({ custom: { 'hannah.0': { enabled: true, shutterInverted: true } } });
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.inverted).to.equal(true);
+        });
+
+        it('prefers an explicit state-level shutterInverted=false over a device-level true', async () => {
+            publishState({
+                role: 'value.blind',
+                custom: { 'hannah.0': { enabled: true, shutterInverted: false } },
+            });
+            publishDevice({ custom: { 'hannah.0': { enabled: true, shutterInverted: true } } });
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.inverted).to.equal(false);
+        });
+
+        it('leaves inverted undefined (not false) when no override is set on a blind role', async () => {
+            publishState({ role: 'value.curtain' });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.inverted).to.be.undefined;
+        });
+
+        it('ignores shutterInverted when custom override is not enabled', async () => {
+            publishState({
+                role: 'level.blind',
+                custom: { 'hannah.0': { enabled: false, shutterInverted: true } },
+            });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.inverted).to.be.undefined;
+        });
+
+        it('ignores shutterInverted on a non-blind role, even if set', async () => {
+            publishState({
+                role: 'switch.light',
+                custom: { 'hannah.0': { enabled: true, shutterInverted: true } },
+            });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.inverted).to.be.undefined;
         });
 
         it('prefers a common.custom name override on the state object (hannah#164)', async () => {

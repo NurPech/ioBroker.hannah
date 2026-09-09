@@ -54,6 +54,18 @@
             ],
             "freeSolo": true,
             "hidden": "!data.enabled"
+        },
+        "shutterInverted": {
+            "type": "checkbox",
+            "label": {
+                "en": "Inverted Rolladen/Markise (0% = open)",
+                "de": "Invertierter Rolladen/Markise (0% = auf)"
+            },
+            "help": {
+                "en": "Only relevant for Rolladen/Markise devices (category \"blind\"). Enable if this actor's raw percentage means 0%=open/100%=closed instead of Hannah's default 0%=closed/100%=open (e.g. some Homematic/KNX actors).",
+                "de": "Nur relevant für Rolladen/Markise-Geräte (Kategorie \"blind\"). Aktivieren, wenn der rohe Prozentwert dieses Aktors 0%=auf/100%=zu statt Hannahs Standard 0%=zu/100%=auf bedeutet (z.B. bei manchen Homematic/KNX-Aktoren)."
+            },
+            "hidden": "!data.enabled"
         }
     }
 }
