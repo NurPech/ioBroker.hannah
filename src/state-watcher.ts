@@ -242,6 +242,7 @@ export class StateWatcher {
                         writable: meta.writable,
                         deviceId: meta.deviceId,
                         canonicalKey: meta.canonicalKey,
+                        inverted: meta.inverted,
                     });
 
                     sent++;
@@ -272,6 +273,7 @@ export class StateWatcher {
         writable: boolean;
         deviceId: string;
         canonicalKey: string;
+        inverted: boolean | undefined;
     }> {
         const deviceId = stateId.split('.').slice(0, -1).join('.');
 
@@ -377,6 +379,8 @@ export class StateWatcher {
             'value.curtain': { type: 'blind', canonicalKey: 'level' },
         };
 
+        const role = stateObj?.common?.role ?? '';
+
         const resolveTypeAndCanonicalKey = (): { type: string; canonicalKey: string } => {
             const typeOverride =
                 (stateCustom?.enabled && stateCustom?.type) || (deviceCustom?.enabled && deviceCustom?.type);
@@ -384,7 +388,6 @@ export class StateWatcher {
             // Key pro State unterschiedlich (s.o.), ein Device-weiter Override ergäbe keinen Sinn.
             const canonicalKeyOverride = stateCustom?.enabled && stateCustom?.canonicalKey;
 
-            const role = stateObj?.common?.role ?? '';
             const roleMatch = ROLE_TABLE[role];
 
             if (role.startsWith('level.color')) {
@@ -463,6 +466,21 @@ export class StateWatcher {
         const { stateType, enumValues } = this._resolveStateType(stateObj);
         const { type, canonicalKey } = resolveTypeAndCanonicalKey();
 
+        // hannah#177/hannah-proto#4: analog zum type/name-Override, aber nur für über die
+        // ROLE_TABLE als 'blind' aufgelöste States relevant — Rolladen/Markise-Aktoren, die
+        // von sich aus die umgekehrte Konvention (0%=auf/100%=zu) nutzen (z.B. Homematic/KNX).
+        // State-Level gewinnt vor Device-Level, wie bei type/name. undefined (nicht false)
+        // wenn kein Override gesetzt ist — Core unterscheidet "kein Override" von "explizit
+        // nicht invertiert" nicht, aber das Proto-Feld erlaubt die Unterscheidung bewusst.
+        const stateShutterInverted = stateCustom?.enabled ? stateCustom?.shutterInverted : undefined;
+        const deviceShutterInverted = deviceCustom?.enabled ? deviceCustom?.shutterInverted : undefined;
+        const shutterInvertedOverride =
+            stateShutterInverted !== undefined ? stateShutterInverted : deviceShutterInverted;
+        const inverted =
+            ROLE_TABLE[role]?.type === 'blind' && shutterInvertedOverride !== undefined
+                ? Boolean(shutterInvertedOverride)
+                : undefined;
+
         return {
             room: roomId,
             roomNames: roomNames,
@@ -480,6 +498,7 @@ export class StateWatcher {
             writable: Boolean(stateObj?.common?.write),
             deviceId,
             canonicalKey,
+            inverted,
         };
     }
 
