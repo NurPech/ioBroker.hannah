@@ -196,7 +196,12 @@ export class ResidentsWatcher {
                     roomieId: residentId,
                     moodLevel: typeof moodState?.val === 'number' ? moodState.val : undefined,
                     type: RESIDENT_PATH_SEGMENTS[parts[2]],
-                    presenceState: typeof presenceState?.val === 'number' ? presenceState.val : 0,
+                    // presence_state ist ein optional int32 (hannah-proto PROTO_VERSION 4,
+                    // extra dafür eingeführt "0/weg" von "kein Wert gelesen" unterscheiden zu
+                    // können) — ein fehlender/nicht-numerischer Read muss also unset bleiben,
+                    // nicht auf 0 zurückfallen. Core interpretiert "unset" als "kein Update seit
+                    // Prozessstart", nicht als bestätigte Abwesenheit (hannah#281).
+                    presenceState: typeof presenceState?.val === 'number' ? presenceState.val : undefined,
                 });
                 sent++;
             }
