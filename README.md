@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.1.4 (2026-09-13)
 - Fixed: the residents snapshot sent on every reconnect reported a resident as "away" whenever their presence state couldn't be read as a number, instead of leaving it unset — collapsing "genuinely away" and "no value read" into the same signal
 - Changed: updated to hannah-proto 4.0.0 — no functional change for this adapter, just keeping the protocol-version check in lockstep with Hannah Core
 
