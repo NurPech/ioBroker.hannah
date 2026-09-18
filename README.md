@@ -77,7 +77,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.1.5 (2026-09-18)
 - Changed: when Hannah pushes a presence update, the adapter can now set the individual "away"/"home"/"asleep" flag instead of always overwriting the combined presence state — avoids Hannah accidentally clobbering an unrelated flag (e.g. clearing "asleep" while only meaning to update "away"). No visible change until Hannah Core starts sending the new, more precise update.
 - Changed: satellite online/offline log messages downgraded from "info" to "debug" — too noisy for the default log level
 
