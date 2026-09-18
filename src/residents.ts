@@ -4,6 +4,24 @@ import type { AgentMessageSender } from './grpc-client';
 
 type ResidentType = agent.ResidentType;
 const ResidentType = agent.ResidentType;
+type ResidentPresenceAction = agent.ResidentPresenceAction;
+const ResidentPresenceAction = agent.ResidentPresenceAction;
+
+/**
+ * Maps a ResidentPresenceAction to the single presence.{away,home,night} datapoint it
+ * writes — the residents adapter guards cross-consistency between its four presence
+ * datapoints itself (confirmed: writing e.g. "away" true auto-flips "home" false), so
+ * only the one flag an action is actually about needs writing (hannah-proto#7, fixes
+ * the combined presence.state write clobbering unrelated flags — root cause of
+ * gessinger/voice/hannah#299). RESIDENT_PRESENCE_ACTION_UNSPECIFIED has no entry —
+ * that's the legacy-fallback case, see handleSetResident().
+ */
+const RESIDENT_PRESENCE_ACTION_WRITE: Partial<Record<ResidentPresenceAction, { suffix: string; value: boolean }>> = {
+    [ResidentPresenceAction.AWAY]: { suffix: 'away', value: true },
+    [ResidentPresenceAction.HOME]: { suffix: 'home', value: true },
+    [ResidentPresenceAction.ASLEEP]: { suffix: 'night', value: true },
+    [ResidentPresenceAction.AWAKE]: { suffix: 'night', value: false },
+};
 
 const RESIDENT_PATH_SEGMENTS: Record<string, ResidentType> = {
     roomie: ResidentType.ROOMIE,
@@ -134,18 +152,42 @@ export class ResidentsWatcher {
      * Hannah instructs the adapter to set a resident's presence state.
      * type determines the path: .roomie./.guest./.pet.
      *
+     * Prefers `action` (writes only the single presence.{away,home,night} flag it names)
+     * over the legacy combined `presenceState` write. `action` is only populated by Core
+     * running hannah-proto compat_version 2+ (gessinger/voice/hannah#309) — an older Core
+     * always sends RESIDENT_PRESENCE_ACTION_UNSPECIFIED (proto3 default), in which case
+     * this falls back to the old presence.state write unchanged.
+     *
      * @param residentId - Resident ID (e.g. "leonie", "hannah")
-     * @param presenceState - Presence value from the residents adapter
+     * @param presenceState - Legacy presence value from the residents adapter (0=absent, 1=home, 2=night) — fallback only
      * @param type - ResidentType as decoded from the gRPC command (string enum, see ResidentType)
+     * @param action - Which single presence flag to set; RESIDENT_PRESENCE_ACTION_UNSPECIFIED = use presenceState instead
      */
-    public async handleSetResident(residentId: string, presenceState: number, type: ResidentType): Promise<void> {
+    public async handleSetResident(
+        residentId: string,
+        presenceState: number,
+        type: ResidentType,
+        action: ResidentPresenceAction = ResidentPresenceAction.RESIDENT_PRESENCE_ACTION_UNSPECIFIED,
+    ): Promise<void> {
         const segment = residentTypeToSegment(type);
-        const stateId = `residents.${this.instance}.${segment}.${residentId}.presence.state`;
+        const base = `residents.${this.instance}.${segment}.${residentId}.presence`;
+        const write = RESIDENT_PRESENCE_ACTION_WRITE[action];
         try {
-            await this.adapter.setForeignStateAsync(stateId, { val: presenceState, ack: false });
-            this.adapter.log.debug(`[residents] SetResident ${segment}/${residentId} → ${presenceState}`);
+            if (write) {
+                await this.adapter.setForeignStateAsync(`${base}.${write.suffix}`, { val: write.value, ack: false });
+                this.adapter.log.debug(
+                    `[residents] SetResident ${segment}/${residentId} → ${write.suffix}=${write.value}`,
+                );
+            } else {
+                await this.adapter.setForeignStateAsync(`${base}.state`, { val: presenceState, ack: false });
+                this.adapter.log.debug(
+                    `[residents] SetResident ${segment}/${residentId} → state=${presenceState} (legacy, kein action gesetzt)`,
+                );
+            }
         } catch (e) {
-            this.adapter.log.error(`[residents] SetResident failed for ${stateId}: ${(e as Error).message}`);
+            this.adapter.log.error(
+                `[residents] SetResident failed for ${segment}/${residentId}: ${(e as Error).message}`,
+            );
         }
     }
 

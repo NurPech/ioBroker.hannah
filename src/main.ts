@@ -186,7 +186,7 @@ class Hannah extends utils.Adapter {
                     void this.states?.handleSetState(cmd.setState.stateId, cmd.setState.value);
                 } else if (cmd.setResident) {
                     const r = cmd.setResident;
-                    void this.residents?.handleSetResident(r.residentId, r.presenceState, r.type);
+                    void this.residents?.handleSetResident(r.residentId, r.presenceState, r.type, r.action);
                 } else if (cmd.setResidentMood) {
                     const r = cmd.setResidentMood;
                     void this.residents?.handleSetResidentMood(r.residentId, r.mood, r.type);
