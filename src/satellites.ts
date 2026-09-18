@@ -229,9 +229,9 @@ export class SatelliteWatcher {
             });
         }
         if (online) {
-            this.adapter.log.info(`[satellites] Satellite online: ${deviceId} in room '${room}'`);
+            this.adapter.log.debug(`[satellites] Satellite online: ${deviceId} in room '${room}'`);
         } else {
-            this.adapter.log.info(`[satellites] Satellite offline: ${deviceId} in room '${room}'`);
+            this.adapter.log.debug(`[satellites] Satellite offline: ${deviceId} in room '${room}'`);
         }
         await this._updateAnyOnline(room);
     }
