@@ -321,9 +321,18 @@ export class StateWatcher {
 
         const floor = floorFromObj ?? floorFromId;
 
+        // hannah-iobroker#187: a room can be assigned directly to the leaf state instead of
+        // its parent channel/device (common for manually-built alias constructs with no real
+        // device level) — check that before falling back to device/grandparent-device.
         let roomObj = Object.values(allRooms.result).find(
-            (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(deviceId),
+            (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(stateId),
         );
+
+        if (roomObj == null) {
+            roomObj = Object.values(allRooms.result).find(
+                (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(deviceId),
+            );
+        }
 
         if (roomObj == null) {
             const parentId = deviceId.split('.').slice(0, -1).join('.');
@@ -628,10 +637,15 @@ export class StateWatcher {
             }
         };
 
+        // hannah-iobroker#187: a room enum member isn't always a device/channel — it can be a
+        // leaf state directly. addWildcard's `d.*` pattern never matches that (a state has no
+        // children), so every room member is also subscribed as a single state; harmless no-op
+        // when `d` is actually a container with no state of its own.
         if (selectedRooms.length === 0 && selectedFunctions.length === 0) {
             // No filter → room wildcards cover all sub-states including function states
             for (const d of roomDevices) {
                 await addWildcard(d);
+                await addSingleState(d);
             }
         } else if (selectedRooms.length === 0) {
             // Functions only → all states from selected function enums
@@ -642,11 +656,13 @@ export class StateWatcher {
             // Rooms only → pattern-subscribe for all states under room devices
             for (const d of roomDevices) {
                 await addWildcard(d);
+                await addSingleState(d);
             }
         } else {
-            // Both → function states whose device prefix is in a selected room
+            // Both → function states whose device prefix is in a selected room, or whose own
+            // id IS a selected room member (#187)
             for (const s of funcStates) {
-                if ([...roomDevices].some(d => s.startsWith(`${d}.`))) {
+                if ([...roomDevices].some(d => s === d || s.startsWith(`${d}.`))) {
                     await addSingleState(s);
                 }
             }
