@@ -79,7 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.1.6 (2026-09-21)
 - Fixed: a device whose room was assigned directly to its state instead of the parent channel/device was never discovered — Hannah never learned about it at all
 
 ### 1.1.5 (2026-09-18)
