@@ -18,6 +18,7 @@ type StateWatcherInternals = {
         allRooms: { result: Record<string, any> },
         allFunctions: { result: Record<string, any> },
     ): Promise<{
+        room: string;
         device: string;
         type: string;
         stateType: shared.StateType;
@@ -32,6 +33,7 @@ type StateWatcherInternals = {
     ): shared.EnumValues | undefined;
     _isManaged(id: string): boolean;
     _extractViewMembers(rows: Array<{ id: string; value: ioBroker.Object | null }>, selected: string[]): Set<string>;
+    _subscribeEnumStates(selectedRooms: string[], selectedFunctions: string[]): Promise<void>;
     subscribedIds: Set<string>;
     wildcardPrefixes: Set<string>;
     verifiedWildcardCache: Set<string>;
@@ -383,6 +385,24 @@ describe('StateWatcher', () => {
             expect(meta.deviceId).to.equal(deviceId);
         });
 
+        it('resolves the room via the parent device/channel when the room enum member is the device', async () => {
+            publishState({ role: 'switch.light' });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.room).to.equal('wohnzimmer');
+        });
+
+        it('resolves the room when the room enum member is the state itself instead of the parent device (hannah-iobroker#187)', async () => {
+            publishState({ role: 'switch.light' });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(stateId), noFunctions);
+
+            expect(meta.room).to.equal('wohnzimmer');
+        });
+
         const functionNameCases: Array<[string, string]> = [
             ['licht', 'light'],
             ['stecker', 'socket'],
@@ -663,6 +683,52 @@ describe('StateWatcher', () => {
             const result = sw._extractViewMembers([{ id: 'enum.rooms.leer', value: null }], []);
 
             expect(result.size).to.equal(0);
+        });
+    });
+
+    describe('_subscribeEnumStates (hannah-iobroker#187)', () => {
+        // Enum objects are written straight into the mock database's backing Map, bypassing
+        // publishObject()'s extend()-based deep clone — that clone turns a real `members` array
+        // into a plain object with numeric-string keys (same mock artifact already noted above
+        // for common.states), which would break _extractViewMembers' for-of loop over `members`.
+        function publishEnum(id: string, members: string[]): void {
+            (database as unknown as { objects: Map<string, ioBroker.Object> }).objects.set(id, {
+                _id: id,
+                type: 'enum',
+                common: { name: '', members } as unknown as ioBroker.EnumCommon,
+                native: {},
+            });
+        }
+
+        it('subscribes a room enum member as a single state, not only as a wildcard prefix, since a room can be assigned directly to a leaf state', async () => {
+            const stateId = 'alias.0.EnOcean.Schalten.Wohnzimmer.status';
+            publishEnum('enum.rooms.wohnzimmer', [stateId]);
+            const sw = internals(makeWatcher());
+
+            await sw._subscribeEnumStates([], []);
+
+            expect(sw.subscribedIds.has(stateId)).to.equal(true);
+        });
+
+        it('still subscribes the wildcard prefix for a room enum member that is a real device/channel', async () => {
+            const deviceId = 'javascript.0.virtualDevice.Test.Device';
+            publishEnum('enum.rooms.wohnzimmer', [deviceId]);
+            const sw = internals(makeWatcher());
+
+            await sw._subscribeEnumStates([], []);
+
+            expect(sw.wildcardPrefixes.has(`${deviceId}.`)).to.equal(true);
+        });
+
+        it('matches a function state whose id equals a selected room member directly, not only as a child path (both-filters branch)', async () => {
+            const stateId = 'alias.0.EnOcean.Schalten.Wohnzimmer.status';
+            publishEnum('enum.rooms.wohnzimmer', [stateId]);
+            publishEnum('enum.functions.light', [stateId]);
+            const sw = internals(makeWatcher());
+
+            await sw._subscribeEnumStates(['enum.rooms.wohnzimmer'], ['enum.functions.light']);
+
+            expect(sw.subscribedIds.has(stateId)).to.equal(true);
         });
     });
 
