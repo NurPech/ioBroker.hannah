@@ -1,4 +1,5 @@
 import * as utils from '@iobroker/adapter-core';
+import { LogShipper, wrapLogger } from '@m1kad0/hannah-logging';
 import type { agent, satellite } from '@m1kad0/hannah-proto';
 import { GrpcClient } from './grpc-client';
 import { StateWatcher } from './state-watcher';
@@ -23,6 +24,7 @@ class Hannah extends utils.Adapter {
     private ble: BleWatcher | null = null;
     private sensorWatcher: SensorWatcher | null = null;
     private enumReloadTimer: ioBroker.Timeout | null | undefined = null;
+    private shipper: LogShipper | null = null;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({ ...options, name: 'hannah' });
@@ -35,6 +37,8 @@ class Hannah extends utils.Adapter {
 
     /** @inheritdoc */
     private async onReady(): Promise<void> {
+        this.setupLogShipping();
+
         await this.setObjectNotExistsAsync('info', {
             type: 'channel',
             common: { name: 'Information' },
@@ -307,11 +311,41 @@ class Hannah extends utils.Adapter {
             }
             this.grpc?.disconnect();
             void this.weather?.unsubscribe();
-            callback();
         } catch (e) {
             this.log.error(`Error during shutdown: ${(e as Error).message}`);
+        }
+        // Sends what's still buffered (up to 2 s), then lets ioBroker stop the adapter.
+        if (this.shipper) {
+            void this.shipper.close().finally(callback);
+        } else {
             callback();
         }
+    }
+
+    /**
+     * Ships the adapter's logs to the Hannah log collector as well, once Hannah announces one.
+     * `this.log` is replaced by a wrapped logger before any module is created — the modules
+     * read `adapter.log` whenever they log, so everything goes through it. The ioBroker log
+     * itself stays exactly as it is. All encrypted settings (tokens, passwords) are masked.
+     */
+    private setupLogShipping(): void {
+        const native = this.config as unknown as Record<string, unknown>;
+        const encrypted: string[] = this.ioPack?.encryptedNative ?? [];
+        const secrets = encrypted
+            .map(key => native[key])
+            .filter((value): value is string => typeof value === 'string' && value !== '');
+
+        this.shipper = new LogShipper({
+            component: 'iobroker',
+            version: this.version,
+            instance: `${this.host}.${this.namespace}`,
+            secrets,
+            internalLog: this.log,
+        });
+        this.log = wrapLogger(this.log, this.shipper);
+        this.shipper.connect({
+            hannahAddress: `${this.config.hannahHost || '127.0.0.1'}:${this.config.hannahPort || 50051}`,
+        });
     }
 
     public onMessage(obj: ioBroker.Message): void {
