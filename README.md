@@ -79,7 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.2.0 (2026-09-24)
 - Added: the adapter sends its logs to the Hannah log collector as well, as soon as Hannah reports one, so they are included when you download the logs of all Hannah components. The ioBroker log stays exactly as it is, and without a log collector nothing changes. Passwords and tokens from the adapter settings are masked before a line is sent
 
 ### 1.1.6 (2026-09-21)
