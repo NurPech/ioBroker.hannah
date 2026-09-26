@@ -79,7 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.3.1 (2026-09-26)
 - Changed: when ioBroker runs in Docker, the adapter's logs in the Hannah log collector no longer show up under a new name after every container recreate. They appear as `container`, or under the name set in the `HANNAH_LOG_INSTANCE` environment variable
 
 ### 1.3.0 (2026-09-26)
