@@ -655,7 +655,9 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                     >
                         <MenuItem value="">{I18n.t('Disabled')}</MenuItem>
                         <MenuItem value="openweathermap">openweathermap</MenuItem>
-                        <MenuItem value="accuweather">accuweather</MenuItem>
+                        <MenuItem value="accuweather">
+                            accuweather ({I18n.t('not supported / deprecated')})
+                        </MenuItem>
                         <MenuItem value="daswetter">daswetter</MenuItem>
                         <MenuItem value="custom">{I18n.t('Custom')}</MenuItem>
                     </Select>

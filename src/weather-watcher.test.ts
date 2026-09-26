@@ -71,13 +71,15 @@ describe('WeatherSource', () => {
             expect(source).to.be.null;
         });
 
-        it('keeps the role-based scan for accuweather', async () => {
-            const { source, send } = makeSource({ adapterType: 'accuweather' });
-            publishState('accuweather.0.forecast.current.temperature', 'value.temperature', 8.4);
-
-            await source.subscribe();
-
-            expect(send.firstCall.args[0].weatherUpdate.current.temperature).to.equal(8.4);
+        it('returns null and warns for deprecated accuweather (#192)', () => {
+            const source = createWeatherSource(adapterInstance, sinon.stub(), {
+                adapterType: 'accuweather',
+                instance: '0',
+                location: 'location_1',
+                customMapping: {},
+            });
+            expect(source).to.be.null;
+            expect(adapter.log.warn).to.have.been.calledWithMatch(/accuweather is no longer supported/);
         });
     });
 

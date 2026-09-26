@@ -10,7 +10,7 @@ export type { WeatherSource } from './weather-source';
 
 /** Weather source selection from the adapter config. */
 export interface WeatherSourceConfig {
-    /** '' | 'openweathermap' | 'accuweather' | 'daswetter' | 'custom' */
+    /** '' | 'openweathermap' | 'daswetter' | 'custom' | 'accuweather' (deprecated) */
     adapterType: string;
     /** e.g. "0"; ignored when adapterType === 'custom' */
     instance: string;
@@ -42,9 +42,15 @@ export function createWeatherSource(
             return new CustomWeatherSource(adapter, send, config.customMapping);
         case 'daswetter':
             return new DasWetterSource(adapter, send, instance, config.location || 'location_1');
+        case 'accuweather':
+            // Deprecated: AccuWeather dropped its free API tier, so there's no reliable
+            // reference for the ioBroker adapter's object tree. Still a valid config value
+            // so existing configs keep loading — it just forwards nothing (#192).
+            adapter.log.warn(
+                '[weather] accuweather is no longer supported, no weather data will be forwarded to Hannah. Please select another weather source.',
+            );
+            return null;
         default:
-            // openweathermap — and, until it gets its own handling, any other known
-            // adapter type (accuweather) keeps the previous role-based scan.
             return new OpenWeatherMapSource(adapter, send, config.adapterType, instance);
     }
 }
