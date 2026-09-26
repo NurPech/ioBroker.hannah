@@ -26,9 +26,18 @@ export interface EnumItem {
 /** ioBroker weather adapters the "known adapter" role-scan supports. */
 const WEATHER_ADAPTER_TYPES = ['openweathermap', 'accuweather', 'daswetter'] as const;
 
+/** A daswetter location channel with its place name. */
+export interface WeatherLocation {
+    /** Location channel, e.g. location_1 */
+    id: string;
+    /** Place name from the channel's Location state */
+    name: string;
+}
+
 interface AppState extends GenericAppState {
     residentsInstances: string[];
     weatherInstancesByType: Record<string, string[]>;
+    daswetterLocations: Record<string, WeatherLocation[]>;
     allRooms: EnumItem[];
     allFunctions: EnumItem[];
     enumsLoaded: boolean;
@@ -72,21 +81,41 @@ class App extends GenericApp<GenericAppProps, AppState> {
             ...this.state,
             residentsInstances: [],
             weatherInstancesByType: {},
+            daswetterLocations: {},
             allRooms: [],
             allFunctions: [],
             enumsLoaded: false,
         };
     }
 
+    /** Collects daswetter.<instance>.location_N.Location states into per-instance location lists. */
+    private async loadDaswetterLocations(): Promise<Record<string, WeatherLocation[]>> {
+        const states = await this.socket.getForeignStates('daswetter.*.location_*.Location');
+        const byInstance: Record<string, WeatherLocation[]> = {};
+        for (const [id, state] of Object.entries(states || {}) as Array<[string, { val?: unknown } | null]>) {
+            const m = id.match(/^daswetter\.(\d+)\.(location_\d+)\.Location$/);
+            if (!m) {
+                continue;
+            }
+            (byInstance[m[1]] ||= []).push({ id: m[2], name: state?.val ? String(state.val) : m[2] });
+        }
+        for (const list of Object.values(byInstance)) {
+            list.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+        }
+        return byInstance;
+    }
+
     /** @inheritdoc */
     async onConnectionReady(): Promise<void> {
         try {
-            const [roomEnums, funcEnums, resInstances, ...weatherInstanceLists] = await Promise.all([
-                this.socket.getEnums('rooms'),
-                this.socket.getEnums('functions'),
-                this.socket.getAdapterInstances('residents'),
-                ...WEATHER_ADAPTER_TYPES.map(type => this.socket.getAdapterInstances(type)),
-            ]);
+            const [roomEnums, funcEnums, resInstances, daswetterLocations, ...weatherInstanceLists] =
+                await Promise.all([
+                    this.socket.getEnums('rooms'),
+                    this.socket.getEnums('functions'),
+                    this.socket.getAdapterInstances('residents'),
+                    this.loadDaswetterLocations(),
+                    ...WEATHER_ADAPTER_TYPES.map(type => this.socket.getAdapterInstances(type)),
+                ]);
 
             const toList = (enums: Record<string, any>): EnumItem[] =>
                 Object.values(enums)
@@ -103,6 +132,7 @@ class App extends GenericApp<GenericAppProps, AppState> {
                 allFunctions: toList(funcEnums),
                 residentsInstances: resInstances.map(inst => inst._id.split('.').pop() as string),
                 weatherInstancesByType,
+                daswetterLocations,
                 enumsLoaded: true,
             });
         } catch (e) {
@@ -112,6 +142,7 @@ class App extends GenericApp<GenericAppProps, AppState> {
                 allFunctions: [],
                 residentsInstances: [],
                 weatherInstancesByType: {},
+                daswetterLocations: {},
                 enumsLoaded: true,
             });
         }
@@ -130,6 +161,7 @@ class App extends GenericApp<GenericAppProps, AppState> {
                     onChange={(attr, value) => this.updateNativeValue(attr, value)}
                     residentsInstances={this.state.residentsInstances}
                     weatherInstancesByType={this.state.weatherInstancesByType}
+                    daswetterLocations={this.state.daswetterLocations}
                     allRooms={this.state.allRooms}
                     allFunctions={this.state.allFunctions}
                     enumsLoaded={this.state.enumsLoaded}

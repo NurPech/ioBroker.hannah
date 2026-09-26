@@ -79,6 +79,11 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: with "daswetter" selected as weather source, Hannah never received any weather data — its object tree differs completely from openweathermap's, and the discovery only understood the latter. daswetter now has its own dedicated handling: forecast days and current conditions (taken from the hourly forecast slot that is running right now) are read by state name, wind speed is converted from km/h, and days are matched by their own date, so a delayed download doesn't shift "today" and "tomorrow"
+- Added: "Location" selection in the Weather tab for daswetter, listing the locations configured in the selected daswetter instance. Defaults to the first location, so existing setups work without any change
+- Changed: "accuweather" as weather source is marked as not supported / deprecated — AccuWeather no longer offers a free API, so its data can't be supported reliably. Existing settings keep loading, but no weather data is forwarded and a warning is logged at startup; please switch to another weather source
+
 ### 1.2.0 (2026-09-24)
 - Added: the adapter sends its logs to the Hannah log collector as well, as soon as Hannah reports one, so they are included when you download the logs of all Hannah components. The ioBroker log stays exactly as it is, and without a log collector nothing changes. Passwords and tokens from the adapter settings are masked before a line is sent
 

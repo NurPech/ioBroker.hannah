@@ -13,6 +13,7 @@ declare global {
             residentsInstance: string;
             weatherAdapterType: string;
             weatherInstance: string;
+            weatherLocation: string;
             weatherCustomMapping: {
                 temperature?: string;
                 humidity?: string;

@@ -109,6 +109,8 @@
     "Custom": "Custom",
     "Instance": "Instance",
     "No %s instance found": "No %s instance found",
+    "Location": "Location",
+    "not supported / deprecated": "not supported / deprecated",
     "Field": "Field",
     "State ID": "State ID",
     "Temperature": "Temperature",

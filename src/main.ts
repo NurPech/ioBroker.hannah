@@ -4,7 +4,7 @@ import type { agent, satellite } from '@m1kad0/hannah-proto';
 import { GrpcClient } from './grpc-client';
 import { StateWatcher } from './state-watcher';
 import { ResidentsWatcher } from './residents';
-import { WeatherWatcher } from './weather-watcher';
+import { createWeatherSource, type WeatherSource } from './weather-watcher';
 import { SatelliteWatcher } from './satellites';
 import { MessagesHandler } from './messages';
 import HannahDeviceManagement from './deviceManager';
@@ -17,7 +17,7 @@ class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
     private states: StateWatcher | null = null;
     private residents: ResidentsWatcher | null = null;
-    private weather: WeatherWatcher | null = null;
+    private weather: WeatherSource | null = null;
     private satellites: SatelliteWatcher | null = null;
     private messages: MessagesHandler | null = null;
     private dm: HannahDeviceManagement | null = null;
@@ -106,7 +106,12 @@ class Hannah extends utils.Adapter {
 
         this.states = new StateWatcher(this, send);
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
-        this.weather = cfg.weatherAdapterType ? new WeatherWatcher(this, send) : null;
+        this.weather = createWeatherSource(this, send, {
+            adapterType: cfg.weatherAdapterType || '',
+            instance: cfg.weatherInstance || '0',
+            location: cfg.weatherLocation || 'location_1',
+            customMapping: cfg.weatherCustomMapping || {},
+        });
         this.satellites = new SatelliteWatcher(this, send, () => this.grpc);
         await this.satellites.ensureVirtualRooms();
         this.ble = new BleWatcher(this);
@@ -133,11 +138,7 @@ class Hannah extends utils.Adapter {
                     floorMappings: cfg.floorMappings || [],
                 });
                 await this.residents?.subscribe();
-                await this.weather?.subscribe({
-                    adapterType: cfg.weatherAdapterType || '',
-                    instance: cfg.weatherInstance || '0',
-                    customMapping: cfg.weatherCustomMapping || {},
-                });
+                await this.weather?.subscribe();
                 await this.subscribeStatesAsync('satellites.rooms.*');
                 await this.subscribeForeignObjectsAsync('enum.rooms.*');
                 await this.subscribeForeignObjectsAsync('enum.functions.*');
