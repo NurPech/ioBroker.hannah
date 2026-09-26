@@ -20,7 +20,7 @@ import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { I18n } from '@iobroker/gui-components';
-import type { EnumItem } from '../app';
+import type { EnumItem, WeatherLocation } from '../app';
 
 /** Default NVS values pre-filled when flashing or rewriting a satellite. */
 export interface SatelliteDefaults {
@@ -57,6 +57,7 @@ interface SettingsProps {
     onChange: (attr: string, value: any) => void;
     residentsInstances: string[];
     weatherInstancesByType: Record<string, string[]>;
+    daswetterLocations: Record<string, WeatherLocation[]>;
     allRooms: EnumItem[];
     allFunctions: EnumItem[];
     enumsLoaded: boolean;
@@ -636,10 +637,12 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
     }
 
     private renderWeatherTab(): React.JSX.Element {
-        const { native, onChange, weatherInstancesByType } = this.props;
+        const { native, onChange, weatherInstancesByType, daswetterLocations } = this.props;
         const adapterType: string = native.weatherAdapterType || '';
         const isKnownVendor = adapterType !== '' && adapterType !== 'custom';
         const instances = weatherInstancesByType[adapterType] || [];
+        const locations = daswetterLocations[native.weatherInstance || '0'] || [];
+        const location: string = native.weatherLocation || 'location_1';
 
         return (
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 500 }}>
@@ -683,6 +686,30 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                                     </MenuItem>
                                 ))
                             )}
+                        </Select>
+                    </FormControl>
+                )}
+
+                {adapterType === 'daswetter' && (
+                    <FormControl size="small">
+                        <InputLabel>{I18n.t('Location')}</InputLabel>
+                        <Select
+                            value={location}
+                            label={I18n.t('Location')}
+                            onChange={e => onChange('weatherLocation', e.target.value)}
+                        >
+                            {/* Keep the saved value selectable even if its Location state isn't there (yet). */}
+                            {!locations.some(l => l.id === location) && (
+                                <MenuItem value={location}>{location}</MenuItem>
+                            )}
+                            {locations.map(l => (
+                                <MenuItem
+                                    key={l.id}
+                                    value={l.id}
+                                >
+                                    {l.name} ({l.id})
+                                </MenuItem>
+                            ))}
                         </Select>
                     </FormControl>
                 )}

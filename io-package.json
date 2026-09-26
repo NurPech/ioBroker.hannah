@@ -188,6 +188,7 @@
     "residentsInstance": "0",
     "weatherAdapterType": "",
     "weatherInstance": "0",
+    "weatherLocation": "location_1",
     "weatherCustomMapping": {
       "temperature": "",
       "humidity": "",
