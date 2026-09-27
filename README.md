@@ -79,6 +79,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Changed: logs go to the Hannah log collector's versioned API `hannah.v1`. A log collector too old for it still gets them over the previous API
+
 ### 1.4.0 (2026-09-27)
 - Changed: the adapter uses Hannah Core's new versioned API (`hannah.v1`, Hannah Core with hannah-proto 4.6.0 or newer). With an older Hannah Core it automatically falls back to the previous API and logs a warning once per connection that Hannah Core should be updated, so the adapter can be updated before Hannah Core
 - Changed: log shipping to the Hannah log collector now uses the same fallback and keeps working with older and newer Hannah Core versions
