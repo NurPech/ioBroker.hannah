@@ -25,6 +25,8 @@ class Hannah extends utils.Adapter {
     private sensorWatcher: SensorWatcher | null = null;
     private enumReloadTimer: ioBroker.Timeout | null | undefined = null;
     private shipper: logging.LogShipper | null = null;
+    // #203: undefined = unknown since adapter start
+    private trustNotificationRaised: boolean | undefined = undefined;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({ ...options, name: 'hannah' });
@@ -104,7 +106,12 @@ class Hannah extends utils.Adapter {
             this.grpc?.send(msg);
         };
 
-        this.states = new StateWatcher(this, send);
+        this.states = new StateWatcher(
+            this,
+            send,
+            msg => this.grpc?.sendWithAck(msg) ?? Promise.resolve({ kind: 'disconnected' }),
+            (supported, configured) => void this._onTrustSupport(supported, configured),
+        );
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
         this.weather = createWeatherSource(this, send, {
             adapterType: cfg.weatherAdapterType || '',
@@ -263,12 +270,13 @@ class Hannah extends utils.Adapter {
     }
 
     /**
-     * Schedules a debounced enum reload when room or function enums change.
+     * Schedules a debounced enum reload when room or function enums change; forwards other
+     * changes (managed states' custom settings, #203) to the StateWatcher.
      *
      * @param id - Object ID that changed
-     * @param _obj - New object value (unused)
+     * @param obj - New object value
      */
-    private onObjectChange(id: string, _obj: ioBroker.Object | null | undefined): void {
+    private onObjectChange(id: string, obj: ioBroker.Object | null | undefined): void {
         if (id.startsWith('enum.rooms.') || id.startsWith('enum.functions.')) {
             this.log.info(`[enums] Change detected on ${id} — reloading in 5s`);
             if (this.enumReloadTimer) {
@@ -280,6 +288,49 @@ class Hannah extends utils.Adapter {
             }, 5_000);
         } else if (id.startsWith('residents.')) {
             this.residents?.onObjectChange(id);
+        } else {
+            this.states?.onObjectChange(id, obj);
+        }
+    }
+
+    /**
+     * #203: neededTrust only protects anything if Core enforces it. Raise a notification when
+     * at least one state has it set but Core doesn't support it (too old, or unversioned API);
+     * clear it once a later snapshot ack confirms support, e.g. after a Core update.
+     *
+     * @param supported - Core enforces required_trust_level
+     * @param configured - At least one state has neededTrust set
+     */
+    private async _onTrustSupport(supported: boolean, configured: boolean): Promise<void> {
+        try {
+            if (supported) {
+                if (this.trustNotificationRaised !== false) {
+                    // Also when unknown (adapter restart): a notification from an earlier run may still be open.
+                    this.sendToHost(this.host ?? null, 'clearNotifications', {
+                        scope: 'hannah',
+                        category: 'trustLevelsUnsupported',
+                        instance: `system.adapter.${this.namespace}`,
+                    });
+                    this.trustNotificationRaised = false;
+                }
+                return;
+            }
+            if (!configured) {
+                return;
+            }
+            this.log.warn(
+                '[states] Hannah Core does not support trust levels per state yet — neededTrust has no effect. Please update Hannah Core.',
+            );
+            if (this.trustNotificationRaised !== true) {
+                await this.registerNotification(
+                    'hannah',
+                    'trustLevelsUnsupported',
+                    'Hannah Core does not support trust levels per state yet, please update Hannah Core',
+                );
+                this.trustNotificationRaised = true;
+            }
+        } catch (e) {
+            this.log.warn(`[states] Trust level notification failed: ${(e as Error).message}`);
         }
     }
 

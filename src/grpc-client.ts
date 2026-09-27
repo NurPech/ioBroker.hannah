@@ -11,6 +11,22 @@ import user_registry = v1.user_registry;
 export type AgentMessageSender = (msg: agent.AgentMessage) => void;
 export type CommandHandler = (cmd: agent.AgentCommand) => void;
 
+/**
+ * Outcome of sendWithAck() (hannah-proto#16):
+ * - ack: Core replied, `ack.unknownFields` lists what its schema didn't know
+ * - timeout: no reply in time — Core too old to send AgentAck at all
+ * - legacy: connected via the unversioned hannah.* API, which has no ack_id/AgentAck
+ * - disconnected: stream closed before a reply — outcome unknown, not a verdict
+ */
+export type AckResult =
+    | { kind: 'ack'; ack: agent.AgentAck }
+    | { kind: 'timeout' }
+    | { kind: 'legacy' }
+    | { kind: 'disconnected' };
+export type AckingMessageSender = (msg: agent.AgentMessage) => Promise<AckResult>;
+
+const ACK_TIMEOUT_MS = 10_000;
+
 interface LogAdapter {
     info: (s: string) => void;
     warn: (s: string) => void;
@@ -44,6 +60,9 @@ export class GrpcClient {
     private log: LogAdapter;
     private _setTimeout: (fn: () => void, ms: number) => number;
     private _clearTimeout: (t: number) => void;
+    // Per connection: reset in _openStream(), pending ones resolved as 'disconnected' on close.
+    private ackCounter = 0n;
+    private pendingAcks = new Map<bigint, { resolve: (r: AckResult) => void; timer: number }>();
 
     /**
      * @param opts - Configuration options including callbacks and logger
@@ -103,6 +122,11 @@ export class GrpcClient {
     }
 
     private _closeConnection(): void {
+        for (const { resolve, timer } of this.pendingAcks.values()) {
+            this._clearTimeout(timer);
+            resolve({ kind: 'disconnected' });
+        }
+        this.pendingAcks.clear();
         try {
             this.stream?.end();
         } catch {
@@ -123,6 +147,7 @@ export class GrpcClient {
             this.log.info(`[grpc] Using ${this.versioned.service} (Hannah Core without hannah.v1).`);
         }
         this.stream = hannahClient.agentConnect();
+        this.ackCounter = 0n;
 
         // For bidi streams with Python gRPC, the server does not send initial metadata,
         // so the 'metadata' event never fires. Trigger onConnected immediately — if the
@@ -133,6 +158,10 @@ export class GrpcClient {
         });
 
         this.stream.on('data', (cmd: agent.AgentCommand) => {
+            if (cmd.ack) {
+                this._handleAck(cmd.ack);
+                return;
+            }
             this.onCommand(cmd);
         });
 
@@ -408,6 +437,43 @@ export class GrpcClient {
         } catch (e) {
             this.log.warn(`[grpc] Send failed: ${(e as Error).message}`);
         }
+    }
+
+    /**
+     * Send a message with ack_id set and wait for Core's AgentAck listing the fields it
+     * didn't understand (hannah-proto#16). Never rejects — see AckResult for the outcomes.
+     *
+     * @param msg - AgentMessage frame; its ackId is overwritten
+     * @param timeoutMs - How long to wait for the AgentAck before assuming Core is too old
+     */
+    sendWithAck(msg: agent.AgentMessage, timeoutMs = ACK_TIMEOUT_MS): Promise<AckResult> {
+        if (!this.stream) {
+            return Promise.resolve({ kind: 'disconnected' });
+        }
+        if (this.versioned?.legacy) {
+            this.send(msg);
+            return Promise.resolve({ kind: 'legacy' });
+        }
+        const ackId = ++this.ackCounter;
+        return new Promise(resolve => {
+            const timer = this._setTimeout(() => {
+                this.pendingAcks.delete(ackId);
+                resolve({ kind: 'timeout' });
+            }, timeoutMs);
+            this.pendingAcks.set(ackId, { resolve, timer });
+            this.send({ ...msg, ackId });
+        });
+    }
+
+    private _handleAck(ack: agent.AgentAck): void {
+        const pending = this.pendingAcks.get(ack.ackId);
+        if (!pending) {
+            this.log.debug(`[grpc] Ignoring AgentAck for unknown ack_id ${ack.ackId}`);
+            return;
+        }
+        this.pendingAcks.delete(ack.ackId);
+        this._clearTimeout(pending.timer);
+        pending.resolve({ kind: 'ack', ack });
     }
 
     /**

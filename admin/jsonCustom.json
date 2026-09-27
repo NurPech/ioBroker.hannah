@@ -67,6 +67,21 @@
                 "de": "Nur relevant für Rolladen/Markise-Geräte (Kategorie \"blind\"). Aktivieren, wenn der rohe Prozentwert dieses Aktors 0%=auf/100%=zu statt Hannahs Standard 0%=zu/100%=auf bedeutet (z.B. bei manchen Homematic/KNX-Aktoren)."
             },
             "hidden": "!data.enabled"
+        },
+        "neededTrust": {
+            "type": "number",
+            "label": {
+                "en": "Minimum trust level",
+                "de": "Mindest-Vertrauensstufe"
+            },
+            "help": {
+                "en": "Only users with at least this trust level (0–10) may switch this state via Hannah. Reading is never restricted. Unknown users count as trust level 0. Leave empty for no restriction. Requires a Hannah Core that supports it — otherwise the adapter shows a notification.",
+                "de": "Nur Benutzer mit mindestens dieser Vertrauensstufe (0–10) dürfen diesen State über Hannah schalten. Das Abfragen wird nie eingeschränkt. Unbekannte Benutzer zählen als Stufe 0. Leer lassen für keine Einschränkung. Setzt einen Hannah Core voraus, der das unterstützt — sonst zeigt der Adapter eine Benachrichtigung."
+            },
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "hidden": "!data.enabled"
         }
     }
 }

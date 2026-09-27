@@ -2,7 +2,41 @@ import type * as utils from '@iobroker/adapter-core';
 import { v1 } from '@m1kad0/hannah-proto';
 import agent = v1.agent;
 import shared = v1.shared;
-import type { AgentMessageSender } from './grpc-client';
+import type { AckResult, AckingMessageSender, AgentMessageSender } from './grpc-client';
+
+/** Field number of AgentDevice.required_trust_level (hannah-proto#15). */
+const REQUIRED_TRUST_LEVEL_FIELD = 15;
+const AGENT_DEVICE_TYPE = 'hannah.v1.AgentDevice';
+const TRUST_RESEND_DEBOUNCE_MS = 2_000;
+
+/**
+ * #203: whether Core enforces AgentDevice.required_trust_level, judged from the AgentAck of a
+ * snapshot (hannah-proto#16). Core guarantees that every field it doesn't report as unknown is
+ * also evaluated, so an ack without field 15 means "enforced". null = no verdict (disconnected).
+ *
+ * @param result - Outcome of sendWithAck() for a message carrying devices
+ */
+export function trustLevelSupported(result: AckResult): boolean | null {
+    switch (result.kind) {
+        case 'ack':
+            return !result.ack.unknownFields.some(
+                u => u.messageType === AGENT_DEVICE_TYPE && u.fieldNumbers.includes(REQUIRED_TRUST_LEVEL_FIELD),
+            );
+        case 'timeout':
+        case 'legacy':
+            return false;
+        case 'disconnected':
+            return null;
+    }
+}
+
+/**
+ * Called after every device snapshot whose support verdict is known.
+ *
+ * @param supported - Core enforces required_trust_level
+ * @param configured - At least one state in the snapshot has neededTrust set
+ */
+export type TrustSupportHandler = (supported: boolean, configured: boolean) => void;
 
 /**
  * Discovers ioBroker states via enum (rooms + functions) and extra prefixes,
@@ -17,14 +51,29 @@ export class StateWatcher {
     private verifiedWildcardCache = new Set<string>();
     private watchMoreIds = new Set<string>();
     private floorMappings: Array<{ label: string; abbreviation: string }> = [];
+    private sendWithAck: AckingMessageSender | undefined;
+    private onTrustSupport: TrustSupportHandler | undefined;
+    // #203: neededTrust per state as last sent — onObjectChange() resends only on a real change
+    private trustByState = new Map<string, number | undefined>();
+    private objectPatterns = new Set<string>();
+    private resendTimer: ioBroker.Timeout | null | undefined = null;
 
     /**
      * @param adapter - ioBroker adapter instance
      * @param send - Function to send messages to Hannah Core
+     * @param sendWithAck - Sends a message and waits for Core's AgentAck (used for device snapshots)
+     * @param onTrustSupport - Told after each snapshot whether Core enforces neededTrust
      */
-    constructor(adapter: utils.AdapterInstance, send: AgentMessageSender) {
+    constructor(
+        adapter: utils.AdapterInstance,
+        send: AgentMessageSender,
+        sendWithAck?: AckingMessageSender,
+        onTrustSupport?: TrustSupportHandler,
+    ) {
         this.adapter = adapter;
         this.send = send;
+        this.sendWithAck = sendWithAck;
+        this.onTrustSupport = onTrustSupport;
     }
 
     private get textCommandStateId(): string {
@@ -61,7 +110,36 @@ export class StateWatcher {
         this.subscribedIds.add(this.textCommandStateId);
 
         this.adapter.log.info(`[states] ${this.subscribedIds.size} Patterns/States subscribed.`);
+        await this._subscribeObjects();
         await this._sendSnapshot();
+    }
+
+    /**
+     * #203: a changed neededTrust takes effect without an adapter restart. Call from
+     * onObjectChange — resends the device snapshot (debounced) when a managed state's
+     * neededTrust actually changed. Core replaces its device map on every snapshot, so a
+     * full resend is safe.
+     *
+     * @param id - Object ID that changed
+     * @param obj - New object, or null/undefined if deleted
+     */
+    onObjectChange(id: string, obj: ioBroker.Object | null | undefined): void {
+        if (id === this.textCommandStateId || !this._isManaged(id)) {
+            return;
+        }
+        const stateCustom = (obj?.common?.custom as any)?.[this.adapter.namespace];
+        const trust = obj?.type === 'state' ? this._resolveNeededTrust(stateCustom) : undefined;
+        if (trust === this.trustByState.get(id)) {
+            return;
+        }
+        this.adapter.log.info(`[states] neededTrust of ${id} changed to ${trust ?? 'none'} — resending devices`);
+        if (this.resendTimer) {
+            this.adapter.clearTimeout(this.resendTimer);
+        }
+        this.resendTimer = this.adapter.setTimeout(() => {
+            this.resendTimer = null;
+            void this._sendSnapshot();
+        }, TRUST_RESEND_DEBOUNCE_MS);
     }
 
     /**
@@ -208,6 +286,7 @@ export class StateWatcher {
      */
     private async _sendSnapshot(): Promise<void> {
         const devices: agent.AgentDevice[] = [];
+        const trustByState = new Map<string, number | undefined>();
         let sent = 0;
 
         const [allRooms, allFunctions] = await Promise.all([
@@ -244,7 +323,9 @@ export class StateWatcher {
                         deviceId: meta.deviceId,
                         canonicalKey: meta.canonicalKey,
                         inverted: meta.inverted,
+                        requiredTrustLevel: meta.requiredTrustLevel,
                     });
+                    trustByState.set(id, meta.requiredTrustLevel);
 
                     sent++;
                 }
@@ -252,10 +333,47 @@ export class StateWatcher {
                 this.adapter.log.warn(`[states] Snapshot failed for ${pattern}: ${(e as Error).message}`);
             }
         }
+        this.trustByState = trustByState;
 
-        this.send({ sendSnapshot: { devices } });
+        const msg: agent.AgentMessage = { sendSnapshot: { devices } };
+        if (this.sendWithAck) {
+            const configured = devices.some(d => d.requiredTrustLevel !== undefined);
+            // Not awaited: waiting up to the ack timeout would hold up start() and everything
+            // onConnected does after it.
+            void this.sendWithAck(msg).then(result => this._reportTrustSupport(result, configured));
+        } else {
+            this.send(msg);
+        }
 
         this.adapter.log.info(`[states] Snapshot: ${sent} current device states sent.`);
+    }
+
+    private _reportTrustSupport(result: AckResult, configured: boolean): void {
+        const supported = trustLevelSupported(result);
+        if (supported === null) {
+            this.adapter.log.debug('[states] No ack for device snapshot (disconnected) — trust support unknown');
+            return;
+        }
+        this.adapter.log.debug(`[states] Snapshot ack: ${result.kind}, trust levels supported: ${supported}`);
+        this.onTrustSupport?.(supported, configured);
+    }
+
+    /**
+     * #203: object subscriptions mirror the state subscriptions, so neededTrust changes on
+     * managed states reach onObjectChange().
+     */
+    private async _subscribeObjects(): Promise<void> {
+        for (const pattern of this.subscribedIds) {
+            if (pattern === this.textCommandStateId || this.objectPatterns.has(pattern)) {
+                continue;
+            }
+            try {
+                await this.adapter.subscribeForeignObjectsAsync(pattern);
+                this.objectPatterns.add(pattern);
+            } catch (e) {
+                this.adapter.log.warn(`[states] Object subscribe failed for ${pattern}: ${(e as Error).message}`);
+            }
+        }
     }
 
     private async _resolveDeviceMeta(
@@ -275,6 +393,7 @@ export class StateWatcher {
         deviceId: string;
         canonicalKey: string;
         inverted: boolean | undefined;
+        requiredTrustLevel: number | undefined;
     }> {
         const deviceId = stateId.split('.').slice(0, -1).join('.');
 
@@ -290,6 +409,7 @@ export class StateWatcher {
         const stateCustom = (stateObj?.common?.custom as any)?.[ns];
         const deviceCustom = (deviceObj?.common?.custom as any)?.[ns];
 
+        const requiredTrustLevel = this._resolveNeededTrust(stateCustom);
         const rawFloorFromObj =
             typeof deviceObj?.common?.floor === 'string' && deviceObj.common.floor ? deviceObj.common.floor : null;
 
@@ -509,7 +629,32 @@ export class StateWatcher {
             deviceId,
             canonicalKey,
             inverted,
+            requiredTrustLevel,
         };
+    }
+
+    /**
+     * #203: common.custom["hannah.0"].neededTrust — minimum trust level (0–10) needed to set
+     * this state. State-level only, like canonicalKey: a lock and its battery indicator sit
+     * on the same device but need different protection. undefined (not 0) when unset or
+     * invalid — the proto distinguishes "no restriction" from an explicit 0.
+     *
+     * @param stateCustom - The state's common.custom entry for this adapter instance
+     */
+    private _resolveNeededTrust(stateCustom: any): number | undefined {
+        if (!stateCustom?.enabled) {
+            return undefined;
+        }
+        const raw = stateCustom.neededTrust;
+        if (raw === undefined || raw === null || raw === '') {
+            return undefined;
+        }
+        const level = Number(raw);
+        if (!Number.isInteger(level) || level < 0 || level > 10) {
+            this.adapter.log.warn(`[states] Ignoring invalid neededTrust ${JSON.stringify(raw)} (expected 0–10)`);
+            return undefined;
+        }
+        return level;
     }
 
     /**
@@ -581,9 +726,18 @@ export class StateWatcher {
      * Unsubscribe all states and clear the subscription set.
      */
     async stop(): Promise<void> {
+        if (this.resendTimer) {
+            this.adapter.clearTimeout(this.resendTimer);
+            this.resendTimer = null;
+        }
         for (const id of this.subscribedIds) {
             await this.adapter.unsubscribeForeignStatesAsync(id);
         }
+        for (const pattern of this.objectPatterns) {
+            await this.adapter.unsubscribeForeignObjectsAsync(pattern);
+        }
+        this.objectPatterns.clear();
+        this.trustByState.clear();
         this.subscribedIds.clear();
         this.wildcardPrefixes.clear();
         this.verifiedWildcardCache.clear();

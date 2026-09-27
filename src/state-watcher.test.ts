@@ -4,7 +4,7 @@ import * as sinon from 'sinon';
 import { utils } from '@iobroker/testing';
 import { v1 } from '@m1kad0/hannah-proto';
 import shared = v1.shared;
-import { StateWatcher } from './state-watcher';
+import { StateWatcher, trustLevelSupported } from './state-watcher';
 
 const { createMocks } = utils.unit;
 
@@ -28,6 +28,7 @@ type StateWatcherInternals = {
         deviceId: string;
         canonicalKey: string;
         inverted: boolean | undefined;
+        requiredTrustLevel: number | undefined;
     }>;
     _statesToEnumValues(
         rawStates: Record<string, string> | string[] | string | undefined,
@@ -35,6 +36,8 @@ type StateWatcherInternals = {
     _isManaged(id: string): boolean;
     _extractViewMembers(rows: Array<{ id: string; value: ioBroker.Object | null }>, selected: string[]): Set<string>;
     _subscribeEnumStates(selectedRooms: string[], selectedFunctions: string[]): Promise<void>;
+    _sendSnapshot(): Promise<void>;
+    trustByState: Map<string, number | undefined>;
     subscribedIds: Set<string>;
     wildcardPrefixes: Set<string>;
     verifiedWildcardCache: Set<string>;
@@ -248,6 +251,52 @@ describe('StateWatcher', () => {
             const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
 
             expect(meta.canonicalKey).to.equal('on');
+        });
+
+        // #203: neededTrust, state-level only; undefined (not 0) means "no restriction".
+        it('reports requiredTrustLevel from neededTrust on the state object', async () => {
+            publishState({ role: 'switch.lock', custom: { 'hannah.0': { enabled: true, neededTrust: 8 } } });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.requiredTrustLevel).to.equal(8);
+        });
+
+        it('keeps an explicit neededTrust of 0 distinct from unset', async () => {
+            publishState({ role: 'switch.lock', custom: { 'hannah.0': { enabled: true, neededTrust: 0 } } });
+            publishDevice();
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.requiredTrustLevel).to.equal(0);
+        });
+
+        const unsetTrustCases: Array<[string, Record<string, unknown>]> = [
+            ['no custom entry', {}],
+            ['empty neededTrust', { custom: { 'hannah.0': { enabled: true, neededTrust: '' } } }],
+            ['override not enabled', { custom: { 'hannah.0': { enabled: false, neededTrust: 8 } } }],
+            ['out of range', { custom: { 'hannah.0': { enabled: true, neededTrust: 11 } } }],
+            ['not an integer', { custom: { 'hannah.0': { enabled: true, neededTrust: 2.5 } } }],
+        ];
+        for (const [label, common] of unsetTrustCases) {
+            it(`leaves requiredTrustLevel undefined for ${label}`, async () => {
+                publishState({ role: 'switch.lock', ...common });
+                publishDevice();
+
+                const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+                expect(meta.requiredTrustLevel).to.equal(undefined);
+            });
+        }
+
+        it('ignores neededTrust on the device object (state-level only)', async () => {
+            publishState({ role: 'switch.lock' });
+            publishDevice({ custom: { 'hannah.0': { enabled: true, neededTrust: 8 } } });
+
+            const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
+
+            expect(meta.requiredTrustLevel).to.equal(undefined);
         });
 
         // hannah#177/hannah-proto#4: shutterInverted-Override, nur für über die ROLE_TABLE als
@@ -785,6 +834,130 @@ describe('StateWatcher', () => {
 
             expect(handled).to.equal(true);
             expect(send).to.have.been.calledOnce;
+        });
+    });
+
+    // #203/hannah-proto#16
+    describe('trustLevelSupported', () => {
+        const ack = (unknownFields: Array<{ messageType: string; fieldNumbers: number[] }>): any => ({
+            kind: 'ack',
+            ack: { ackId: 1n, unknownFields },
+        });
+
+        it('is supported when Core acks without reporting AgentDevice field 15', () => {
+            expect(trustLevelSupported(ack([]))).to.equal(true);
+            expect(trustLevelSupported(ack([{ messageType: 'hannah.v1.AgentDevice', fieldNumbers: [16] }]))).to.equal(
+                true,
+            );
+            expect(trustLevelSupported(ack([{ messageType: 'hannah.v1.Other', fieldNumbers: [15] }]))).to.equal(true);
+        });
+
+        it('is unsupported when Core reports AgentDevice field 15 as unknown', () => {
+            expect(
+                trustLevelSupported(ack([{ messageType: 'hannah.v1.AgentDevice', fieldNumbers: [14, 15] }])),
+            ).to.equal(false);
+        });
+
+        it('is unsupported on ack timeout and on the unversioned API', () => {
+            expect(trustLevelSupported({ kind: 'timeout' })).to.equal(false);
+            expect(trustLevelSupported({ kind: 'legacy' })).to.equal(false);
+        });
+
+        it('has no verdict when disconnected', () => {
+            expect(trustLevelSupported({ kind: 'disconnected' })).to.equal(null);
+        });
+    });
+
+    describe('snapshot trust support report (#203)', () => {
+        const stateId = 'javascript.0.virtualDevice.Test.Device.lock';
+
+        async function snapshotWith(custom: Record<string, unknown> | undefined): Promise<sinon.SinonStub> {
+            database.publishObject({
+                _id: stateId,
+                type: 'state',
+                common: { role: 'switch.lock', custom } as unknown as ioBroker.StateCommon,
+                native: {},
+            });
+            // MockAdapter lacks these — _sendSnapshot would swallow the TypeError per pattern
+            (adapter as any).getForeignStatesAsync = sinon.stub().resolves({ [stateId]: { val: false, ack: true } });
+            (adapter as any).getEnumAsync = sinon.stub().resolves({ result: {} });
+            const onTrustSupport = sinon.stub();
+            const sendWithAck = sinon.stub().resolves({ kind: 'timeout' });
+            const sw = new StateWatcher(adapterInstance, sinon.stub(), sendWithAck, onTrustSupport);
+            internals(sw).subscribedIds.add(stateId);
+
+            await internals(sw)._sendSnapshot();
+            await Promise.resolve();
+
+            expect(sendWithAck).to.have.been.calledOnce;
+            expect(sendWithAck.firstCall.args[0].sendSnapshot.devices).to.have.length(1);
+            return onTrustSupport;
+        }
+
+        it('reports configured=true when a state has neededTrust set', async () => {
+            const onTrustSupport = await snapshotWith({ 'hannah.0': { enabled: true, neededTrust: 8 } });
+
+            expect(onTrustSupport).to.have.been.calledOnceWithExactly(false, true);
+        });
+
+        it('reports configured=false when no state has neededTrust set', async () => {
+            const onTrustSupport = await snapshotWith(undefined);
+
+            expect(onTrustSupport).to.have.been.calledOnceWithExactly(false, false);
+        });
+    });
+
+    describe('onObjectChange (#203)', () => {
+        const stateId = 'javascript.0.virtualDevice.Test.Device.lock';
+        let setTimeoutStub: sinon.SinonStub;
+
+        beforeEach(() => {
+            setTimeoutStub = sinon.stub().returns(1);
+            (adapter as any).setTimeout = setTimeoutStub;
+            (adapter as any).clearTimeout = sinon.stub();
+        });
+
+        function stateObj(custom?: Record<string, unknown>): ioBroker.Object {
+            return {
+                _id: stateId,
+                type: 'state',
+                common: { role: 'switch.lock', custom } as unknown as ioBroker.StateCommon,
+                native: {},
+            };
+        }
+
+        function managedWatcher(lastSent: number | undefined): StateWatcher {
+            const sw = makeWatcher();
+            internals(sw).subscribedIds.add(stateId);
+            internals(sw).trustByState.set(stateId, lastSent);
+            return sw;
+        }
+
+        it('schedules a resend when neededTrust changed', () => {
+            managedWatcher(undefined).onObjectChange(
+                stateId,
+                stateObj({ 'hannah.0': { enabled: true, neededTrust: 5 } }),
+            );
+
+            expect(setTimeoutStub).to.have.been.calledOnce;
+        });
+
+        it('schedules a resend when neededTrust was removed', () => {
+            managedWatcher(5).onObjectChange(stateId, stateObj());
+
+            expect(setTimeoutStub).to.have.been.calledOnce;
+        });
+
+        it('does nothing when neededTrust is unchanged (other object edits)', () => {
+            managedWatcher(5).onObjectChange(stateId, stateObj({ 'hannah.0': { enabled: true, neededTrust: 5 } }));
+
+            expect(setTimeoutStub).to.not.have.been.called;
+        });
+
+        it('ignores objects that are not managed', () => {
+            makeWatcher().onObjectChange(stateId, stateObj({ 'hannah.0': { enabled: true, neededTrust: 5 } }));
+
+            expect(setTimeoutStub).to.not.have.been.called;
         });
     });
 });
