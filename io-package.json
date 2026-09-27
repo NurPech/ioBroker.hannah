@@ -178,6 +178,35 @@
       "deviceManager": true
     }
   },
+  "notifications": [
+    {
+      "scope": "hannah",
+      "name": {
+        "en": "Hannah",
+        "de": "Hannah"
+      },
+      "description": {
+        "en": "Notifications from the Hannah adapter",
+        "de": "Benachrichtigungen des Hannah-Adapters"
+      },
+      "categories": [
+        {
+          "category": "trustLevelsUnsupported",
+          "name": {
+            "en": "Trust levels per state not supported",
+            "de": "Vertrauensstufen pro State nicht unterstützt"
+          },
+          "severity": "alert",
+          "description": {
+            "en": "At least one state has a minimum trust level set, but the connected Hannah Core does not support it yet. These states are not protected — anyone can switch them via Hannah. Please update Hannah Core.",
+            "de": "Mindestens ein State hat eine Mindest-Vertrauensstufe, aber der verbundene Hannah Core unterstützt das noch nicht. Diese States sind nicht geschützt — jeder kann sie über Hannah schalten. Bitte Hannah Core aktualisieren."
+          },
+          "regex": [],
+          "limit": 1
+        }
+      ]
+    }
+  ],
   "native": {
     "hannahHost": "",
     "hannahPort": 50051,

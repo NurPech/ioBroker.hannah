@@ -27,7 +27,7 @@
     "@iobroker/adapter-core": "^3.4.3",
     "@iobroker/dm-utils": "^3.2.0",
     "@m1kad0/hannah-grpc-lib": "^0.5.0",
-    "@m1kad0/hannah-proto": "^4.6.3",
+    "@m1kad0/hannah-proto": "^4.7.0",
     "adm-zip": "^0.6.0"
   },
   "devDependencies": {
