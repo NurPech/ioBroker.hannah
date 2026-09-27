@@ -49,6 +49,7 @@
     "Label in ID path": "Мітка на шляху ідентифікатора",
     "Loading firmware from adapter...": "Завантаження прошивки з адаптера...",
     "Loading...": "Завантаження...",
+    "Location": "Розташування",
     "MQTT": "MQTT",
     "Map floor labels or abbreviations found in state IDs to a canonical abbreviation (e.g. \"Erdgeschoss\" → \"EG\"). Leave empty to use built-in defaults (EG, OG, UG, DG, KG, ZG).": "Зіставте позначки поверхів або абревіатури, знайдені в ідентифікаторах штатів, на канонічну абревіатуру (наприклад, «Erdgeschoss» → «EG»). Залиште пустим, щоб використовувати вбудовані параметри за замовчуванням (EG, OG, UG, DG, KG, ZG).",
     "NVS": "NVS",
@@ -114,6 +115,7 @@
     "files": "файли",
     "gRPC Port": "Порт gRPC",
     "hannah adapter settings": "Налаштування адаптера Hannah",
+    "not supported / deprecated": "не підтримується/застаріло",
     "partitions": "перегородки",
     "unknown error": "невідома помилка",
     "unknown version": "невідома версія"

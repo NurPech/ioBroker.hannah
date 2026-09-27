@@ -49,6 +49,7 @@
     "Label in ID path": "Label in ID-pad",
     "Loading firmware from adapter...": "Firmware laden van adapter...",
     "Loading...": "Laden...",
+    "Location": "Locatie",
     "MQTT": "MQTT",
     "Map floor labels or abbreviations found in state IDs to a canonical abbreviation (e.g. \"Erdgeschoss\" → \"EG\"). Leave empty to use built-in defaults (EG, OG, UG, DG, KG, ZG).": "Wijs vloerlabels of afkortingen in staats-ID's toe aan een canonieke afkorting (bijvoorbeeld \"Erdgeschoss\" → \"EG\"). Laat dit leeg om ingebouwde standaardinstellingen te gebruiken (EG, OG, UG, DG, KG, ZG).",
     "NVS": "NVS",
@@ -114,6 +115,7 @@
     "files": "bestanden",
     "gRPC Port": "gRPC-poort",
     "hannah adapter settings": "Hannah-adapterinstellingen",
+    "not supported / deprecated": "niet ondersteund/afgeschaft",
     "partitions": "partities",
     "unknown error": "onbekende fout",
     "unknown version": "onbekende versie"
