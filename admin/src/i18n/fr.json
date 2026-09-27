@@ -49,6 +49,7 @@
     "Label in ID path": "Étiquette dans le chemin d'identification",
     "Loading firmware from adapter...": "Chargement du firmware depuis l'adaptateur...",
     "Loading...": "Chargement...",
+    "Location": "Emplacement",
     "MQTT": "MQTT",
     "Map floor labels or abbreviations found in state IDs to a canonical abbreviation (e.g. \"Erdgeschoss\" → \"EG\"). Leave empty to use built-in defaults (EG, OG, UG, DG, KG, ZG).": "Associez les étiquettes d'étage ou les abréviations trouvées dans les identifiants d'État à une abréviation canonique (par exemple \"Erdgeschoss\" → \"EG\"). Laissez vide pour utiliser les valeurs par défaut intégrées (EG, OG, UG, DG, KG, ZG).",
     "NVS": "NVS",
@@ -114,6 +115,7 @@
     "files": "fichiers",
     "gRPC Port": "Port gRPC",
     "hannah adapter settings": "Paramètres de l'adaptateur Hannah",
+    "not supported / deprecated": "non pris en charge / obsolète",
     "partitions": "cloisons",
     "unknown error": "erreur inconnue",
     "unknown version": "version inconnue"

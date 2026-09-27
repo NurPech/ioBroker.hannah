@@ -49,6 +49,7 @@
     "Label in ID path": "ID 路径中的标签",
     "Loading firmware from adapter...": "正在从适配器加载固件...",
     "Loading...": "加载中...",
+    "Location": "地点",
     "MQTT": "MQTT",
     "Map floor labels or abbreviations found in state IDs to a canonical abbreviation (e.g. \"Erdgeschoss\" → \"EG\"). Leave empty to use built-in defaults (EG, OG, UG, DG, KG, ZG).": "将状态 ID 中找到的楼层标签或缩写映射为规范缩写（例如“Erdgeschoss”→“EG”）。留空以使用内置默认值（EG、OG、UG、DG、KG、ZG）。",
     "NVS": "NVS",
@@ -114,6 +115,7 @@
     "files": "文件",
     "gRPC Port": "gRPC 端口",
     "hannah adapter settings": "汉娜适配器设置",
+    "not supported / deprecated": "不支持/已弃用",
     "partitions": "分区",
     "unknown error": "未知错误",
     "unknown version": "未知版本"
