@@ -1,6 +1,6 @@
 import * as utils from '@iobroker/adapter-core';
-import { LogShipper, wrapLogger } from '@m1kad0/hannah-logging';
-import type { agent, satellite } from '@m1kad0/hannah-proto';
+import { logging } from '@m1kad0/hannah-grpc-lib';
+import type { v1 } from '@m1kad0/hannah-proto';
 import { GrpcClient } from './grpc-client';
 import { StateWatcher } from './state-watcher';
 import { ResidentsWatcher } from './residents';
@@ -24,7 +24,7 @@ class Hannah extends utils.Adapter {
     private ble: BleWatcher | null = null;
     private sensorWatcher: SensorWatcher | null = null;
     private enumReloadTimer: ioBroker.Timeout | null | undefined = null;
-    private shipper: LogShipper | null = null;
+    private shipper: logging.LogShipper | null = null;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({ ...options, name: 'hannah' });
@@ -159,7 +159,7 @@ class Hannah extends utils.Adapter {
                 // (German, possibly umlaut-containing) display name here sanitizes to a
                 // different object path than the live one, forking a stale duplicate tree
                 // once the satellite reconnects (hannah-Adapter#169).
-                const effectiveRoom = (sat: satellite.Satellite): string =>
+                const effectiveRoom = (sat: v1.satellite.Satellite): string =>
                     sat.connected ? sat.room : sat.roomId || sat.roomDisplayName || '';
                 for (const sat of sats) {
                     await this.satellites!.handleSatelliteUpdate(
@@ -186,7 +186,7 @@ class Hannah extends utils.Adapter {
                 await this.residents?.unsubscribe();
                 this.messages?.onDisconnected();
             },
-            onCommand: (cmd: agent.AgentCommand) => {
+            onCommand: (cmd: v1.agent.AgentCommand) => {
                 if (cmd.setState) {
                     void this.states?.handleSetState(cmd.setState.stateId, cmd.setState.value);
                 } else if (cmd.setResident) {
@@ -336,14 +336,14 @@ class Hannah extends utils.Adapter {
             .map(key => native[key])
             .filter((value): value is string => typeof value === 'string' && value !== '');
 
-        this.shipper = new LogShipper({
+        this.shipper = new logging.LogShipper({
             component: 'iobroker',
             version: this.version,
             instance: `${this.host}.${this.namespace}`,
             secrets,
             internalLog: this.log,
         });
-        this.log = wrapLogger(this.log, this.shipper);
+        this.log = logging.wrapLogger(this.log, this.shipper);
         this.shipper.connect({
             hannahAddress: `${this.config.hannahHost || '127.0.0.1'}:${this.config.hannahPort || 50051}`,
         });

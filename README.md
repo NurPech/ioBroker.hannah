@@ -79,6 +79,10 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Changed: the adapter uses Hannah Core's new versioned API (`hannah.v1`, Hannah Core with hannah-proto 4.6.0 or newer). With an older Hannah Core it automatically falls back to the previous API and logs a warning once per connection that Hannah Core should be updated, so the adapter can be updated before Hannah Core
+- Changed: log shipping to the Hannah log collector now uses the same fallback and keeps working with older and newer Hannah Core versions
+
 ### 1.3.1 (2026-09-26)
 - Changed: when ioBroker runs in Docker, the adapter's logs in the Hannah log collector no longer show up under a new name after every container recreate. They appear as `container`, or under the name set in the `HANNAH_LOG_INSTANCE` environment variable
 

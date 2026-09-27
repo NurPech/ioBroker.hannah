@@ -1,5 +1,6 @@
 import type * as utils from '@iobroker/adapter-core';
-import type { weather } from '@m1kad0/hannah-proto';
+import { v1 } from '@m1kad0/hannah-proto';
+import weather = v1.weather;
 import type { AgentMessageSender } from './grpc-client';
 
 /** Internal accumulator shape — superset of current + forecast-day fields. */
