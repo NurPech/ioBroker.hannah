@@ -1,6 +1,7 @@
 import type * as utils from '@iobroker/adapter-core';
-import type { agent } from '@m1kad0/hannah-proto';
-import { shared } from '@m1kad0/hannah-proto';
+import { v1 } from '@m1kad0/hannah-proto';
+import agent = v1.agent;
+import shared = v1.shared;
 import type { AgentMessageSender } from './grpc-client';
 
 /**

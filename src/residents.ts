@@ -1,5 +1,6 @@
 import type * as utils from '@iobroker/adapter-core';
-import { agent } from '@m1kad0/hannah-proto';
+import { v1 } from '@m1kad0/hannah-proto';
+import agent = v1.agent;
 import type { AgentMessageSender } from './grpc-client';
 
 type ResidentType = agent.ResidentType;

@@ -1,26 +1,12 @@
 import * as grpc from '@grpc/grpc-js';
-import { PROTO_VERSION, agent, hannah, compat_interceptor } from '@m1kad0/hannah-proto';
-import type { control, satellite, shared, satellite_provisioning, user_registry } from '@m1kad0/hannah-proto';
-
-/**
- * Haengt die PROTO_VERSION der installierten hannah-proto npm-Version als `x-proto-version`-Metadata
- * an jeden ausgehenden Call (#60).
- *
- * @param options - Call options for this interceptor invocation
- * @param nextCall - Continuation to the next interceptor / the actual call
- */
-const protocolVersionInterceptor: grpc.Interceptor = (
-    options: grpc.InterceptorOptions,
-    nextCall: grpc.NextCall,
-): grpc.InterceptingCall => {
-    const requester = new grpc.RequesterBuilder()
-        .withStart((metadata, listener, next) => {
-            metadata.set('x-proto-version', String(PROTO_VERSION));
-            next(metadata, listener);
-        })
-        .build();
-    return new grpc.InterceptingCall(nextCall(options), requester);
-};
+import { client } from '@m1kad0/hannah-grpc-lib';
+import { v1 } from '@m1kad0/hannah-proto';
+import agent = v1.agent;
+import control = v1.control;
+import satellite = v1.satellite;
+import shared = v1.shared;
+import satellite_provisioning = v1.satellite_provisioning;
+import user_registry = v1.user_registry;
 
 export type AgentMessageSender = (msg: agent.AgentMessage) => void;
 export type CommandHandler = (cmd: agent.AgentCommand) => void;
@@ -46,7 +32,9 @@ interface GrpcClientOptions {
  * Automatically reconnects on error or stream end.
  */
 export class GrpcClient {
-    private client: hannah.HannahServiceClient | null = null;
+    private versioned: client.VersionedClient | null = null;
+    private client: client.HannahServiceClient | null = null;
+    private connectGeneration = 0;
     private stream: grpc.ClientDuplexStream<agent.AgentMessage, agent.AgentCommand> | null = null;
     private reconnectTimer: number | null = null;
     private running = false;
@@ -85,29 +73,56 @@ export class GrpcClient {
             return;
         }
         // Close previous stream/client before reconnecting to avoid duplicate connections
+        this._closeConnection();
+
+        const addr = `${host}:${port}`;
+        this.log.info(`[grpc] Connecting to Hannah Core: ${addr}`);
+        // hannah.v1 with fallback to the unversioned API for Cores that predate it. A fresh
+        // VersionedClient per connection means the probe runs again after every reconnect
+        // (Core may have been updated in between). x-proto-version and x-compat-version are
+        // attached by the lib's default interceptors.
+        const versioned = new client.VersionedClient(addr, grpc.credentials.createInsecure(), {
+            warn: (message: string) => this.log.warn(`[grpc] ${message}`),
+        });
+        this.versioned = versioned;
+        const generation = ++this.connectGeneration;
+        versioned
+            .resolve()
+            .then(resolved => {
+                // disconnect() or a newer _connect() happened during the probe
+                if (!this.running || generation !== this.connectGeneration) {
+                    return;
+                }
+                this.client = resolved;
+                this._openStream(resolved, host, port);
+            })
+            .catch((e: Error) => {
+                this.log.warn(`[grpc] Connecting failed: ${e.message}`);
+                this._scheduleReconnect(host, port);
+            });
+    }
+
+    private _closeConnection(): void {
         try {
             this.stream?.end();
         } catch {
             /* ignore */
         }
         try {
-            this.client?.close();
+            this.versioned?.close();
         } catch {
             /* ignore */
         }
         this.stream = null;
         this.client = null;
+        this.versioned = null;
+    }
 
-        const addr = `${host}:${port}`;
-        this.log.info(`[grpc] Connecting to Hannah Core: ${addr}`);
-        // compat_interceptor (hannah-proto#9/hannah#217) laeuft additiv neben
-        // protocolVersionInterceptor, nicht als Ersatz — ein Breaking Change,
-        // der auf eine Message begrenzt ist, muss nicht mehr jeden Client
-        // ablehnen, sondern nur Calls, die diese Message tatsaechlich nutzen.
-        this.client = new hannah.HannahServiceClient(addr, grpc.credentials.createInsecure(), {
-            interceptors: [protocolVersionInterceptor, compat_interceptor.compatVersionInterceptor],
-        });
-        this.stream = this.client.agentConnect();
+    private _openStream(hannahClient: client.HannahServiceClient, host: string, port: number): void {
+        if (this.versioned?.legacy) {
+            this.log.info(`[grpc] Using ${this.versioned.service} (Hannah Core without hannah.v1).`);
+        }
+        this.stream = hannahClient.agentConnect();
 
         // For bidi streams with Python gRPC, the server does not send initial metadata,
         // so the 'metadata' event never fires. Trigger onConnected immediately — if the
@@ -404,15 +419,6 @@ export class GrpcClient {
             this._clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
         }
-        try {
-            this.stream?.end();
-        } catch {
-            /* ignore */
-        }
-        try {
-            this.client?.close();
-        } catch {
-            /* ignore */
-        }
+        this._closeConnection();
     }
 }

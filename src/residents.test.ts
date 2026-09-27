@@ -2,7 +2,8 @@ import type * as adapterCore from '@iobroker/adapter-core';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { utils } from '@iobroker/testing';
-import { agent } from '@m1kad0/hannah-proto';
+import { v1 } from '@m1kad0/hannah-proto';
+import agent = v1.agent;
 import { ResidentsWatcher } from './residents';
 
 const { createMocks } = utils.unit;
