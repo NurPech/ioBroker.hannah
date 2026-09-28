@@ -79,7 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.5.1 (2026-09-28)
 - Fixed: writing to `satellites.rooms.all.announcement`/`.announcementSsml`/`.announcementRephrase`/`.dnd`/`.mute` (the virtual "all" room) logged a debug line but never actually reached Hannah
 
 ### 1.5.0 (2026-09-27)
