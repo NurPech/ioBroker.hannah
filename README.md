@@ -79,6 +79,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: writing to `satellites.rooms.all.announcement`/`.announcementSsml`/`.announcementRephrase`/`.dnd`/`.mute` (the virtual "all" room) logged a debug line but never actually reached Hannah
+
 ### 1.5.0 (2026-09-27)
 - Added: minimum trust level per state (`neededTrust`, 0–10, in the state's "Custom settings" dialog) — only users with at least this trust level may switch the state via Hannah; reading it is never restricted. Leave empty for no restriction. Changes take effect without restarting the adapter
 - Added: ioBroker notification when a minimum trust level is set but the connected Hannah Core doesn't support it yet — those states aren't protected until Hannah Core is updated. The notification is cleared automatically once an updated Hannah Core confirms support

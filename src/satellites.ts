@@ -342,12 +342,20 @@ export class SatelliteWatcher {
         // Broadcast-Convenience (hannah#56/#156): Funktionen leben primär am Satelliten,
         // der Adapter löst den Raum selbst zu seinen aktuell bekannten Satelliten auf und
         // sendet pro Satellit ein eigenes satelliteControl — Core sieht keinen Raum-Broadcast.
-        for (const [deviceIdLower, deviceRoom] of this.deviceRooms) {
-            if (roomPathKey(deviceRoom) !== roomId.toLowerCase()) {
-                continue;
+        // Ausnahme: der virtuelle "all"-Raum hat keinen eigenen deviceRooms-Eintrag (kein
+        // Satellit ist ihm zugeordnet) — der Fanout unten würde für ihn also nie etwas
+        // matchen. Für "all" bleibt es daher bei der alten Direktweiterleitung; Core löst
+        // room == "all" selbst zu allen verbundenen Satelliten auf (siehe ensureVirtualRooms).
+        if (roomId.toLowerCase() === 'all') {
+            this.send({ satelliteControl: { room: 'all', deviceId: '', [key]: state.val } });
+        } else {
+            for (const [deviceIdLower, deviceRoom] of this.deviceRooms) {
+                if (roomPathKey(deviceRoom) !== roomId.toLowerCase()) {
+                    continue;
+                }
+                const actualDeviceId = this.deviceToObjectKey.get(deviceIdLower) ?? deviceIdLower;
+                this.send({ satelliteControl: { room: deviceRoom, deviceId: actualDeviceId, [key]: state.val } });
             }
-            const actualDeviceId = this.deviceToObjectKey.get(deviceIdLower) ?? deviceIdLower;
-            this.send({ satelliteControl: { room: deviceRoom, deviceId: actualDeviceId, [key]: state.val } });
         }
         if (resetKeys.includes(key)) {
             void this.adapter.setState(id, { val: '', ack: true });
