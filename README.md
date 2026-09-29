@@ -79,7 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.5.2 (2026-09-29)
 - Fixed: live value updates for states with an unusual name no longer freeze at their first value — the adapter now tells Hannah Core which role a state has instead of leaving Core to guess it from the state name (needs hannah-proto 4.8 on the Core side; older Cores behave as before)
 - Changed: updated to hannah-proto 4.8.0
 
