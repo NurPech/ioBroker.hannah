@@ -55,6 +55,8 @@ export class StateWatcher {
     private onTrustSupport: TrustSupportHandler | undefined;
     // #203: neededTrust per state as last sent — onObjectChange() resends only on a real change
     private trustByState = new Map<string, number | undefined>();
+    // canonicalKey per state as last sent in the snapshot — reused for live updates
+    private canonicalKeyByState = new Map<string, string>();
     private objectPatterns = new Set<string>();
     private resendTimer: ioBroker.Timeout | null | undefined = null;
 
@@ -217,6 +219,9 @@ export class StateWatcher {
                 value: JSON.stringify(state.val),
                 ack: state.ack ?? false,
                 ts: BigInt(state.ts ?? Date.now()),
+                // Unknown states (e.g. WatchMore) and unresolved roles send none — Core then
+                // falls back to its own suffix lookup.
+                canonicalKey: this.canonicalKeyByState.get(id) || undefined,
             },
         });
         return true;
@@ -287,6 +292,7 @@ export class StateWatcher {
     private async _sendSnapshot(): Promise<void> {
         const devices: agent.AgentDevice[] = [];
         const trustByState = new Map<string, number | undefined>();
+        const canonicalKeyByState = new Map<string, string>();
         let sent = 0;
 
         const [allRooms, allFunctions] = await Promise.all([
@@ -326,6 +332,7 @@ export class StateWatcher {
                         requiredTrustLevel: meta.requiredTrustLevel,
                     });
                     trustByState.set(id, meta.requiredTrustLevel);
+                    canonicalKeyByState.set(id, meta.canonicalKey);
 
                     sent++;
                 }
@@ -334,6 +341,7 @@ export class StateWatcher {
             }
         }
         this.trustByState = trustByState;
+        this.canonicalKeyByState = canonicalKeyByState;
 
         const msg: agent.AgentMessage = { sendSnapshot: { devices } };
         if (this.sendWithAck) {
@@ -738,6 +746,7 @@ export class StateWatcher {
         }
         this.objectPatterns.clear();
         this.trustByState.clear();
+        this.canonicalKeyByState.clear();
         this.subscribedIds.clear();
         this.wildcardPrefixes.clear();
         this.verifiedWildcardCache.clear();

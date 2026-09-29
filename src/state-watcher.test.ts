@@ -814,6 +814,27 @@ describe('StateWatcher', () => {
             expect(msg.stateUpdate.value).to.equal('42');
         });
 
+        it('includes the canonicalKey remembered from the snapshot in the AgentStateUpdate', () => {
+            const send = sinon.stub();
+            const sw = new StateWatcher(adapterInstance, send);
+            internals(sw).subscribedIds.add('hannah.0.some.state');
+            (sw as any).canonicalKeyByState.set('hannah.0.some.state', 'current');
+
+            sw.onStateChange('hannah.0.some.state', makeState({ val: 42, ack: true }));
+
+            expect(send.firstCall.args[0].stateUpdate.canonicalKey).to.equal('current');
+        });
+
+        it('sends no canonicalKey for a state without a resolved key', () => {
+            const send = sinon.stub();
+            const sw = new StateWatcher(adapterInstance, send);
+            internals(sw).subscribedIds.add('hannah.0.some.state');
+
+            sw.onStateChange('hannah.0.some.state', makeState({ val: 42, ack: true }));
+
+            expect(send.firstCall.args[0].stateUpdate.canonicalKey).to.equal(undefined);
+        });
+
         it('drops an unconfirmed (ack=false) subscribed state', () => {
             const send = sinon.stub();
             const sw = new StateWatcher(adapterInstance, send);
