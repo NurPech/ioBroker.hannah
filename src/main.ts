@@ -1,6 +1,7 @@
 import * as utils from '@iobroker/adapter-core';
 import { logging } from '@m1kad0/hannah-grpc-lib';
-import type { v1 } from '@m1kad0/hannah-proto';
+import type { v2 } from '@m1kad0/hannah-proto';
+import type { BridgedCommand } from './agent-bridge';
 import { GrpcClient } from './grpc-client';
 import { StateWatcher } from './state-watcher';
 import { ResidentsWatcher } from './residents';
@@ -111,6 +112,10 @@ class Hannah extends utils.Adapter {
             send,
             msg => this.grpc?.sendWithAck(msg) ?? Promise.resolve({ kind: 'disconnected' }),
             (supported, configured) => void this._onTrustSupport(supported, configured),
+            {
+                send: msg => this.grpc?.sendLegacy(msg),
+                sendWithAck: msg => this.grpc?.sendLegacyWithAck(msg) ?? Promise.resolve({ kind: 'disconnected' }),
+            },
         );
         this.residents = cfg.residentsInstance ? new ResidentsWatcher(this, send, cfg.residentsInstance) : null;
         this.weather = createWeatherSource(this, send, {
@@ -136,14 +141,17 @@ class Hannah extends utils.Adapter {
             log: this.log,
             setTimeout: (fn, ms) => this.setTimeout(fn, ms) ?? 0,
             clearTimeout: t => this.clearTimeout(t as ioBroker.Timeout),
-            onConnected: async () => {
+            onConnected: async generation => {
                 await this.setState('info.connection', true, true);
-                await this.states!.start({
-                    selectedRooms: cfg.selectedRooms || [],
-                    selectedFunctions: cfg.selectedFunctions || [],
-                    extraStatePrefixes: cfg.extraStatePrefixes || [],
-                    floorMappings: cfg.floorMappings || [],
-                });
+                await this.states!.start(
+                    {
+                        selectedRooms: cfg.selectedRooms || [],
+                        selectedFunctions: cfg.selectedFunctions || [],
+                        extraStatePrefixes: cfg.extraStatePrefixes || [],
+                        floorMappings: cfg.floorMappings || [],
+                    },
+                    generation,
+                );
                 await this.residents?.subscribe();
                 await this.weather?.subscribe();
                 await this.subscribeStatesAsync('satellites.rooms.*');
@@ -166,7 +174,7 @@ class Hannah extends utils.Adapter {
                 // (German, possibly umlaut-containing) display name here sanitizes to a
                 // different object path than the live one, forking a stale duplicate tree
                 // once the satellite reconnects (hannah-Adapter#169).
-                const effectiveRoom = (sat: v1.satellite.Satellite): string =>
+                const effectiveRoom = (sat: v2.satellite.Satellite): string =>
                     sat.connected ? sat.room : sat.roomId || sat.roomDisplayName || '';
                 for (const sat of sats) {
                     await this.satellites!.handleSatelliteUpdate(
@@ -193,12 +201,22 @@ class Hannah extends utils.Adapter {
                 await this.residents?.unsubscribe();
                 this.messages?.onDisconnected();
             },
-            onCommand: (cmd: v1.agent.AgentCommand) => {
+            onCommand: (cmd: BridgedCommand) => {
                 if (cmd.setState) {
                     void this.states?.handleSetState(cmd.setState.stateId, cmd.setState.value);
+                } else if (cmd.setSlot) {
+                    const s = cmd.setSlot;
+                    void this.states?.handleSetSlot(s.deviceId, s.slotId, s.value);
                 } else if (cmd.setResident) {
                     const r = cmd.setResident;
-                    void this.residents?.handleSetResident(r.residentId, r.presenceState, r.type, r.action);
+                    // hannah.v2 has only the action; a hannah.v1 Core older than compat_version 2
+                    // sends just the legacy presence_state, which comes with the command then.
+                    void this.residents?.handleSetResident(
+                        r.residentId,
+                        cmd.legacyPresenceState ?? 0,
+                        r.type,
+                        r.action,
+                    );
                 } else if (cmd.setResidentMood) {
                     const r = cmd.setResidentMood;
                     void this.residents?.handleSetResidentMood(r.residentId, r.mood, r.type);

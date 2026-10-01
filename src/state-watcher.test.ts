@@ -814,7 +814,35 @@ describe('StateWatcher', () => {
             expect(msg.stateUpdate.value).to.equal('42');
         });
 
-        it('includes the canonicalKey remembered from the snapshot in the AgentStateUpdate', () => {
+        // hannah.v1 Core: the legacy path, unchanged
+        function legacyWatcher(): { sw: StateWatcher; send: sinon.SinonStub; legacySend: sinon.SinonStub } {
+            const send = sinon.stub();
+            const legacySend = sinon.stub();
+            const sw = new StateWatcher(adapterInstance, send, undefined, undefined, { send: legacySend });
+            (sw as any).generation = 'v1';
+            internals(sw).subscribedIds.add('hannah.0.some.state');
+            return { sw, send, legacySend };
+        }
+
+        it('includes the canonicalKey remembered from the snapshot in the AgentStateUpdate (hannah.v1)', () => {
+            const { sw, send, legacySend } = legacyWatcher();
+            (sw as any).canonicalKeyByState.set('hannah.0.some.state', 'current');
+
+            sw.onStateChange('hannah.0.some.state', makeState({ val: 42, ack: true }));
+
+            expect(legacySend.firstCall.args[0].stateUpdate.canonicalKey).to.equal('current');
+            expect(send).to.not.have.been.called;
+        });
+
+        it('sends no canonicalKey for a state without a resolved key (hannah.v1)', () => {
+            const { sw, legacySend } = legacyWatcher();
+
+            sw.onStateChange('hannah.0.some.state', makeState({ val: 42, ack: true }));
+
+            expect(legacySend.firstCall.args[0].stateUpdate.canonicalKey).to.equal(undefined);
+        });
+
+        it('sends no canonicalKey in a hannah.v2 AgentStateUpdate, which has none', () => {
             const send = sinon.stub();
             const sw = new StateWatcher(adapterInstance, send);
             internals(sw).subscribedIds.add('hannah.0.some.state');
@@ -822,17 +850,119 @@ describe('StateWatcher', () => {
 
             sw.onStateChange('hannah.0.some.state', makeState({ val: 42, ack: true }));
 
-            expect(send.firstCall.args[0].stateUpdate.canonicalKey).to.equal('current');
+            expect(send.firstCall.args[0].stateUpdate).to.not.have.property('canonicalKey');
         });
 
-        it('sends no canonicalKey for a state without a resolved key', () => {
-            const send = sinon.stub();
-            const sw = new StateWatcher(adapterInstance, send);
-            internals(sw).subscribedIds.add('hannah.0.some.state');
+        describe('typed devices (hannah.v2)', () => {
+            const slotState = 'hannah.0.dev.on';
+            const model = (): any => ({
+                bySlotState: new Map([
+                    [
+                        slotState,
+                        {
+                            deviceId: 'hannah.0.dev',
+                            slotId: 'on',
+                            target: { kind: 1, inverted: false, stateId: slotState, writable: true },
+                        },
+                    ],
+                ]),
+                targets: new Map(),
+                devices: [],
+            });
 
-            sw.onStateChange('hannah.0.some.state', makeState({ val: 42, ack: true }));
+            it('forwards a confirmed state of a typed device as a SlotUpdate, not as a state update', () => {
+                const send = sinon.stub();
+                const sw = new StateWatcher(adapterInstance, send);
+                (sw as any).deviceModel = model();
+                internals(sw).subscribedIds.add(slotState);
 
-            expect(send.firstCall.args[0].stateUpdate.canonicalKey).to.equal(undefined);
+                sw.onStateChange(slotState, makeState({ val: true, ack: true, ts: 5 }));
+
+                expect(send).to.have.been.calledOnce;
+                expect(send.firstCall.args[0].slotUpdate).to.deep.equal({
+                    deviceId: 'hannah.0.dev',
+                    slotId: 'on',
+                    value: { boolean: true },
+                    ack: true,
+                    ts: 5n,
+                });
+            });
+
+            it('sends both for a WatchMore state that is also a slot (triggers watch state IDs)', () => {
+                const send = sinon.stub();
+                const sw = new StateWatcher(adapterInstance, send);
+                (sw as any).deviceModel = model();
+                internals(sw).watchMoreIds.add(slotState);
+
+                sw.onStateChange(slotState, makeState({ val: false, ack: true }));
+
+                expect(send).to.have.been.calledTwice;
+                expect(send.firstCall.args[0]).to.have.property('slotUpdate');
+                expect(send.secondCall.args[0].stateUpdate.stateId).to.equal(slotState);
+            });
+
+            it('sends a plain state update for a state that came after the last snapshot', () => {
+                const send = sinon.stub();
+                const sw = new StateWatcher(adapterInstance, send);
+                (sw as any).deviceModel = model();
+                internals(sw).subscribedIds.add('hannah.0.new.state');
+
+                sw.onStateChange('hannah.0.new.state', makeState({ val: 1, ack: true }));
+
+                expect(send.firstCall.args[0]).to.have.property('stateUpdate');
+            });
+        });
+
+        describe('handleSetSlot', () => {
+            const stateId = 'hannah.0.dev.level';
+            let setForeignState: sinon.SinonStub;
+
+            function watcherWith(target: any, current: unknown = 10): StateWatcher {
+                setForeignState = sinon.stub().resolves();
+                (adapter as any).setForeignStateAsync = setForeignState;
+                (adapter as any).getForeignStateAsync = sinon.stub().resolves({ val: current });
+                const sw = new StateWatcher(adapterInstance, sinon.stub());
+                (sw as any).deviceModel = {
+                    devices: [],
+                    bySlotState: new Map(),
+                    targets: new Map([['dev', new Map([['brightness', target]])]]),
+                };
+                return sw;
+            }
+
+            const target = { stateId, kind: 2, inverted: false, writable: true, valueType: 'number' };
+
+            it('writes the value to the state of the slot, not yet confirmed', async () => {
+                await watcherWith(target).handleSetSlot('dev', 'brightness', { number: 40 });
+
+                expect(setForeignState).to.have.been.calledOnceWithExactly(stateId, { val: 40, ack: false });
+            });
+
+            it('writes an inverted cover with the inverted position', async () => {
+                const cover = { ...target, kind: 30, inverted: true };
+
+                await watcherWith(cover).handleSetSlot('dev', 'brightness', { number: 70 });
+
+                expect(setForeignState.firstCall.args[1].val).to.equal(30);
+            });
+
+            it('refuses a read-only slot', async () => {
+                await watcherWith({ ...target, writable: false }).handleSetSlot('dev', 'brightness', { number: 40 });
+
+                expect(setForeignState).to.not.have.been.called;
+            });
+
+            it('refuses an unknown slot', async () => {
+                await watcherWith(target).handleSetSlot('dev', 'nope', { number: 40 });
+
+                expect(setForeignState).to.not.have.been.called;
+            });
+
+            it('refuses a value of the wrong kind', async () => {
+                await watcherWith(target).handleSetSlot('dev', 'brightness', { boolean: true });
+
+                expect(setForeignState).to.not.have.been.called;
+            });
         });
 
         it('drops an unconfirmed (ack=false) subscribed state', () => {
@@ -879,13 +1009,23 @@ describe('StateWatcher', () => {
             ).to.equal(false);
         });
 
-        it('is unsupported on ack timeout and on the unversioned API', () => {
+        it('is unsupported on ack timeout', () => {
             expect(trustLevelSupported({ kind: 'timeout' })).to.equal(false);
-            expect(trustLevelSupported({ kind: 'legacy' })).to.equal(false);
+            expect(trustLevelSupported({ kind: 'timeout' }, 'v2')).to.equal(false);
         });
 
         it('has no verdict when disconnected', () => {
             expect(trustLevelSupported({ kind: 'disconnected' })).to.equal(null);
+        });
+
+        it('looks at Slot field 7 on a hannah.v2 stream', () => {
+            expect(trustLevelSupported(ack([]), 'v2')).to.equal(true);
+            expect(trustLevelSupported(ack([{ messageType: 'hannah.v2.Slot', fieldNumbers: [7] }]), 'v2')).to.equal(
+                false,
+            );
+            expect(
+                trustLevelSupported(ack([{ messageType: 'hannah.v1.AgentDevice', fieldNumbers: [15] }]), 'v2'),
+            ).to.equal(true);
         });
     });
 
@@ -904,7 +1044,11 @@ describe('StateWatcher', () => {
             (adapter as any).getEnumAsync = sinon.stub().resolves({ result: {} });
             const onTrustSupport = sinon.stub();
             const sendWithAck = sinon.stub().resolves({ kind: 'timeout' });
-            const sw = new StateWatcher(adapterInstance, sinon.stub(), sendWithAck, onTrustSupport);
+            const sw = new StateWatcher(adapterInstance, sinon.stub(), undefined, onTrustSupport, {
+                send: sinon.stub(),
+                sendWithAck,
+            });
+            (sw as any).generation = 'v1';
             internals(sw).subscribedIds.add(stateId);
 
             await internals(sw)._sendSnapshot();
@@ -925,6 +1069,83 @@ describe('StateWatcher', () => {
             const onTrustSupport = await snapshotWith(undefined);
 
             expect(onTrustSupport).to.have.been.calledOnceWithExactly(false, false);
+        });
+    });
+
+    describe('typed snapshot (hannah.v2)', () => {
+        const base = 'javascript.0.virtualDevice.Test.Lamp';
+
+        function publish(suffix: string, common: Record<string, unknown>): void {
+            database.publishObject({
+                _id: `${base}.${suffix}`,
+                type: 'state',
+                common: { write: true, name: '', ...common } as unknown as ioBroker.StateCommon,
+                native: {},
+            });
+        }
+
+        async function snapshot(): Promise<{
+            sendWithAck: sinon.SinonStub;
+            onTrustSupport: sinon.SinonStub;
+            sw: StateWatcher;
+        }> {
+            publish('on', {
+                role: 'switch.light',
+                type: 'boolean',
+                custom: { 'hannah.0': { enabled: true, neededTrust: 6 } },
+            });
+            publish('level', { role: 'level.dimmer', type: 'number' });
+            publish('rgb', { role: 'level.color.rgb', type: 'string' });
+            publish('ct', { role: 'level.color.temperature', type: 'number' });
+            (adapter as any).getForeignStatesAsync = sinon.stub().resolves({
+                [`${base}.on`]: { val: true, ack: true },
+                [`${base}.level`]: { val: 60, ack: true },
+                [`${base}.rgb`]: { val: '#00ff00', ack: true },
+                [`${base}.ct`]: { val: 2700, ack: true },
+            });
+            (adapter as any).getEnumAsync = sinon
+                .stub()
+                .callsFake((name: string) => Promise.resolve(name === 'rooms' ? room(base) : { result: {} }));
+            const onTrustSupport = sinon.stub();
+            const sendWithAck = sinon.stub().resolves({ kind: 'ack', ack: { ackId: 1n, unknownFields: [] } });
+            const sw = new StateWatcher(adapterInstance, sinon.stub(), sendWithAck, onTrustSupport);
+            internals(sw).subscribedIds.add('javascript.0.virtualDevice.Test.Lamp.*');
+
+            await internals(sw)._sendSnapshot();
+            await Promise.resolve();
+            return { sendWithAck, onTrustSupport, sw };
+        }
+
+        it('sends the states of a device as one typed device with its slots, a colour not mixed up with a colour temperature', async () => {
+            const { sendWithAck } = await snapshot();
+
+            expect(sendWithAck).to.have.been.calledOnce;
+            const [dev] = sendWithAck.firstCall.args[0].typedSnapshot.devices;
+            expect(dev).to.include({ deviceId: base, name: 'Lamp', room: 'wohnzimmer' });
+            expect(dev.slots.map((s: any) => s.slotId).sort()).to.deep.equal([
+                'brightness',
+                'color',
+                'color_temperature',
+                'on',
+            ]);
+            expect(dev.slots.find((s: any) => s.slotId === 'color').value).to.deep.equal({ rgb: 0x00ff00 });
+            expect(dev.slots.find((s: any) => s.slotId === 'color_temperature').value).to.deep.equal({ number: 2700 });
+        });
+
+        it('carries neededTrust as the trust level of the slot and judges support from the Slot field', async () => {
+            const { sendWithAck, onTrustSupport } = await snapshot();
+
+            const slots = sendWithAck.firstCall.args[0].typedSnapshot.devices[0].slots;
+            expect(slots.find((s: any) => s.slotId === 'on').requiredTrustLevel).to.equal(6);
+            expect(onTrustSupport).to.have.been.calledOnceWithExactly(true, true);
+        });
+
+        it('indexes the slots for live updates and SetSlot', async () => {
+            const { sw } = await snapshot();
+
+            const model = (sw as any).deviceModel;
+            expect(model.bySlotState.get(`${base}.level`)).to.deep.include({ deviceId: base, slotId: 'brightness' });
+            expect(model.targets.get(base).get('on').stateId).to.equal(`${base}.on`);
         });
     });
 

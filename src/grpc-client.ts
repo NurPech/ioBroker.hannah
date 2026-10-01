@@ -1,29 +1,33 @@
 import * as grpc from '@grpc/grpc-js';
 import { client } from '@m1kad0/hannah-grpc-lib';
-import { v1 } from '@m1kad0/hannah-proto';
-import agent = v1.agent;
-import control = v1.control;
-import satellite = v1.satellite;
-import shared = v1.shared;
-import satellite_provisioning = v1.satellite_provisioning;
-import user_registry = v1.user_registry;
+import type { v1 } from '@m1kad0/hannah-proto';
+import { v2 } from '@m1kad0/hannah-proto';
+import { commandToV2, hasPayload, messageToV1 } from './agent-bridge';
+import type { BridgedCommand } from './agent-bridge';
+import agent = v2.agent;
+import control = v2.control;
+import satellite = v2.satellite;
+import shared = v2.shared;
+import satellite_provisioning = v2.satellite_provisioning;
+import user_registry = v2.user_registry;
+
+/** The API generation of the AgentConnect stream: Core serves hannah.v2, or only hannah.v1 (older Core). */
+export type Generation = 'v1' | 'v2';
 
 export type AgentMessageSender = (msg: agent.AgentMessage) => void;
-export type CommandHandler = (cmd: agent.AgentCommand) => void;
+/** Sends a hannah.v1 message as it is: the legacy device sync, which is not bridged. Only works on a v1 stream. */
+export type LegacyMessageSender = (msg: v1.agent.AgentMessage) => void;
+export type CommandHandler = (cmd: BridgedCommand) => void;
 
 /**
  * Outcome of sendWithAck() (hannah-proto#16):
  * - ack: Core replied, `ack.unknownFields` lists what its schema didn't know
  * - timeout: no reply in time — Core too old to send AgentAck at all
- * - legacy: connected via the unversioned hannah.* API, which has no ack_id/AgentAck
  * - disconnected: stream closed before a reply — outcome unknown, not a verdict
  */
-export type AckResult =
-    | { kind: 'ack'; ack: agent.AgentAck }
-    | { kind: 'timeout' }
-    | { kind: 'legacy' }
-    | { kind: 'disconnected' };
+export type AckResult = { kind: 'ack'; ack: agent.AgentAck } | { kind: 'timeout' } | { kind: 'disconnected' };
 export type AckingMessageSender = (msg: agent.AgentMessage) => Promise<AckResult>;
+export type LegacyAckingMessageSender = (msg: v1.agent.AgentMessage) => Promise<AckResult>;
 
 const ACK_TIMEOUT_MS = 10_000;
 
@@ -36,7 +40,7 @@ interface LogAdapter {
 
 interface GrpcClientOptions {
     onCommand: CommandHandler;
-    onConnected: () => void;
+    onConnected: (generation: Generation) => void;
     onDisconnected: () => void;
     log: LogAdapter;
     setTimeout: (fn: () => void, ms: number) => number;
@@ -49,13 +53,16 @@ interface GrpcClientOptions {
  */
 export class GrpcClient {
     private versioned: client.VersionedClient | null = null;
+    // hannah.v2 client: on a Core that only speaks hannah.v1 the lib translates the calls
     private client: client.HannahServiceClient | null = null;
     private connectGeneration = 0;
-    private stream: grpc.ClientDuplexStream<agent.AgentMessage, agent.AgentCommand> | null = null;
+    // Raw stream of the active generation, `streamGeneration` tells which messages it takes
+    private stream: { write(msg: unknown): unknown; end(): unknown } | null = null;
+    private streamGeneration: Generation = 'v2';
     private reconnectTimer: number | null = null;
     private running = false;
     private onCommand: CommandHandler;
-    private onConnected: () => void;
+    private onConnected: (generation: Generation) => void;
     private onDisconnected: () => void;
     private log: LogAdapter;
     private _setTimeout: (fn: () => void, ms: number) => number;
@@ -96,7 +103,7 @@ export class GrpcClient {
 
         const addr = `${host}:${port}`;
         this.log.info(`[grpc] Connecting to Hannah Core: ${addr}`);
-        // hannah.v1 with fallback to the unversioned API for Cores that predate it. A fresh
+        // hannah.v2 with fallback to hannah.v1 for Cores that don't serve v2 yet. A fresh
         // VersionedClient per connection means the probe runs again after every reconnect
         // (Core may have been updated in between). x-proto-version and x-compat-version are
         // attached by the lib's default interceptors.
@@ -107,12 +114,15 @@ export class GrpcClient {
         const generation = ++this.connectGeneration;
         versioned
             .resolve()
-            .then(resolved => {
+            .then(async resolved => {
+                // Unary calls are written for hannah.v2 only, the lib translates them on a v1 Core.
+                // The device sync (AgentConnect) can't be translated, it uses the raw client.
+                const translated = await versioned.resolveTranslated();
                 // disconnect() or a newer _connect() happened during the probe
                 if (!this.running || generation !== this.connectGeneration) {
                     return;
                 }
-                this.client = resolved;
+                this.client = translated;
                 this._openStream(resolved, host, port);
             })
             .catch((e: Error) => {
@@ -142,22 +152,31 @@ export class GrpcClient {
         this.versioned = null;
     }
 
-    private _openStream(hannahClient: client.HannahServiceClient, host: string, port: number): void {
-        if (this.versioned?.legacy) {
-            this.log.info(`[grpc] Using ${this.versioned.service} (Hannah Core without hannah.v1).`);
-        }
-        this.stream = hannahClient.agentConnect();
+    private _openStream(
+        resolved: Awaited<ReturnType<client.VersionedClient['resolve']>>,
+        host: string,
+        port: number,
+    ): void {
+        const generation: Generation = resolved.previous ? 'v1' : 'v2';
+        // each generation's client has its own message types, the stream is typed per generation below
+        const stream = (
+            resolved.client as unknown as { agentConnect(): grpc.ClientDuplexStream<unknown, unknown> }
+        ).agentConnect();
+        this.stream = stream;
+        this.streamGeneration = generation;
         this.ackCounter = 0n;
 
         // For bidi streams with Python gRPC, the server does not send initial metadata,
         // so the 'metadata' event never fires. Trigger onConnected immediately — if the
         // server is unreachable we will get an 'error' event shortly after.
-        this.log.info('[grpc] Connected to Hannah Core.');
-        (this.onConnected() as unknown as Promise<void>).catch((e: Error) => {
+        this.log.info(`[grpc] Connected to Hannah Core (hannah.${generation}).`);
+        (this.onConnected(generation) as unknown as Promise<void>).catch((e: Error) => {
             this.log.error(`[grpc] onConnected error: ${e.message}`);
         });
 
-        this.stream.on('data', (cmd: agent.AgentCommand) => {
+        stream.on('data', (raw: unknown) => {
+            // a hannah.v1 Core speaks hannah.v1 on the stream, everything above works with hannah.v2
+            const cmd = generation === 'v1' ? commandToV2(raw as v1.agent.AgentCommand) : (raw as agent.AgentCommand);
             if (cmd.ack) {
                 this._handleAck(cmd.ack);
                 return;
@@ -165,16 +184,21 @@ export class GrpcClient {
             this.onCommand(cmd);
         });
 
-        this.stream.on('error', (err: Error) => {
+        stream.on('error', (err: Error) => {
             this.log.warn(`[grpc] Stream error: ${err.message}`);
             this._scheduleReconnect(host, port);
         });
 
-        this.stream.on('end', () => {
+        stream.on('end', () => {
             this.log.info('[grpc] Stream ended.');
             this.onDisconnected();
             this._scheduleReconnect(host, port);
         });
+    }
+
+    /** Generation of the open AgentConnect stream, null while not connected. */
+    get generation(): Generation | null {
+        return this.stream ? this.streamGeneration : null;
     }
 
     private _scheduleReconnect(host: string, port: number): void {
@@ -432,8 +456,38 @@ export class GrpcClient {
         if (!this.stream) {
             return;
         }
+        if (this.streamGeneration === 'v2') {
+            this._write(msg);
+            return;
+        }
+        // hannah.v1 stream: the typed device messages have no counterpart there, nothing is sent
+        const bridged = messageToV1(msg);
+        if (hasPayload(bridged)) {
+            this._write(bridged);
+        }
+    }
+
+    /**
+     * Send a hannah.v1 message as it is. For the legacy device sync (per-state snapshot and
+     * state updates with a canonical key) on a stream to a Core that only speaks hannah.v1;
+     * on a hannah.v2 stream it is dropped.
+     *
+     * @param msg - AgentMessage frame in hannah.v1 form
+     */
+    sendLegacy(msg: v1.agent.AgentMessage): void {
+        if (!this.stream) {
+            return;
+        }
+        if (this.streamGeneration !== 'v1') {
+            this.log.debug('[grpc] Dropping a hannah.v1 message on a hannah.v2 stream.');
+            return;
+        }
+        this._write(msg);
+    }
+
+    private _write(msg: unknown): void {
         try {
-            this.stream.write(msg);
+            this.stream?.write(msg);
         } catch (e) {
             this.log.warn(`[grpc] Send failed: ${(e as Error).message}`);
         }
@@ -447,12 +501,22 @@ export class GrpcClient {
      * @param timeoutMs - How long to wait for the AgentAck before assuming Core is too old
      */
     sendWithAck(msg: agent.AgentMessage, timeoutMs = ACK_TIMEOUT_MS): Promise<AckResult> {
+        return this._sendAcked(ackId => this.send({ ...msg, ackId }), timeoutMs);
+    }
+
+    /**
+     * Like sendWithAck(), for a hannah.v1 message on a hannah.v1 stream (see sendLegacy()).
+     *
+     * @param msg - AgentMessage frame in hannah.v1 form; its ackId is overwritten
+     * @param timeoutMs - How long to wait for the AgentAck before assuming Core is too old
+     */
+    sendLegacyWithAck(msg: v1.agent.AgentMessage, timeoutMs = ACK_TIMEOUT_MS): Promise<AckResult> {
+        return this._sendAcked(ackId => this.sendLegacy({ ...msg, ackId }), timeoutMs);
+    }
+
+    private _sendAcked(write: (ackId: bigint) => void, timeoutMs: number): Promise<AckResult> {
         if (!this.stream) {
             return Promise.resolve({ kind: 'disconnected' });
-        }
-        if (this.versioned?.legacy) {
-            this.send(msg);
-            return Promise.resolve({ kind: 'legacy' });
         }
         const ackId = ++this.ackCounter;
         return new Promise(resolve => {
@@ -461,7 +525,7 @@ export class GrpcClient {
                 resolve({ kind: 'timeout' });
             }, timeoutMs);
             this.pendingAcks.set(ackId, { resolve, timer });
-            this.send({ ...msg, ackId });
+            write(ackId);
         });
     }
 
