@@ -446,6 +446,7 @@ function classifyDevice(input: DeviceInput, model: DeviceModel): v2.device_model
             label,
             requiredTrustLevel: state.requiredTrustLevel,
             options: ENUM_KINDS.has(kind) ? [...state.options].sort() : [],
+            identifier: state.stateId,
         });
         targets.set(slotId, target);
         model.bySlotState.set(state.stateId, { deviceId: input.deviceId, slotId, target });

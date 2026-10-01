@@ -127,6 +127,7 @@ describe('GrpcClient against a Hannah Core', () => {
                                     label: '',
                                     requiredTrustLevel: 6,
                                     options: [],
+                                    identifier: 'hannah.0.dev.on',
                                 },
                             ],
                             available: true,
@@ -138,8 +139,20 @@ describe('GrpcClient against a Hannah Core', () => {
 
             expect(result.kind).to.equal('ack');
             const slot = core.received[0].typedSnapshot.devices[0].slots[0];
-            expect(slot).to.deep.include({ slotId: 'on', requiredTrustLevel: 6 });
+            expect(slot).to.deep.include({ slotId: 'on', requiredTrustLevel: 6, identifier: 'hannah.0.dev.on' });
             expect(slot.value).to.deep.include({ boolean: true });
+        });
+
+        it('sends a start value marked initial', async () => {
+            const { core, client } = await connect('v2');
+            await until(() => core.connected(), 'the stream');
+
+            client.send({
+                stateUpdate: { stateId: 'hannah.0.flag', value: 'true', ack: true, ts: 5n, initial: true },
+            });
+
+            await until(() => core.received.length > 0, 'the update');
+            expect(core.received[0].stateUpdate).to.deep.include({ stateId: 'hannah.0.flag', initial: true });
         });
 
         it('receives a SetSlot command', async () => {

@@ -285,6 +285,18 @@ describe('device-model', () => {
             expect(dev.slots[0].requiredTrustLevel).to.equal(8);
         });
 
+        it('names the state behind a slot as its identifier, for generic slots too', () => {
+            const dev = classify([
+                state('on', { key: 'on', valueType: 'boolean' }),
+                state('weird', { key: 'weird', valueType: 'number' }),
+            ]);
+
+            expect(dev.slots.map(s => [s.slotId, s.identifier])).to.deep.equal([
+                ['on', `${BASE}.on`],
+                ['weird', `${BASE}.weird`],
+            ]);
+        });
+
         it('finds the slot of a state for live updates and the state of a slot for SetSlot', () => {
             const model = buildDeviceModel([device([state('on', { key: 'on', valueType: 'boolean' })])]);
 

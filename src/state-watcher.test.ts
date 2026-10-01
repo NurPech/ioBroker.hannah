@@ -988,6 +988,64 @@ describe('StateWatcher', () => {
         });
     });
 
+    describe('watchMore start values', () => {
+        const watched = 'hannah.0.watched.state';
+
+        function watcher(generation: 'v1' | 'v2', current: unknown): { sw: StateWatcher; send: sinon.SinonStub } {
+            (adapter as any).getForeignStateAsync = sinon.stub().resolves(current);
+            const send = sinon.stub();
+            const sw = new StateWatcher(adapterInstance, send);
+            (sw as any).generation = generation;
+            return { sw, send };
+        }
+
+        it('sends the current raw value of a newly watched state as an initial update (hannah.v2)', async () => {
+            const { sw, send } = watcher('v2', { val: true, ack: false, ts: 42 });
+
+            await sw.watchMore([watched]);
+
+            expect(send).to.have.been.calledOnceWithExactly({
+                stateUpdate: { stateId: watched, value: 'true', ack: false, ts: 42n, initial: true },
+            });
+        });
+
+        it('sends a start value only once per watched state', async () => {
+            const { sw, send } = watcher('v2', { val: 1, ack: true, ts: 1 });
+
+            await sw.watchMore([watched]);
+            await sw.watchMore([watched, 'hannah.0.other']);
+
+            expect(send.getCalls().map(c => c.args[0].stateUpdate.stateId)).to.deep.equal([watched, 'hannah.0.other']);
+        });
+
+        it('sends nothing for a state that does not exist', async () => {
+            const { sw, send } = watcher('v2', null);
+
+            await sw.watchMore([watched]);
+
+            expect(send).to.not.have.been.called;
+            expect(internals(sw).watchMoreIds.has(watched)).to.equal(true);
+        });
+
+        it('sends no start value to a hannah.v1 Core, which has no initial updates', async () => {
+            const { sw, send } = watcher('v1', { val: 1, ack: true, ts: 1 });
+
+            await sw.watchMore([watched]);
+
+            expect(send).to.not.have.been.called;
+        });
+
+        it('keeps watching when the start value cannot be read', async () => {
+            const { sw, send } = watcher('v2', undefined);
+            (adapter as any).getForeignStateAsync = sinon.stub().rejects(new Error('boom'));
+
+            await sw.watchMore([watched, 'hannah.0.other']);
+
+            expect(send).to.not.have.been.called;
+            expect(internals(sw).watchMoreIds.size).to.equal(2);
+        });
+    });
+
     // #203/hannah-proto#16
     describe('trustLevelSupported', () => {
         const ack = (unknownFields: Array<{ messageType: string; fieldNumbers: number[] }>): any => ({
