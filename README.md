@@ -79,6 +79,11 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added (with a `hannah.v2` Core): when Hannah starts watching a state for a trigger, the adapter now also reports the state's current value, so conditions like "only if" or "unless" know their state right after a Hannah restart instead of after the next change. Hannah does not run any trigger because of this start value
+- Added (with a `hannah.v2` Core): every slot of a device now names the ioBroker state behind it, so Hannah's trigger editor can offer the device's slots directly
+- Changed: updated to hannah-proto 5.2.0
+
 ### 1.5.3 (2026-10-01)
 - Added: the adapter now speaks the new `hannah.v2` API to Hannah Core and reports your devices as typed devices (light, socket, thermostat, air conditioner, blind, sensor, door/window contact, …) with their capabilities instead of single states. Hannah then knows what a device can do and answers honestly when it can't do something. Older Hannah Cores (`hannah.v1` only) keep working with the previous behavior
 - Fixed (with a `hannah.v2` Core): a light's colour and colour temperature no longer end up on the same value, and each is recognised by its role (`level.color.rgb`, `level.color.temperature`)

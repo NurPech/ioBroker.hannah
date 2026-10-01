@@ -211,7 +211,9 @@ export class StateWatcher {
     }
 
     /**
-     * Subscribe additional state IDs on demand (from AgentWatchMore).
+     * Subscribe additional state IDs on demand (from AgentWatchMore). A hannah.v2 Core also gets
+     * the current raw value of each newly watched state, marked `initial`, so it can prefill its
+     * trigger cache without treating the value as a change.
      *
      * @param stateIds - State IDs to subscribe
      */
@@ -223,6 +225,29 @@ export class StateWatcher {
             await this.adapter.subscribeForeignStatesAsync(id);
             this.watchMoreIds.add(id);
             this.adapter.log.debug(`[states] WatchMore: ${id}`);
+            if (this.generation === 'v2') {
+                await this._sendInitialValue(id);
+            }
+        }
+    }
+
+    private async _sendInitialValue(id: string): Promise<void> {
+        try {
+            const state = await this.adapter.getForeignStateAsync(id);
+            if (!state) {
+                return;
+            }
+            this.send({
+                stateUpdate: {
+                    stateId: id,
+                    value: JSON.stringify(state.val),
+                    ack: state.ack ?? false,
+                    ts: BigInt(state.ts ?? Date.now()),
+                    initial: true,
+                },
+            });
+        } catch (e) {
+            this.adapter.log.warn(`[states] Failed to read the start value of ${id}: ${(e as Error).message}`);
         }
     }
 
@@ -298,7 +323,13 @@ export class StateWatcher {
             }
             if (!slot || isWatchMoreState) {
                 this.send({
-                    stateUpdate: { stateId: id, value: JSON.stringify(state.val), ack: state.ack ?? false, ts },
+                    stateUpdate: {
+                        stateId: id,
+                        value: JSON.stringify(state.val),
+                        ack: state.ack ?? false,
+                        ts,
+                        initial: false,
+                    },
                 });
             }
             return true;
