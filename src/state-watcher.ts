@@ -1,34 +1,83 @@
 import type * as utils from '@iobroker/adapter-core';
-import { v1 } from '@m1kad0/hannah-proto';
-import agent = v1.agent;
+import { v1, v2 } from '@m1kad0/hannah-proto';
+import agent = v2.agent;
 import shared = v1.shared;
-import type { AckResult, AckingMessageSender, AgentMessageSender } from './grpc-client';
+import {
+    buildDeviceModel,
+    fromSlotValue,
+    slotKey,
+    toSlotValue,
+    type DeviceInput,
+    type DeviceModel,
+    type DeviceState,
+    type ValueType,
+} from './device-model';
+import type {
+    AckResult,
+    AckingMessageSender,
+    AgentMessageSender,
+    Generation,
+    LegacyAckingMessageSender,
+    LegacyMessageSender,
+} from './grpc-client';
 
-/** Field number of AgentDevice.required_trust_level (hannah-proto#15). */
-const REQUIRED_TRUST_LEVEL_FIELD = 15;
-const AGENT_DEVICE_TYPE = 'hannah.v1.AgentDevice';
+/** Where required_trust_level sits in the device sync of each generation (hannah-proto#15). */
+const TRUST_LEVEL_FIELD = {
+    // AgentDevice.required_trust_level
+    v1: { messageType: 'hannah.v1.AgentDevice', field: 15 },
+    // Slot.required_trust_level
+    v2: { messageType: 'hannah.v2.Slot', field: 7 },
+} as const;
 const TRUST_RESEND_DEBOUNCE_MS = 2_000;
 
 /**
- * #203: whether Core enforces AgentDevice.required_trust_level, judged from the AgentAck of a
- * snapshot (hannah-proto#16). Core guarantees that every field it doesn't report as unknown is
- * also evaluated, so an ack without field 15 means "enforced". null = no verdict (disconnected).
+ * #203: whether Core enforces required_trust_level, judged from the AgentAck of a snapshot
+ * (hannah-proto#16). Core guarantees that every field it doesn't report as unknown is also
+ * evaluated, so an ack without the field means "enforced". null = no verdict (disconnected).
  *
  * @param result - Outcome of sendWithAck() for a message carrying devices
+ * @param generation - Generation of the stream the snapshot went over
  */
-export function trustLevelSupported(result: AckResult): boolean | null {
+export function trustLevelSupported(result: AckResult, generation: Generation = 'v1'): boolean | null {
+    const { messageType, field } = TRUST_LEVEL_FIELD[generation];
     switch (result.kind) {
         case 'ack':
-            return !result.ack.unknownFields.some(
-                u => u.messageType === AGENT_DEVICE_TYPE && u.fieldNumbers.includes(REQUIRED_TRUST_LEVEL_FIELD),
-            );
+            return !result.ack.unknownFields.some(u => u.messageType === messageType && u.fieldNumbers.includes(field));
         case 'timeout':
-        case 'legacy':
             return false;
         case 'disconnected':
             return null;
     }
 }
+
+/** What the StateWatcher resolves about one ioBroker state: its device, room, type hint and shape. */
+interface DeviceMeta {
+    room: string;
+    roomNames: { [key: string]: string };
+    device: string;
+    type: string;
+    floor: string;
+    functions: string[];
+    stateType: shared.StateType;
+    enumValues: shared.EnumValues | undefined;
+    writable: boolean;
+    deviceId: string;
+    canonicalKey: string;
+    /** common.role of the state, for the typed device model */
+    role: string;
+    /** `canonicalKey` from common.custom, empty = none */
+    canonicalKeyOverride: string;
+    inverted: boolean | undefined;
+    requiredTrustLevel: number | undefined;
+}
+
+const VALUE_TYPE_BY_STATE_TYPE: Partial<Record<shared.StateType, ValueType>> = {
+    [shared.StateType.BOOLEAN]: 'boolean',
+    [shared.StateType.NUMERIC]: 'number',
+    [shared.StateType.ENUM]: 'enum',
+    [shared.StateType.COLOR]: 'color',
+    [shared.StateType.TEXT]: 'text',
+};
 
 /**
  * Called after every device snapshot whose support verdict is known.
@@ -59,23 +108,34 @@ export class StateWatcher {
     private canonicalKeyByState = new Map<string, string>();
     private objectPatterns = new Set<string>();
     private resendTimer: ioBroker.Timeout | null | undefined = null;
+    // Generation of the stream: a hannah.v2 Core gets typed devices, a hannah.v1 Core the
+    // legacy per-state snapshot (set by start())
+    private generation: Generation = 'v2';
+    private legacy: { send: LegacyMessageSender; sendWithAck?: LegacyAckingMessageSender } | undefined;
+    // Typed devices as last sent (hannah.v2 only), the index live updates and SetSlot use
+    private deviceModel: DeviceModel | null = null;
 
     /**
      * @param adapter - ioBroker adapter instance
      * @param send - Function to send messages to Hannah Core
      * @param sendWithAck - Sends a message and waits for Core's AgentAck (used for device snapshots)
      * @param onTrustSupport - Told after each snapshot whether Core enforces neededTrust
+     * @param legacy - Senders for the hannah.v1 device sync, used while Core only speaks hannah.v1
+     * @param legacy.send - Sends a hannah.v1 message as it is
+     * @param legacy.sendWithAck - Same, waits for Core's AgentAck
      */
     constructor(
         adapter: utils.AdapterInstance,
         send: AgentMessageSender,
         sendWithAck?: AckingMessageSender,
         onTrustSupport?: TrustSupportHandler,
+        legacy?: { send: LegacyMessageSender; sendWithAck?: LegacyAckingMessageSender },
     ) {
         this.adapter = adapter;
         this.send = send;
         this.sendWithAck = sendWithAck;
         this.onTrustSupport = onTrustSupport;
+        this.legacy = legacy;
     }
 
     private get textCommandStateId(): string {
@@ -90,13 +150,19 @@ export class StateWatcher {
      * @param config.selectedFunctions - Function enum IDs to include (empty = all)
      * @param config.extraStatePrefixes - Additional state ID prefixes to subscribe
      * @param config.floorMappings - Label→abbreviation pairs for floor detection (empty = hardcoded defaults)
+     * @param generation - API generation of the stream to Core: decides which device sync is sent
      */
-    async start(config: {
-        selectedRooms: string[];
-        selectedFunctions: string[];
-        extraStatePrefixes: Array<{ prefix: string }>;
-        floorMappings: Array<{ label: string; abbreviation: string }>;
-    }): Promise<void> {
+    async start(
+        config: {
+            selectedRooms: string[];
+            selectedFunctions: string[];
+            extraStatePrefixes: Array<{ prefix: string }>;
+            floorMappings: Array<{ label: string; abbreviation: string }>;
+        },
+        generation: Generation = 'v2',
+    ): Promise<void> {
+        this.generation = generation;
+        this.deviceModel = null;
         this.subscribedIds.clear();
         this.wildcardPrefixes.clear();
         this.verifiedWildcardCache.clear();
@@ -212,19 +278,81 @@ export class StateWatcher {
             return false;
         }
 
-        // Regular state → AgentStateUpdate
-        this.send({
+        const ts = BigInt(state.ts ?? Date.now());
+
+        if (this.generation === 'v2') {
+            // A state of a typed device → SlotUpdate. A state that isn't (a WatchMore state, or
+            // one that came after the last snapshot) goes out as a plain AgentStateUpdate; a
+            // WatchMore state that is also a slot gets both (Hannah's triggers watch state IDs).
+            const slot = this.deviceModel?.bySlotState.get(id);
+            if (slot) {
+                this.send({
+                    slotUpdate: {
+                        deviceId: slot.deviceId,
+                        slotId: slot.slotId,
+                        value: toSlotValue(slot.target.kind, state.val, slot.target.inverted),
+                        ack: state.ack ?? false,
+                        ts,
+                    },
+                });
+            }
+            if (!slot || isWatchMoreState) {
+                this.send({
+                    stateUpdate: { stateId: id, value: JSON.stringify(state.val), ack: state.ack ?? false, ts },
+                });
+            }
+            return true;
+        }
+
+        // hannah.v1 Core: regular state → AgentStateUpdate with the canonical key of the snapshot
+        this.legacy?.send({
             stateUpdate: {
                 stateId: id,
                 value: JSON.stringify(state.val),
                 ack: state.ack ?? false,
-                ts: BigInt(state.ts ?? Date.now()),
+                ts,
                 // Unknown states (e.g. WatchMore) and unresolved roles send none — Core then
                 // falls back to its own suffix lookup.
                 canonicalKey: this.canonicalKeyByState.get(id) || undefined,
             },
         });
         return true;
+    }
+
+    /**
+     * Hannah instructs the adapter to control a slot of a typed device (hannah.v2). The
+     * confirmed result comes back as a SlotUpdate with ack=true, once the device reports it.
+     *
+     * @param deviceId - Device ID as sent in the snapshot
+     * @param slotId - Slot of that device
+     * @param value - Value in the scale of the slot's kind
+     */
+    async handleSetSlot(deviceId: string, slotId: string, value: v2.device_model.SlotValue | undefined): Promise<void> {
+        const target = this.deviceModel?.targets.get(deviceId)?.get(slotId);
+        if (!target) {
+            this.adapter.log.warn(`[states] SetSlot rejected — unknown slot ${deviceId}/${slotId}`);
+            return;
+        }
+        if (!target.writable) {
+            this.adapter.log.warn(`[states] SetSlot rejected — ${deviceId}/${slotId} is read-only`);
+            return;
+        }
+        const current = (await this.adapter.getForeignStateAsync(target.stateId))?.val;
+        const parsed = fromSlotValue(target, value, current);
+        if (parsed === undefined) {
+            this.adapter.log.warn(
+                `[states] SetSlot rejected — value ${JSON.stringify(value)} does not fit ${deviceId}/${slotId}`,
+            );
+            return;
+        }
+        try {
+            await this.adapter.setForeignStateAsync(target.stateId, { val: parsed, ack: false });
+            this.adapter.log.debug(
+                `[states] SetSlot ${deviceId}/${slotId} → ${target.stateId} = ${JSON.stringify(parsed)}`,
+            );
+        } catch (e) {
+            this.adapter.log.error(`[states] SetSlot failed for ${deviceId}/${slotId}: ${(e as Error).message}`);
+        }
     }
 
     /**
@@ -290,10 +418,7 @@ export class StateWatcher {
      * Replaces MQTT retained messages — called once after all subscriptions are set up.
      */
     private async _sendSnapshot(): Promise<void> {
-        const devices: agent.AgentDevice[] = [];
-        const trustByState = new Map<string, number | undefined>();
-        const canonicalKeyByState = new Map<string, string>();
-        let sent = 0;
+        const collected: Array<{ id: string; state: ioBroker.State; meta: DeviceMeta }> = [];
 
         const [allRooms, allFunctions] = await Promise.all([
             this.adapter.getEnumAsync('rooms'),
@@ -308,56 +433,133 @@ export class StateWatcher {
                     if (!state) {
                         continue;
                     }
-
-                    const meta = await this._resolveDeviceMeta(id, allRooms, allFunctions);
-
-                    devices.push({
-                        stateId: id,
-                        floor: meta.floor,
-                        room: meta.room,
-                        roomNames: meta.roomNames,
-                        device: meta.device,
-                        deviceType: meta.type,
-                        functions: meta.functions,
-                        value: {
-                            value: JSON.stringify(state.val),
-                            ack: state.ack ?? false,
-                        },
-                        stateType: meta.stateType,
-                        enumValues: meta.enumValues,
-                        writable: meta.writable,
-                        deviceId: meta.deviceId,
-                        canonicalKey: meta.canonicalKey,
-                        inverted: meta.inverted,
-                        requiredTrustLevel: meta.requiredTrustLevel,
-                    });
-                    trustByState.set(id, meta.requiredTrustLevel);
-                    canonicalKeyByState.set(id, meta.canonicalKey);
-
-                    sent++;
+                    collected.push({ id, state, meta: await this._resolveDeviceMeta(id, allRooms, allFunctions) });
                 }
             } catch (e) {
                 this.adapter.log.warn(`[states] Snapshot failed for ${pattern}: ${(e as Error).message}`);
             }
         }
-        this.trustByState = trustByState;
-        this.canonicalKeyByState = canonicalKeyByState;
+        this.trustByState = new Map(collected.map(c => [c.id, c.meta.requiredTrustLevel]));
 
-        const msg: agent.AgentMessage = { sendSnapshot: { devices } };
+        if (this.generation === 'v2') {
+            this._sendTypedSnapshot(collected);
+        } else {
+            this._sendLegacySnapshot(collected);
+        }
+    }
+
+    /**
+     * hannah.v2: the typed devices (class and slots) from the states of the snapshot.
+     *
+     * @param collected - Every subscribed state with its resolved meta data
+     */
+    private _sendTypedSnapshot(collected: Array<{ id: string; state: ioBroker.State; meta: DeviceMeta }>): void {
+        const inputs = new Map<string, DeviceInput>();
+        const seen = new Set<string>();
+        for (const { id, state, meta } of collected) {
+            if (seen.has(id)) {
+                continue;
+            }
+            seen.add(id);
+            const suffix = id.split('.').at(-1) ?? id;
+            const deviceState: DeviceState = {
+                stateId: id,
+                suffix,
+                key: slotKey({
+                    canonicalKeyOverride: meta.canonicalKeyOverride,
+                    role: meta.role,
+                    canonicalKey: meta.canonicalKey,
+                    suffix,
+                }),
+                value: state.val,
+                valueType: VALUE_TYPE_BY_STATE_TYPE[meta.stateType] ?? 'text',
+                writable: meta.writable,
+                typeHint: meta.type,
+                inverted: meta.inverted === true,
+                requiredTrustLevel: meta.requiredTrustLevel,
+                options: Object.keys(meta.enumValues?.values ?? {}),
+            };
+            const input = inputs.get(meta.deviceId);
+            if (input) {
+                input.floor ||= meta.floor;
+                input.states.push(deviceState);
+            } else {
+                inputs.set(meta.deviceId, {
+                    deviceId: meta.deviceId,
+                    name: meta.device,
+                    room: meta.room,
+                    floor: meta.floor,
+                    states: [deviceState],
+                });
+            }
+        }
+
+        const model = buildDeviceModel([...inputs.values()]);
+        this.deviceModel = model;
+        const msg: agent.AgentMessage = { typedSnapshot: { devices: model.devices } };
+        const configured = model.devices.some(d => d.slots.some(s => s.requiredTrustLevel !== undefined));
         if (this.sendWithAck) {
-            const configured = devices.some(d => d.requiredTrustLevel !== undefined);
             // Not awaited: waiting up to the ack timeout would hold up start() and everything
             // onConnected does after it.
             void this.sendWithAck(msg).then(result => this._reportTrustSupport(result, configured));
         } else {
             this.send(msg);
         }
+        const slots = model.devices.reduce((n, d) => n + d.slots.length, 0);
+        this.adapter.log.info(`[states] Snapshot: ${model.devices.length} devices with ${slots} slots sent.`);
+    }
+
+    /**
+     * hannah.v1: the per-state snapshot with canonical keys, unchanged, for a Core that doesn't
+     * know the typed devices.
+     *
+     * @param collected - Every subscribed state with its resolved meta data
+     */
+    private _sendLegacySnapshot(collected: Array<{ id: string; state: ioBroker.State; meta: DeviceMeta }>): void {
+        const devices: v1.agent.AgentDevice[] = [];
+        const canonicalKeyByState = new Map<string, string>();
+
+        for (const { id, state, meta } of collected) {
+            devices.push({
+                stateId: id,
+                floor: meta.floor,
+                room: meta.room,
+                roomNames: meta.roomNames,
+                device: meta.device,
+                deviceType: meta.type,
+                functions: meta.functions,
+                value: {
+                    value: JSON.stringify(state.val),
+                    ack: state.ack ?? false,
+                },
+                stateType: meta.stateType,
+                enumValues: meta.enumValues,
+                writable: meta.writable,
+                deviceId: meta.deviceId,
+                canonicalKey: meta.canonicalKey,
+                inverted: meta.inverted,
+                requiredTrustLevel: meta.requiredTrustLevel,
+            });
+            canonicalKeyByState.set(id, meta.canonicalKey);
+        }
+        this.canonicalKeyByState = canonicalKeyByState;
+        const sent = devices.length;
+
+        const msg: v1.agent.AgentMessage = { sendSnapshot: { devices } };
+        if (this.legacy?.sendWithAck) {
+            const configured = devices.some(d => d.requiredTrustLevel !== undefined);
+            // Not awaited: waiting up to the ack timeout would hold up start() and everything
+            // onConnected does after it.
+            void this.legacy.sendWithAck(msg).then(result => this._reportTrustSupport(result, configured));
+        } else {
+            this.legacy?.send(msg);
+        }
 
         this.adapter.log.info(`[states] Snapshot: ${sent} current device states sent.`);
     }
 
     private _reportTrustSupport(result: AckResult, configured: boolean): void {
-        const supported = trustLevelSupported(result);
+        const supported = trustLevelSupported(result, this.generation);
         if (supported === null) {
             this.adapter.log.debug('[states] No ack for device snapshot (disconnected) — trust support unknown');
             return;
@@ -388,21 +590,7 @@ export class StateWatcher {
         stateId: string,
         allRooms: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
         allFunctions: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
-    ): Promise<{
-        room: string;
-        roomNames: { [key: string]: string };
-        device: string;
-        type: string;
-        floor: string;
-        functions: string[];
-        stateType: shared.StateType;
-        enumValues: shared.EnumValues | undefined;
-        writable: boolean;
-        deviceId: string;
-        canonicalKey: string;
-        inverted: boolean | undefined;
-        requiredTrustLevel: number | undefined;
-    }> {
+    ): Promise<DeviceMeta> {
         const deviceId = stateId.split('.').slice(0, -1).join('.');
 
         const [stateObj, deviceObj] = await Promise.all([
@@ -636,6 +824,9 @@ export class StateWatcher {
             writable: Boolean(stateObj?.common?.write),
             deviceId,
             canonicalKey,
+            role,
+            canonicalKeyOverride:
+                stateCustom?.enabled && stateCustom?.canonicalKey ? String(stateCustom.canonicalKey) : '',
             inverted,
             requiredTrustLevel,
         };

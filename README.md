@@ -79,6 +79,11 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: the adapter now speaks the new `hannah.v2` API to Hannah Core and reports your devices as typed devices (light, socket, thermostat, air conditioner, blind, sensor, door/window contact, …) with their capabilities instead of single states. Hannah then knows what a device can do and answers honestly when it can't do something. Older Hannah Cores (`hannah.v1` only) keep working with the previous behavior
+- Fixed (with a `hannah.v2` Core): a light's colour and colour temperature no longer end up on the same value, and each is recognised by its role (`level.color.rgb`, `level.color.temperature`)
+- Changed: updated to hannah-proto 5.1.0 and hannah-grpc-lib 0.7.0. The fallback to the unversioned Hannah API, which predates `hannah.v1`, is gone: the adapter no longer connects to a Hannah Core that old
+
 ### 1.5.2 (2026-09-29)
 - Fixed: live value updates for states with an unusual name no longer freeze at their first value — the adapter now tells Hannah Core which role a state has instead of leaving Core to guess it from the state name (needs hannah-proto 4.8 on the Core side; older Cores behave as before)
 - Changed: updated to hannah-proto 4.8.0
