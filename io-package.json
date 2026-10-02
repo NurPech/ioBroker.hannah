@@ -183,23 +183,59 @@
       "scope": "hannah",
       "name": {
         "en": "Hannah",
-        "de": "Hannah"
+        "de": "Hannah",
+        "ru": "Hannah",
+        "pt": "Hannah",
+        "nl": "Hannah",
+        "fr": "Hannah",
+        "it": "Hannah",
+        "es": "Hannah",
+        "pl": "Hannah",
+        "uk": "Hannah",
+        "zh-cn": "Hannah"
       },
       "description": {
         "en": "Notifications from the Hannah adapter",
-        "de": "Benachrichtigungen des Hannah-Adapters"
+        "de": "Benachrichtigungen des Hannah-Adapters",
+        "ru": "Уведомления адаптера Hannah",
+        "pt": "Notificações do adaptador Hannah",
+        "nl": "Meldingen van de Hannah-adapter",
+        "fr": "Notifications de l'adaptateur Hannah",
+        "it": "Notifiche dell'adattatore Hannah",
+        "es": "Notificaciones del adaptador Hannah",
+        "pl": "Powiadomienia adaptera Hannah",
+        "uk": "Сповіщення адаптера Hannah",
+        "zh-cn": "来自 Hannah 适配器的通知"
       },
       "categories": [
         {
           "category": "trustLevelsUnsupported",
           "name": {
             "en": "Trust levels per state not supported",
-            "de": "Vertrauensstufen pro State nicht unterstützt"
+            "de": "Vertrauensstufen pro State nicht unterstützt",
+            "ru": "Уровни доверия для отдельных состояний не поддерживаются",
+            "pt": "Níveis de confiança por estado não suportados",
+            "nl": "Vertrouwensniveaus per status worden niet ondersteund",
+            "fr": "Niveaux de confiance par état non pris en charge",
+            "it": "Livelli di fiducia per stato non supportati",
+            "es": "Niveles de confianza por estado no admitidos",
+            "pl": "Poziomy zaufania dla poszczególnych stanów nie są obsługiwane",
+            "uk": "Рівні довіри для окремих станів не підтримуються",
+            "zh-cn": "不支持按状态设置信任级别"
           },
           "severity": "alert",
           "description": {
             "en": "At least one state has a minimum trust level set, but the connected Hannah Core does not support it yet. These states are not protected — anyone can switch them via Hannah. Please update Hannah Core.",
-            "de": "Mindestens ein State hat eine Mindest-Vertrauensstufe, aber der verbundene Hannah Core unterstützt das noch nicht. Diese States sind nicht geschützt — jeder kann sie über Hannah schalten. Bitte Hannah Core aktualisieren."
+            "de": "Mindestens ein State hat eine Mindest-Vertrauensstufe, aber der verbundene Hannah Core unterstützt das noch nicht. Diese States sind nicht geschützt — jeder kann sie über Hannah schalten. Bitte Hannah Core aktualisieren.",
+            "ru": "Для как минимум одного состояния задан минимальный уровень доверия, но подключённый Hannah Core пока его не поддерживает. Эти состояния не защищены — любой может переключать их через Hannah. Пожалуйста, обновите Hannah Core.",
+            "pt": "Pelo menos um estado tem um nível de confiança mínimo definido, mas o Hannah Core conectado ainda não o suporta. Esses estados não estão protegidos — qualquer pessoa pode alterná-los através da Hannah. Atualize o Hannah Core.",
+            "nl": "Voor minstens één status is een minimaal vertrouwensniveau ingesteld, maar de verbonden Hannah Core ondersteunt dit nog niet. Deze statussen zijn niet beveiligd — iedereen kan ze via Hannah schakelen. Werk Hannah Core bij.",
+            "fr": "Au moins un état a un niveau de confiance minimal défini, mais le Hannah Core connecté ne le prend pas encore en charge. Ces états ne sont pas protégés — n'importe qui peut les commuter via Hannah. Veuillez mettre à jour Hannah Core.",
+            "it": "Almeno uno stato ha un livello di fiducia minimo impostato, ma l'Hannah Core collegato non lo supporta ancora. Questi stati non sono protetti: chiunque può commutarli tramite Hannah. Aggiorna Hannah Core.",
+            "es": "Al menos un estado tiene un nivel de confianza mínimo establecido, pero el Hannah Core conectado aún no lo admite. Estos estados no están protegidos: cualquiera puede conmutarlos a través de Hannah. Actualiza Hannah Core.",
+            "pl": "Co najmniej jeden stan ma ustawiony minimalny poziom zaufania, ale podłączony Hannah Core jeszcze go nie obsługuje. Te stany nie są chronione — każdy może je przełączać przez Hannah. Zaktualizuj Hannah Core.",
+            "uk": "Принаймні для одного стану задано мінімальний рівень довіри, але підключений Hannah Core поки що його не підтримує. Ці стани не захищені — будь-хто може перемикати їх через Hannah. Будь ласка, оновіть Hannah Core.",
+            "zh-cn": "至少有一个状态设置了最低信任级别，但已连接的 Hannah Core 尚不支持该功能。这些状态未受保护——任何人都可以通过 Hannah 切换它们。请更新 Hannah Core。"
           },
           "regex": [],
           "limit": 1
