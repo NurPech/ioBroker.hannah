@@ -16,6 +16,13 @@ updates:
       - dependency-name: "@types/node"
         update-types:
           - version-update:semver-major
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: 'github-actions'
     directory: '/'
