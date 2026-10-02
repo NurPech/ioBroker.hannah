@@ -79,6 +79,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: the adapter's notification texts (name, description and the "trust levels not supported" category) are now translated into all supported languages
+
 ### 1.5.4 (2026-10-01)
 - Added (with a `hannah.v2` Core): when Hannah starts watching a state for a trigger, the adapter now also reports the state's current value, so conditions like "only if" or "unless" know their state right after a Hannah restart instead of after the next change. Hannah does not run any trigger because of this start value
 - Added (with a `hannah.v2` Core): every slot of a device now names the ioBroker state behind it, so Hannah's trigger editor can offer the device's slots directly
