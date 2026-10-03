@@ -79,7 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.6.0 (2026-10-03)
 - Added (with a `hannah.v2` Core): devices are now also recognized with the ioBroker type detector (`@iobroker/type-detector`, pinned to 6.0.1). It tells a dimmer from a plain light, a socket from a switch, and which state of a thermostat, blind, air conditioner, air quality sensor or contact plays which part (setpoint, actual temperature, humidity, power, consumption, mode, fan speed, position, ...). A `canonicalKey` or `type` set in `common.custom` still wins, and a state the detector has no part for is handled as before
 - Changed (with a `hannah.v2` Core): a device none of whose states is recognized (a config channel such as a Shelly's cloud or WiFi settings, or a block of status values) is no longer reported to Hannah. The states a recognized device has beyond what Hannah knows are still reported as generic slots
 - Fixed (with a `hannah.v2` Core): a writable boolean with the plain role `state` is only taken for a switch if its name says so (`state`, `on`, `power`, ...). Before, settings such as an LED indication or a debug mode made a motion sensor a socket. A value named `raw` no longer ties with the value itself, so the illuminance of a Zigbee motion sensor is found
