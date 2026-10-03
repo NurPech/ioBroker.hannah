@@ -209,15 +209,27 @@ describe('device-model', () => {
 
         it('with no clear winner nothing is picked and every state stays a generic slot', () => {
             const dev = classify([
+                state('on', { key: 'on', valueType: 'boolean', typeHint: 'socket' }),
                 state('target1', { key: 'expected', value: 19 }),
                 state('target2', { key: 'expected', value: 21 }),
             ]);
 
-            expect(dev.slots.map(s => s.kind)).to.deep.equal([
-                SlotKind.SLOT_KIND_GENERIC_NUMBER,
-                SlotKind.SLOT_KIND_GENERIC_NUMBER,
+            expect(dev.slots.filter(s => s.kind === SlotKind.SLOT_KIND_GENERIC_NUMBER)).to.have.length(2);
+            expect(dev.slots.some(s => s.kind === SlotKind.SLOT_KIND_TARGET_TEMPERATURE)).to.equal(false);
+        });
+
+        it('a device none of whose states is recognized is not reported, and is not in the indexes', () => {
+            const model = buildDeviceModel([
+                device([
+                    state('target1', { key: 'expected', value: 19 }),
+                    state('target2', { key: 'expected', value: 21 }),
+                    state('lat', { key: 'lat', value: 49.4 }),
+                ]),
             ]);
-            expect(dev.deviceClass).to.equal(DeviceClass.DEVICE_CLASS_GENERIC);
+
+            expect(model.devices).to.have.length(0);
+            expect(model.bySlotState.size).to.equal(0);
+            expect(model.targets.size).to.equal(0);
         });
 
         it('a colour and a colour temperature do not collide', () => {

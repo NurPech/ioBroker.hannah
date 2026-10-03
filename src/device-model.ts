@@ -754,7 +754,9 @@ function classifyDevice(input: DeviceInput, model: DeviceModel): v2.device_model
 
 /**
  * The typed devices for the states of an ioBroker setup. States without a room or a device
- * are raw states (weather, car, ...) and belong to no device.
+ * are raw states (weather, car, ...) and belong to no device. A device none of whose states
+ * is recognized (a config channel, a status block) is not reported either: there is nothing
+ * Hannah could do with it. The generic slots of a recognized device stay.
  *
  * @param inputs - One entry per device, in the order the devices are reported
  */
@@ -764,7 +766,14 @@ export function buildDeviceModel(inputs: DeviceInput[]): DeviceModel {
         if (!input.room || !input.deviceId || input.states.length === 0) {
             continue;
         }
-        model.devices.push(classifyDevice(input, model));
+        const own: DeviceModel = { devices: [], bySlotState: new Map(), targets: new Map() };
+        const device = classifyDevice(input, own);
+        if (device.slots.every(slot => GENERIC_KINDS.has(slot.kind))) {
+            continue;
+        }
+        model.devices.push(device);
+        own.bySlotState.forEach((value, key) => model.bySlotState.set(key, value));
+        own.targets.forEach((value, key) => model.targets.set(key, value));
     }
     return model;
 }
