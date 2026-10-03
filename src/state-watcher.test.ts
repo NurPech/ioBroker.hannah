@@ -780,6 +780,56 @@ describe('StateWatcher', () => {
 
             expect(sw.subscribedIds.has(stateId)).to.equal(true);
         });
+
+        it('subscribes the states below a function member that is a device (both-filters branch)', async () => {
+            const deviceId = 'shelly.0.shellyplus1#abc#1';
+            database.publishObject({
+                _id: deviceId,
+                type: 'device',
+                common: { name: 'Plug' },
+                native: {},
+            } as unknown as ioBroker.Object);
+            publishEnum('enum.rooms.testraum', [deviceId]);
+            publishEnum('enum.functions.test', [deviceId]);
+            const sw = internals(makeWatcher());
+
+            await sw._subscribeEnumStates(['enum.rooms.testraum'], ['enum.functions.test']);
+
+            expect(sw.wildcardPrefixes.has(`${deviceId}.`)).to.equal(true);
+        });
+
+        it('subscribes the states below a function member that is a channel (functions-only branch)', async () => {
+            const channelId = 'bshb.0.dev.Contact';
+            database.publishObject({
+                _id: channelId,
+                type: 'channel',
+                common: { name: 'Contact' },
+                native: {},
+            } as unknown as ioBroker.Object);
+            publishEnum('enum.functions.test', [channelId]);
+            const sw = internals(makeWatcher());
+
+            await sw._subscribeEnumStates([], ['enum.functions.test']);
+
+            expect(sw.wildcardPrefixes.has(`${channelId}.`)).to.equal(true);
+        });
+
+        it('does not add a wildcard for a function member that is a plain state', async () => {
+            const stateId = 'javascript.0.virtualDevice.Test.on';
+            database.publishObject({
+                _id: stateId,
+                type: 'state',
+                common: { name: 'on', type: 'boolean', role: 'switch' },
+                native: {},
+            } as unknown as ioBroker.Object);
+            publishEnum('enum.functions.test', [stateId]);
+            const sw = internals(makeWatcher());
+
+            await sw._subscribeEnumStates([], ['enum.functions.test']);
+
+            expect(sw.subscribedIds.has(stateId)).to.equal(true);
+            expect(sw.wildcardPrefixes.has(`${stateId}.`)).to.equal(false);
+        });
     });
 
     describe('onStateChange', () => {

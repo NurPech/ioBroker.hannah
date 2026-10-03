@@ -1194,6 +1194,16 @@ export class StateWatcher {
             }
         };
 
+        // A function enum member is a state or, like in the room enums, a device or channel
+        // (what ioBroker's admin assigns on third-party adapters): the latter is subscribed
+        // with its prefix, too, else nothing below it would ever arrive.
+        const addFunctionMember = async (memberId: string): Promise<void> => {
+            await addSingleState(memberId);
+            if (await this._isContainer(memberId)) {
+                await addWildcard(memberId);
+            }
+        };
+
         // hannah-iobroker#187: a room enum member isn't always a device/channel — it can be a
         // leaf state directly. addWildcard's `d.*` pattern never matches that (a state has no
         // children), so every room member is also subscribed as a single state; harmless no-op
@@ -1207,7 +1217,7 @@ export class StateWatcher {
         } else if (selectedRooms.length === 0) {
             // Functions only → all states from selected function enums
             for (const s of funcStates) {
-                await addSingleState(s);
+                await addFunctionMember(s);
             }
         } else if (selectedFunctions.length === 0) {
             // Rooms only → pattern-subscribe for all states under room devices
@@ -1220,12 +1230,26 @@ export class StateWatcher {
             // id IS a selected room member (#187)
             for (const s of funcStates) {
                 if ([...roomDevices].some(d => s === d || s.startsWith(`${d}.`))) {
-                    await addSingleState(s);
+                    await addFunctionMember(s);
                 }
             }
         }
 
         this.adapter.log.info(`[states] Enum-Discovery: ${this.subscribedIds.size} states subscribed.`);
+    }
+
+    /**
+     * Whether an object holds other objects (device, channel or folder) instead of a value.
+     *
+     * @param id - ioBroker object ID
+     */
+    private async _isContainer(id: string): Promise<boolean> {
+        try {
+            const object = await this.adapter.getForeignObjectAsync(id);
+            return object?.type === 'device' || object?.type === 'channel' || object?.type === 'folder';
+        } catch {
+            return false;
+        }
     }
 
     private _extractViewMembers(
