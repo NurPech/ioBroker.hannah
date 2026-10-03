@@ -107,13 +107,37 @@ const KEYS_BY_TYPE: Record<string, Record<string, string>> = {
         PRESSURE: 'pressure',
         POWER: 'on',
     },
-    motion: { ACTUAL: 'motion' },
+    motion: { ACTUAL: 'motion', SECOND: 'illuminance' },
     contact: CONTACT_TAGS,
     window: CONTACT_TAGS,
     windowTilt: CONTACT_TAGS,
     door: CONTACT_TAGS,
     electricity: ELECTRICAL_TAGS,
 };
+
+/** A role that says little: ioBroker calls every writable boolean `state`, config switches included. */
+const WEAK_SWITCH_ROLE = 'state';
+
+/** Names that make a writable `state` boolean a switch the user means (and not `debugEnabled`). */
+const SWITCH_NAMES = new Set(['on', 'state', 'switch', 'power', 'relay', 'output', 'light', 'lamp', 'plug', 'socket']);
+
+const NAME_TOKEN = /[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+/g;
+
+/**
+ * Whether a state the detector took for the switch of a device is one. A boolean with the
+ * plain role `state` is a switch only if its name says so: the `led_indication` of a motion
+ * sensor or the `debugEnabled` of a Shelly are no light switches, whatever the detector thinks.
+ *
+ * @param role - common.role of the state
+ * @param id - ioBroker state ID
+ */
+function isPlausibleSwitch(role: string, id: string): boolean {
+    if (role !== WEAK_SWITCH_ROLE) {
+        return true;
+    }
+    const name = id.split('.').at(-1) ?? '';
+    return (name.match(NAME_TOKEN) ?? []).some(t => SWITCH_NAMES.has(t.toLowerCase()));
+}
 
 /** Detector types that only describe a side aspect of a device and are no device of their own. */
 const IGNORED_TYPES = new Set(['info', 'instance', 'unknown']);
@@ -160,6 +184,9 @@ export class DeviceDetector {
             const typeHint = TYPE_HINTS[pattern.type] ?? '';
             for (const state of pattern.states) {
                 const key = keys[state.name];
+                if (key === 'on' && !isPlausibleSwitch(this.objects[state.id]?.common?.role ?? '', state.id)) {
+                    continue;
+                }
                 if (state.id && key && !found.has(state.id)) {
                     found.set(state.id, { key, typeHint });
                 }

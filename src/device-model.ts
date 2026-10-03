@@ -233,6 +233,7 @@ const SETPOINT_EXCLUDE = new Set([
     'max',
     'default',
     'away',
+    'raw',
 ]);
 const TOKEN = /[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+/g;
 

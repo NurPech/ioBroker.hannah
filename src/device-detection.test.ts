@@ -173,6 +173,40 @@ describe('device-detection', () => {
         expect(keysOf(detector.detect('alias.0.Licht'))).to.deep.equal({ on: 'on', level: 'level' });
     });
 
+    it('a writable boolean with the plain role "state" is no switch unless its name says so', () => {
+        const detector = new DeviceDetector(
+            objects(
+                channel('zigbee.0.motion'),
+                state('zigbee.0.motion.occupancy', 'sensor.motion', 'boolean', { write: false }),
+                state('zigbee.0.motion.led_indication', 'state', 'boolean'),
+                state('zigbee.0.motion.illuminance', 'value.brightness', 'number', { write: false }),
+            ),
+        );
+
+        const found = detector.detect('zigbee.0.motion');
+
+        expect(keysOf(found)).to.deep.equal({ occupancy: 'motion', illuminance: 'illuminance' });
+        expect([...found.values()].some(d => d.typeHint === 'socket' || d.typeHint === 'light')).to.equal(false);
+    });
+
+    it('a config switch alone in a channel is not a device', () => {
+        const detector = new DeviceDetector(
+            objects(channel('shelly.0.s.Sys'), state('shelly.0.s.Sys.debugEnabled', 'state', 'boolean')),
+        );
+
+        expect(detector.detect('shelly.0.s.Sys').size).to.equal(0);
+    });
+
+    it('keeps a switch whose name says so, with either role', () => {
+        const withState = new DeviceDetector(objects(channel('hm.0.X.1'), state('hm.0.X.1.STATE', 'state', 'boolean')));
+        const withSwitch = new DeviceDetector(
+            objects(channel('hm.0.Y.1'), state('hm.0.Y.1.led_indication', 'switch', 'boolean')),
+        );
+
+        expect(keysOf(withState.detect('hm.0.X.1'))).to.deep.equal({ STATE: 'on' });
+        expect(keysOf(withSwitch.detect('hm.0.Y.1'))).to.deep.equal({ led_indication: 'on' });
+    });
+
     it('recognizes nothing in a group without roles, and does not throw', () => {
         const detector = new DeviceDetector(
             objects(channel('foo.0.x'), state('foo.0.x.a', '', 'number'), state('foo.0.x.b', '', 'string')),

@@ -467,6 +467,15 @@ describe('device-model', () => {
             expect(dev.deviceClass).to.not.equal(DeviceClass.DEVICE_CLASS_LIGHT);
         });
 
+        it('a raw value loses against the value itself', () => {
+            const dev = classify([
+                state('illuminance', { key: 'illuminance', role: 'value.brightness', writable: false, value: 120 }),
+                state('illuminance_raw', { key: 'illuminance', role: 'value.brightness', writable: false, value: 7 }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_ILLUMINANCE)?.identifier).to.equal(`${BASE}.illuminance`);
+        });
+
         it('with two writable brightness states and nothing to tell them apart nothing is picked', () => {
             const dev = classify([
                 state('on', { key: 'on', valueType: 'boolean', typeHint: 'light' }),
