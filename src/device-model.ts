@@ -13,9 +13,13 @@
  * - the type hint (function/role) comes before the slot set
  * - `Thermostat` needs a setpoint, pure measuring devices are `Sensor`
  * - only writable slots control a device: a read-only `on` never makes a lamp
- * - if several states fit one slot kind, only an unambiguous one wins (comfort/eco/offset
- *   setpoints are no setpoints), otherwise none is picked. What isn't picked stays a generic
- *   slot, nothing gets lost
+ * - if several states fit one slot kind, the candidates are narrowed step by step (exact role,
+ *   then unit, then writability, then the name: comfort/eco/offset setpoints are no setpoints)
+ *   until one is left, otherwise none is picked. What isn't picked stays a generic slot,
+ *   nothing gets lost
+ * - values are normalized to the scale of the slot kind (brightness 0-100 %, colour temperature
+ *   in Kelvin, temperature in °C, power in W, energy in kWh); a state in a unit that doesn't
+ *   fit the kind (power in mA) is not picked
  * - name and room are mandatory, a device without room is not reported
  */
 import { v2 } from '@m1kad0/hannah-proto';
@@ -35,6 +39,14 @@ export interface DeviceState {
     suffix: string;
     /** semantic key of the state, see `slotKey()` */
     key: string;
+    /** common.role of the state, empty = none */
+    role: string;
+    /** common.unit of the state, empty = none */
+    unit: string;
+    /** common.min of the state, undefined = none */
+    min: number | undefined;
+    /** common.max of the state, undefined = none */
+    max: number | undefined;
     /** raw ioBroker value */
     value: unknown;
     /** how the value looks */
@@ -79,6 +91,8 @@ export interface SlotTarget {
     valueType: ValueType;
     /** neededTrust of the slot, undefined = no restriction */
     requiredTrustLevel: number | undefined;
+    /** how the raw value is turned into the scale of the kind, undefined = it already is */
+    transform?: Transform;
 }
 
 /** The typed devices of a setup and the indexes live updates and SetSlot need. */
@@ -122,6 +136,9 @@ const TEXT_KINDS = new Set<SlotKind>([
     SlotKind.SLOT_KIND_FAN_SPEED,
 ]);
 
+/** How a raw value becomes the scale of its slot kind: `linear` is `raw * mul + add`, `mired` is 10^6 / raw. */
+export type Transform = { kind: 'linear'; mul: number; add: number } | { kind: 'mired' };
+
 /** Semantic key of a state → slot kind (`level` and `current` depend on the type hint). */
 const KIND_BY_KEY: Record<string, SlotKind> = {
     on: SlotKind.SLOT_KIND_ON,
@@ -134,6 +151,47 @@ const KIND_BY_KEY: Record<string, SlotKind> = {
     co2_equiv: SlotKind.SLOT_KIND_CO2,
     voc_equiv: SlotKind.SLOT_KIND_VOC,
     power: SlotKind.SLOT_KIND_POWER,
+    energy: SlotKind.SLOT_KIND_ENERGY,
+};
+
+/** Roles that name a slot kind exactly, the first tie-break step. */
+const ROLES_BY_KIND: Partial<Record<SlotKind, string[]>> = {
+    [SlotKind.SLOT_KIND_ON]: ['switch', 'switch.light', 'switch.power'],
+    [SlotKind.SLOT_KIND_BRIGHTNESS]: ['level.dimmer', 'level.brightness'],
+    [SlotKind.SLOT_KIND_COLOR]: ['level.color.rgb', 'level.color.hex', 'level.color'],
+    [SlotKind.SLOT_KIND_COLOR_TEMPERATURE]: ['level.color.temperature'],
+    [SlotKind.SLOT_KIND_POSITION]: ['level.blind', 'level.curtain', 'level.valve'],
+    [SlotKind.SLOT_KIND_TARGET_TEMPERATURE]: ['level.temperature'],
+    [SlotKind.SLOT_KIND_TEMPERATURE]: ['value.temperature'],
+    [SlotKind.SLOT_KIND_HUMIDITY]: ['value.humidity'],
+    [SlotKind.SLOT_KIND_ILLUMINANCE]: ['value.brightness', 'value.illuminance'],
+    [SlotKind.SLOT_KIND_POWER]: ['value.power'],
+    [SlotKind.SLOT_KIND_ENERGY]: ['value.power.consumption', 'value.energy', 'value.energy.consumed'],
+};
+
+/** Roles that mean energy (kWh), not power: ioBroker calls the consumption `value.power.consumption`. */
+const ENERGY_ROLES = new Set([
+    'value.power.consumption',
+    'value.energy',
+    'value.energy.consumed',
+    'value.energy.total',
+]);
+
+/** The unit a kind is sent in, the second tie-break step (a state in that unit beats one in another). */
+const PREFERRED_UNIT: Partial<Record<SlotKind, string>> = {
+    [SlotKind.SLOT_KIND_BRIGHTNESS]: '%',
+    [SlotKind.SLOT_KIND_POSITION]: '%',
+    [SlotKind.SLOT_KIND_TEMPERATURE]: 'c',
+    [SlotKind.SLOT_KIND_TARGET_TEMPERATURE]: 'c',
+    [SlotKind.SLOT_KIND_POWER]: 'w',
+    [SlotKind.SLOT_KIND_ENERGY]: 'kwh',
+    [SlotKind.SLOT_KIND_COLOR_TEMPERATURE]: 'k',
+};
+
+/** Units a kind can't be measured in: power in mA is the current, not the power. */
+const FOREIGN_UNITS: Partial<Record<SlotKind, Set<string>>> = {
+    [SlotKind.SLOT_KIND_POWER]: new Set(['a', 'ma', 'v', 'mv', 'wh', 'kwh', 'mwh']),
+    [SlotKind.SLOT_KIND_ENERGY]: new Set(['a', 'ma', 'v', 'mv', 'w', 'kw', 'mw']),
 };
 
 /** State names that mean the same as a key but are spelled differently. */
@@ -201,6 +259,9 @@ export function slotKey(s: {
         // hue, saturation, white, ...: no slot of their own (yet)
         return s.suffix;
     }
+    if (ENERGY_ROLES.has(s.role)) {
+        return 'energy';
+    }
     return s.canonicalKey || KEY_BY_SUFFIX[s.suffix] || s.suffix;
 }
 
@@ -216,13 +277,147 @@ export function slotIdForKind(kind: SlotKind): string {
 // ------------------------------------------------------------------ values
 
 /**
+ * A unit without case, spaces and degree sign: "°C" → "c", " kWh" → "kwh".
+ *
+ * @param unit - common.unit of a state
+ */
+export function normalizeUnit(unit: string): string {
+    return unit.replace(/[°\s]/g, '').toLowerCase();
+}
+
+const MIRED_UNITS = new Set(['mired', 'mireds', 'mirek']);
+
+/** The highest colour temperature in mired anyone sells (Kelvin ranges start well above it). */
+const MIRED_MAX = 1000;
+
+function linear(mul: number, add = 0): Transform {
+    return { kind: 'linear', mul, add };
+}
+
+/**
+ * How the raw value of a state turns into the scale of its slot kind, from the unit and the
+ * range of the state. undefined = it already is on that scale (or nothing is known that says
+ * otherwise): without a unit or a range the value is taken as it is.
+ *
+ * @param kind - Slot kind
+ * @param unit - common.unit of the state
+ * @param min - common.min of the state
+ * @param max - common.max of the state
+ */
+export function transformFor(
+    kind: SlotKind,
+    unit: string,
+    min: number | undefined,
+    max: number | undefined,
+): Transform | undefined {
+    const u = normalizeUnit(unit);
+    switch (kind) {
+        case SlotKind.SLOT_KIND_BRIGHTNESS:
+        case SlotKind.SLOT_KIND_POSITION: {
+            // 0-255, 0-254 or 0-1 instead of 0-100 %
+            const lo = min ?? 0;
+            if (u === '%' || max === undefined || !(max > lo) || (lo === 0 && max === 100)) {
+                return undefined;
+            }
+            const mul = 100 / (max - lo);
+            return linear(mul, -lo * mul);
+        }
+        case SlotKind.SLOT_KIND_COLOR_TEMPERATURE:
+            if (MIRED_UNITS.has(u) || (u === '' && max !== undefined && max <= MIRED_MAX)) {
+                return { kind: 'mired' };
+            }
+            return undefined;
+        case SlotKind.SLOT_KIND_TEMPERATURE:
+        case SlotKind.SLOT_KIND_TARGET_TEMPERATURE:
+            if (u === 'f') {
+                return linear(5 / 9, -160 / 9);
+            }
+            return u === 'k' ? linear(1, -273.15) : undefined;
+        case SlotKind.SLOT_KIND_POWER:
+            if (u === 'kw') {
+                return linear(1000);
+            }
+            return u === 'mw' ? linear(0.001) : undefined;
+        case SlotKind.SLOT_KIND_ENERGY:
+            if (u === 'wh') {
+                return linear(0.001);
+            }
+            return u === 'mwh' ? linear(1000) : undefined;
+        default:
+            return undefined;
+    }
+}
+
+/**
+ * Rounded so a scale like 100 / 255 does not leave 40.00000000000001 behind.
+ *
+ * @param n - The number to round to two decimals
+ */
+function round(n: number): number {
+    return Math.round(n * 100) / 100;
+}
+
+function applyTransform(transform: Transform | undefined, raw: number): number | undefined {
+    if (!transform) {
+        return raw;
+    }
+    if (transform.kind === 'mired') {
+        return raw > 0 ? Math.round(1e6 / raw) : undefined;
+    }
+    return round(raw * transform.mul + transform.add);
+}
+
+function revertTransform(transform: Transform | undefined, value: number): number | undefined {
+    if (!transform) {
+        return value;
+    }
+    if (transform.kind === 'mired') {
+        return value > 0 ? Math.round(1e6 / value) : undefined;
+    }
+    return round((value - transform.add) / transform.mul);
+}
+
+/**
+ * The colour of a state as RGB. The notations in use: `#rrggbb`, `rrggbb`, `0xrrggbb`, `#rgb`,
+ * `rgb(r, g, b)` and a number. undefined = not a colour.
+ *
+ * @param raw - Value of the ioBroker state
+ */
+function parseColor(raw: unknown): number | undefined {
+    if (typeof raw === 'number') {
+        return Number.isFinite(raw) ? Math.trunc(raw) & 0xffffff : undefined;
+    }
+    if (typeof raw !== 'string') {
+        return undefined;
+    }
+    const text = raw.trim();
+    const channels = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,[^)]*)?\)$/i.exec(text);
+    if (channels) {
+        const [r, g, b] = channels.slice(1, 4).map(Number);
+        return r > 255 || g > 255 || b > 255 ? undefined : (r << 16) | (g << 8) | b;
+    }
+    const hex = /^(?:#|0x)?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(text)?.[1];
+    if (!hex) {
+        return undefined;
+    }
+    const full = hex.length === 3 ? [...hex].map(c => c + c).join('') : hex;
+    return parseInt(full, 16);
+}
+
+/**
  * ioBroker value → value of a slot kind, on the scale of that kind. undefined = unknown.
  *
  * @param kind - Slot kind
  * @param raw - Value of the ioBroker state
  * @param inverted - The actuator is inverted (only matters for cover positions)
+ * @param transform - How the raw value turns into the scale of the kind, undefined = it already is
  */
-export function toSlotValue(kind: SlotKind, raw: unknown, inverted = false): v2.device_model.SlotValue | undefined {
+export function toSlotValue(
+    kind: SlotKind,
+    raw: unknown,
+    inverted = false,
+    transform?: Transform,
+): v2.device_model.SlotValue | undefined {
     if (raw === null || raw === undefined || raw === '') {
         return undefined;
     }
@@ -239,17 +434,18 @@ export function toSlotValue(kind: SlotKind, raw: unknown, inverted = false): v2.
             : undefined;
     }
     if (kind === SlotKind.SLOT_KIND_COLOR) {
-        if (typeof raw === 'string') {
-            const match = /^#([0-9a-f]{6})$/i.exec(raw.trim());
-            return match ? { rgb: parseInt(match[1], 16) } : undefined;
-        }
-        return typeof raw === 'number' && Number.isFinite(raw) ? { rgb: Math.trunc(raw) & 0xffffff } : undefined;
+        const rgb = parseColor(raw);
+        return rgb === undefined ? undefined : { rgb };
     }
     const number = typeof raw === 'number' ? raw : Number(raw);
     if (typeof raw === 'boolean' || !Number.isFinite(number)) {
         return undefined;
     }
-    return { number: inverted && kind === SlotKind.SLOT_KIND_POSITION ? 100 - number : number };
+    const value = applyTransform(transform, number);
+    if (value === undefined) {
+        return undefined;
+    }
+    return { number: inverted && kind === SlotKind.SLOT_KIND_POSITION ? 100 - value : value };
 }
 
 /**
@@ -280,12 +476,18 @@ export function fromSlotValue(
             return undefined;
         }
         const rgb = value.rgb & 0xffffff;
-        return typeof current === 'number' ? rgb : `#${rgb.toString(16).padStart(6, '0')}`;
+        if (typeof current === 'number') {
+            return rgb;
+        }
+        const hex = rgb.toString(16).padStart(6, '0');
+        // the notation the state already has: with or without the hash
+        return typeof current === 'string' && /^[0-9a-f]{6}$/i.test(current.trim()) ? hex : `#${hex}`;
     }
     if (typeof value.number !== 'number' || !Number.isFinite(value.number)) {
         return undefined;
     }
-    return target.inverted && kind === SlotKind.SLOT_KIND_POSITION ? 100 - value.number : value.number;
+    const slotValue = target.inverted && kind === SlotKind.SLOT_KIND_POSITION ? 100 - value.number : value.number;
+    return revertTransform(target.transform, slotValue);
 }
 
 // ------------------------------------------------------------------ classification
@@ -324,23 +526,70 @@ function resolveKinds(states: DeviceState[], blind: boolean, climate: boolean): 
     const groups = new Map<SlotKind, DeviceState[]>();
     for (const state of states) {
         const kind = preliminaryKind(state, blind, climate);
-        if (kind !== undefined) {
+        if (kind !== undefined && unitFits(kind, state.unit)) {
             groups.set(kind, [...(groups.get(kind) ?? []), state]);
         }
     }
     const chosen = new Map<string, SlotKind>();
     for (const [kind, members] of groups) {
-        if (members.length === 1) {
-            chosen.set(members[0].stateId, kind);
-        } else if (kind === SlotKind.SLOT_KIND_TARGET_TEMPERATURE) {
-            const plain = members.filter(s => ![...tokens(s.suffix)].some(t => SETPOINT_EXCLUDE.has(t)));
-            if (plain.length === 1) {
-                chosen.set(plain[0].stateId, kind);
-            }
+        const winner = pickWinner(kind, members);
+        if (winner) {
+            chosen.set(winner.stateId, kind);
         }
-        // anything else is ambiguous, nothing is chosen
+        // no clear winner: nothing is chosen
     }
     return chosen;
+}
+
+/**
+ * A state in a unit that belongs to another quantity (power in mA) can't carry the kind.
+ *
+ * @param kind - Slot kind a state competes for
+ * @param unit - common.unit of the state
+ */
+function unitFits(kind: SlotKind, unit: string): boolean {
+    return !FOREIGN_UNITS[kind]?.has(normalizeUnit(unit));
+}
+
+/** Slot kinds a user sets (a writable state is the control, a read-only one a reading of it). */
+const CONTROL_KINDS = new Set<SlotKind>([
+    SlotKind.SLOT_KIND_ON,
+    SlotKind.SLOT_KIND_BRIGHTNESS,
+    SlotKind.SLOT_KIND_COLOR,
+    SlotKind.SLOT_KIND_COLOR_TEMPERATURE,
+    SlotKind.SLOT_KIND_POSITION,
+    SlotKind.SLOT_KIND_TARGET_TEMPERATURE,
+]);
+
+/**
+ * The state that carries a kind if several states fit it. The candidates are narrowed step by
+ * step (a step that would leave none is skipped): exact role, then unit, then writability (a
+ * setpoint is writable, a measurement is not), then the name as the last resort (comfort, eco
+ * and the like are no setpoints). Not exactly one left = nobody wins.
+ *
+ * @param kind - The slot kind the candidates compete for
+ * @param candidates - The states that fit the kind
+ */
+function pickWinner(kind: SlotKind, candidates: DeviceState[]): DeviceState | undefined {
+    const preferredUnit = PREFERRED_UNIT[kind];
+    const roles = ROLES_BY_KIND[kind];
+    const steps: Array<(s: DeviceState) => boolean> = [
+        s => roles?.includes(s.role) === true,
+        s => preferredUnit !== undefined && normalizeUnit(s.unit) === preferredUnit,
+        s => (CONTROL_KINDS.has(kind) ? s.writable : !s.writable),
+        s => ![...tokens(s.suffix)].some(t => SETPOINT_EXCLUDE.has(t)),
+    ];
+    let left = candidates;
+    for (const step of steps) {
+        if (left.length === 1) {
+            break;
+        }
+        const narrowed = left.filter(step);
+        if (narrowed.length > 0) {
+            left = narrowed;
+        }
+    }
+    return left.length === 1 ? left[0] : undefined;
 }
 
 function decideClass(slots: v2.device_model.Slot[], typeHints: Set<string>): DeviceClass {
@@ -429,6 +678,7 @@ function classifyDevice(input: DeviceInput, model: DeviceModel): v2.device_model
             }
         }
         const inverted = state.inverted && kind === SlotKind.SLOT_KIND_POSITION;
+        const transform = transformFor(kind, state.unit, state.min, state.max);
         const target: SlotTarget = {
             stateId: state.stateId,
             kind,
@@ -436,11 +686,12 @@ function classifyDevice(input: DeviceInput, model: DeviceModel): v2.device_model
             writable: state.writable,
             valueType: state.valueType,
             requiredTrustLevel: state.requiredTrustLevel,
+            transform,
         };
         slots.set(slotId, {
             slotId,
             kind,
-            value: toSlotValue(kind, state.value, inverted),
+            value: toSlotValue(kind, state.value, inverted, transform),
             writable: state.writable,
             unit: '',
             label,

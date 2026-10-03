@@ -5,6 +5,7 @@ import {
     fromSlotValue,
     slotKey,
     toSlotValue,
+    transformFor,
     type DeviceInput,
     type DeviceState,
     type SlotTarget,
@@ -21,6 +22,10 @@ function state(suffix: string, over: Partial<DeviceState> = {}): DeviceState {
         stateId: `${BASE}.${suffix}`,
         suffix,
         key: suffix,
+        role: '',
+        unit: '',
+        min: undefined,
+        max: undefined,
         value: null,
         valueType: 'number',
         writable: true,
@@ -375,5 +380,204 @@ describe('device-model', () => {
             expect(fromSlotValue(target(SlotKind.SLOT_KIND_COLOR), { text: 'rot' }, '#000000')).to.equal(undefined);
             expect(fromSlotValue(target(SlotKind.SLOT_KIND_ON), undefined, false)).to.equal(undefined);
         });
+    });
+
+    describe('tie cases', () => {
+        const slotOf = (dev: v2.device_model.TypedDevice, kind: SlotKind): v2.device_model.Slot | undefined =>
+            dev.slots.find(s => s.kind === kind);
+
+        it('setpoint vs. comfort/eco: the writable level.temperature beats the rest by role', () => {
+            const dev = classify([
+                state('soll', { key: 'expected', role: 'level.temperature', value: 20 }),
+                state('comfort', { key: 'expected', role: 'level.temperature.comfort', value: 22 }),
+                state('eco', { key: 'expected', role: 'level.temperature.eco', value: 17 }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_TARGET_TEMPERATURE)?.value).to.deep.equal({ number: 20 });
+            expect(dev.deviceClass).to.equal(DeviceClass.DEVICE_CLASS_THERMOSTAT);
+        });
+
+        it('setpoint vs. actual value: the writable state is the setpoint', () => {
+            const dev = classify([
+                state('a', { key: 'expected', value: 20, writable: true }),
+                state('b', { key: 'expected', value: 18, writable: false }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_TARGET_TEMPERATURE)?.slotId).to.equal('target_temperature');
+            expect(slotOf(dev, SlotKind.SLOT_KIND_TARGET_TEMPERATURE)?.value).to.deep.equal({ number: 20 });
+        });
+
+        it('°C vs. °F: the state in °C wins, the °F duplicate stays a generic slot', () => {
+            const dev = classify([
+                state('temperatureF', { key: 'current', unit: '°F', value: 70, writable: false }),
+                state('temperatureC', { key: 'current', unit: '°C', value: 21, writable: false }),
+            ]);
+
+            const temperature = slotOf(dev, SlotKind.SLOT_KIND_TEMPERATURE);
+            expect(temperature?.identifier).to.equal(`${BASE}.temperatureC`);
+            expect(temperature?.value).to.deep.equal({ number: 21 });
+            expect(dev.slots.filter(s => s.kind === SlotKind.SLOT_KIND_GENERIC_NUMBER)).to.have.length(1);
+        });
+
+        it('a temperature only in °F is converted to °C', () => {
+            const dev = classify([state('current', { key: 'current', unit: '°F', value: 70, writable: false })]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_TEMPERATURE)?.value).to.deep.equal({ number: 21.11 });
+        });
+
+        it('W vs. mA: a power state in mA is no power', () => {
+            const dev = classify([
+                state('on', { key: 'on', valueType: 'boolean', typeHint: 'socket' }),
+                state('power', { key: 'power', unit: 'mA', value: 80, writable: false }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_POWER)).to.equal(undefined);
+            expect(dev.slots.find(s => s.slotId === 'power')?.kind).to.equal(SlotKind.SLOT_KIND_GENERIC_NUMBER);
+        });
+
+        it('W vs. kWh: a consumption role is energy, not power, and both are normalized', () => {
+            const dev = classify([
+                state('on', { key: 'on', valueType: 'boolean', typeHint: 'socket' }),
+                state('power', { key: 'power', role: 'value.power', unit: 'kW', value: 1.5, writable: false }),
+                state('total', {
+                    key: slotKey({
+                        canonicalKeyOverride: '',
+                        role: 'value.power.consumption',
+                        canonicalKey: '',
+                        suffix: 'total',
+                    }),
+                    role: 'value.power.consumption',
+                    unit: 'Wh',
+                    value: 2500,
+                    writable: false,
+                }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_POWER)?.value).to.deep.equal({ number: 1500 });
+            expect(slotOf(dev, SlotKind.SLOT_KIND_ENERGY)?.value).to.deep.equal({ number: 2.5 });
+            expect(dev.deviceClass).to.equal(DeviceClass.DEVICE_CLASS_SOCKET);
+        });
+
+        it('read-only brightness: a state that cannot be written is no control slot', () => {
+            const dev = classify([
+                state('on', { key: 'on', valueType: 'boolean', writable: false }),
+                state('level', { key: 'level', writable: false, typeHint: 'light' }),
+            ]);
+
+            expect(dev.deviceClass).to.not.equal(DeviceClass.DEVICE_CLASS_LIGHT);
+        });
+
+        it('with two writable brightness states and nothing to tell them apart nothing is picked', () => {
+            const dev = classify([
+                state('on', { key: 'on', valueType: 'boolean', typeHint: 'light' }),
+                state('level1', { key: 'level', typeHint: 'light' }),
+                state('level2', { key: 'level', typeHint: 'light' }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_BRIGHTNESS)).to.equal(undefined);
+        });
+
+        it('exact role beats the name', () => {
+            const dev = classify([
+                state('level', { key: 'level', typeHint: 'light', role: 'level.brightness' }),
+                state('eco_level', { key: 'level', typeHint: 'light', role: 'level' }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_BRIGHTNESS)?.identifier).to.equal(`${BASE}.level`);
+        });
+    });
+
+    describe('normalization', () => {
+        const slotOfOnly = (s: DeviceState): v2.device_model.Slot => classify([s]).slots[0];
+
+        it('scales a brightness of 0-255 to 0-100 %', () => {
+            const dev = classify([
+                state('on', { key: 'on', valueType: 'boolean', typeHint: 'light' }),
+                state('level', { key: 'level', typeHint: 'light', min: 0, max: 255, value: 255 }),
+            ]);
+
+            expect(dev.slots.find(s => s.kind === SlotKind.SLOT_KIND_BRIGHTNESS)?.value).to.deep.equal({
+                number: 100,
+            });
+            expect(
+                toSlotValue(
+                    SlotKind.SLOT_KIND_BRIGHTNESS,
+                    102,
+                    false,
+                    transformFor(SlotKind.SLOT_KIND_BRIGHTNESS, '', 0, 255),
+                ),
+            ).to.deep.equal({ number: 40 });
+        });
+
+        it('leaves a brightness of 0-100 or in % alone', () => {
+            expect(transformFor(SlotKind.SLOT_KIND_BRIGHTNESS, '', 0, 100)).to.equal(undefined);
+            expect(transformFor(SlotKind.SLOT_KIND_BRIGHTNESS, '%', 0, 255)).to.equal(undefined);
+            expect(transformFor(SlotKind.SLOT_KIND_BRIGHTNESS, '', undefined, undefined)).to.equal(undefined);
+        });
+
+        it('writes a brightness back on the scale of the state', () => {
+            const dev = buildDeviceModel([
+                device([
+                    state('on', { key: 'on', valueType: 'boolean', typeHint: 'light' }),
+                    state('level', { key: 'level', typeHint: 'light', min: 0, max: 255 }),
+                ]),
+            ]);
+            const target = dev.targets.get(BASE)?.get('brightness') as SlotTarget;
+
+            expect(fromSlotValue(target, { number: 40 }, 0)).to.equal(102);
+            expect(fromSlotValue(target, { number: 100 }, 0)).to.equal(255);
+        });
+
+        it('turns a colour temperature in mired into Kelvin and back', () => {
+            const kind = SlotKind.SLOT_KIND_COLOR_TEMPERATURE;
+            const transform = transformFor(kind, '', 153, 500);
+
+            expect(toSlotValue(kind, 250, false, transform)).to.deep.equal({ number: 4000 });
+            expect(fromSlotValue({ ...target0(kind), transform }, { number: 4000 }, 0)).to.equal(250);
+        });
+
+        it('leaves a colour temperature in Kelvin alone', () => {
+            const kind = SlotKind.SLOT_KIND_COLOR_TEMPERATURE;
+
+            expect(transformFor(kind, 'K', 2000, 6500)).to.equal(undefined);
+            expect(transformFor(kind, '', 2000, 6500)).to.equal(undefined);
+            expect(transformFor(kind, '', undefined, undefined)).to.equal(undefined);
+        });
+
+        it('reads the colour notations in use', () => {
+            const kind = SlotKind.SLOT_KIND_COLOR;
+
+            expect(toSlotValue(kind, '0096ff')).to.deep.equal({ rgb: 0x0096ff });
+            expect(toSlotValue(kind, '0x0096FF')).to.deep.equal({ rgb: 0x0096ff });
+            expect(toSlotValue(kind, '#09f')).to.deep.equal({ rgb: 0x0099ff });
+            expect(toSlotValue(kind, 'rgb(0, 150, 255)')).to.deep.equal({ rgb: 0x0096ff });
+            expect(toSlotValue(kind, 'rgb(0, 300, 255)')).to.equal(undefined);
+        });
+
+        it('writes a colour without the hash if the state has none', () => {
+            const color = { ...target0(SlotKind.SLOT_KIND_COLOR), valueType: 'color' as const };
+
+            expect(fromSlotValue(color, { rgb: 0x0096ff }, '000000')).to.equal('0096ff');
+        });
+
+        it('reports kW and Wh in W and kWh', () => {
+            expect(slotOfOnly(state('p', { key: 'power', unit: 'kW', value: 2, writable: false })).value).to.deep.equal(
+                { number: 2000 },
+            );
+            expect(
+                slotOfOnly(state('e', { key: 'energy', unit: 'Wh', value: 1500, writable: false })).value,
+            ).to.deep.equal({ number: 1.5 });
+        });
+
+        function target0(kind: SlotKind): SlotTarget {
+            return {
+                stateId: `${BASE}.x`,
+                kind,
+                inverted: false,
+                writable: true,
+                valueType: 'number',
+                requiredTrustLevel: undefined,
+            };
+        }
     });
 });

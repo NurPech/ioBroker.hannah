@@ -79,6 +79,10 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added (with a `hannah.v2` Core): values are now reported on the scale Hannah expects, from the unit and range of the state: brightness and cover position as 0-100 % (also from 0-255 or 0-1), colour temperature in Kelvin (also from mired), temperature in °C (also from °F or K), power in W (also from kW or mW) and energy in kWh (also from Wh or MWh). A colour is also understood as `rrggbb`, `0xrrggbb`, `#rgb` and `rgb(r, g, b)`, and is written back in the notation the state already has
+- Changed (with a `hannah.v2` Core): if several states of a device fit one slot, the adapter now narrows them down by exact role, then unit, then writability and only then by name. A temperature in °C wins over a °F duplicate, a state in mA is no power, and a consumption role is energy rather than power. If there is still no clear winner, none is picked and the states stay generic slots
+
 ### 1.5.5 (2026-10-03)
 - Fixed: the adapter's notification texts (name, description and the "trust levels not supported" category) are now translated into all supported languages
 - Changed: updated the test dependency `@iobroker/testing` to 6.3.0

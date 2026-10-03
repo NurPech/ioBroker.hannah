@@ -65,6 +65,12 @@ interface DeviceMeta {
     canonicalKey: string;
     /** common.role of the state, for the typed device model */
     role: string;
+    /** common.unit of the state, empty = none */
+    unit: string;
+    /** common.min of the state, undefined = none */
+    min: number | undefined;
+    /** common.max of the state, undefined = none */
+    max: number | undefined;
     /** `canonicalKey` from common.custom, empty = none */
     canonicalKeyOverride: string;
     inverted: boolean | undefined;
@@ -315,7 +321,7 @@ export class StateWatcher {
                     slotUpdate: {
                         deviceId: slot.deviceId,
                         slotId: slot.slotId,
-                        value: toSlotValue(slot.target.kind, state.val, slot.target.inverted),
+                        value: toSlotValue(slot.target.kind, state.val, slot.target.inverted, slot.target.transform),
                         ack: state.ack ?? false,
                         ts,
                     },
@@ -502,6 +508,10 @@ export class StateWatcher {
                     canonicalKey: meta.canonicalKey,
                     suffix,
                 }),
+                role: meta.role,
+                unit: meta.unit,
+                min: meta.min,
+                max: meta.max,
                 value: state.val,
                 valueType: VALUE_TYPE_BY_STATE_TYPE[meta.stateType] ?? 'text',
                 writable: meta.writable,
@@ -856,6 +866,9 @@ export class StateWatcher {
             deviceId,
             canonicalKey,
             role,
+            unit: typeof stateObj?.common?.unit === 'string' ? stateObj.common.unit : '',
+            min: typeof stateObj?.common?.min === 'number' ? stateObj.common.min : undefined,
+            max: typeof stateObj?.common?.max === 'number' ? stateObj.common.max : undefined,
             canonicalKeyOverride:
                 stateCustom?.enabled && stateCustom?.canonicalKey ? String(stateCustom.canonicalKey) : '',
             inverted,
