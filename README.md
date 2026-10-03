@@ -82,6 +82,8 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
 ### **WORK IN PROGRESS**
 - Fixed: the adapter's notification texts (name, description and the "trust levels not supported" category) are now translated into all supported languages
 - Changed: updated the test dependency `@iobroker/testing` to 6.3.0
+- Changed: adapter names itself and its version in every call to Hannah Core, so Core can tell which version is connected and name it in its notice about outdated components. Requires `hannah-grpc-lib` 0.8 (below 0.09.0)
+- Changed: Telegram tells Hannah Core every 30 seconds that it is running, so Core still knows it when it holds no open connection. Needs a Core that knows the call, an older Core is left alone after one log line. Requires `hannah-grpc-lib` 0.09.0 (below 0.10.0)
 
 ### 1.5.4 (2026-10-01)
 - Added (with a `hannah.v2` Core): when Hannah starts watching a state for a trigger, the adapter now also reports the state's current value, so conditions like "only if" or "unless" know their state right after a Hannah restart instead of after the next change. Hannah does not run any trigger because of this start value
