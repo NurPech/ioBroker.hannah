@@ -1336,6 +1336,27 @@ describe('StateWatcher', () => {
                 expect(devices[0].slots.find((s: any) => s.slotId === 'power').value).to.deep.equal({ number: 1500 });
             });
 
+            it('merges sibling channels when the function sits on the channels, not on each state', async () => {
+                database.publishObject({
+                    _id: 'dev.0.W',
+                    type: 'device',
+                    common: { name: 'Fenster' },
+                    native: {},
+                } as unknown as ioBroker.Object);
+                publishState('dev.0.W.Contact.open', { role: 'sensor.window', type: 'boolean', write: false });
+                publishState('dev.0.W.Battery.level', { role: 'value.battery', type: 'number', write: false });
+
+                const devices = await snapshotOf(
+                    { 'dev.0.W.Contact.open': true, 'dev.0.W.Battery.level': 90 },
+                    ['dev.0.W.Contact', 'dev.0.W.Battery'],
+                    ['dev.0.W.Contact', 'dev.0.W.Battery'],
+                    'dev.0.W.*',
+                );
+
+                expect(devices).to.have.length(1);
+                expect(devices[0].deviceId).to.equal('dev.0.W');
+            });
+
             it('keeps the relays of a multi-relay plug as devices of their own', async () => {
                 const ids = [
                     'plug.0.P.Relay0.on',

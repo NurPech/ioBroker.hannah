@@ -60,6 +60,11 @@ interface DeviceMeta {
     device: string;
     /** the name of the state itself, for a state that is a device of its own */
     ownName: string;
+    /**
+     * IDs of the function enums the state, its device or its channel's device is a member of,
+     * for the typed device model. `functions` only has the exact matches (hannah.v1 snapshot).
+     */
+    functionIds: string[];
     type: string;
     floor: string;
     functions: string[];
@@ -544,7 +549,7 @@ export class StateWatcher {
                 requiredTrustLevel: meta.requiredTrustLevel,
                 options: Object.keys(meta.enumValues?.values ?? {}),
             };
-            groupFunctions.set(groupId, [...(groupFunctions.get(groupId) ?? []), ...meta.functions]);
+            groupFunctions.set(groupId, [...(groupFunctions.get(groupId) ?? []), ...meta.functionIds]);
             const input = inputs.get(groupId);
             if (input) {
                 input.floor ||= meta.floor;
@@ -817,6 +822,16 @@ export class StateWatcher {
             String(obj.common?.name?.de ?? obj.common?.name ?? obj._id),
         );
 
+        // like rooms, a function is often assigned to the device or channel, not to each state
+        const functionHolders = [stateId, deviceId, deviceId.split('.').slice(0, -1).join('.')];
+        const functionIds = Object.values(allFunctions.result)
+            .filter(
+                (obj: any) =>
+                    obj?._id?.startsWith('enum.functions.') &&
+                    functionHolders.some(id => obj.common?.members?.includes(id)),
+            )
+            .map((obj: any) => String(obj._id));
+
         // Rolle → {Kategorie, kanonischer State-Key}. Die Kategorie wird pro Gerät aggregiert
         // (erster nicht-leerer Wert über alle Sibling-States gewinnt, siehe hannah#133 auf
         // Core-Seite); der kanonische Key wird dagegen direkt pro State übernommen, ohne
@@ -946,6 +961,7 @@ export class StateWatcher {
         return {
             room: roomId,
             roomNames: roomNames,
+            functionIds,
             ownName:
                 readableName(stateCustom?.enabled && stateCustom?.name) ??
                 readableName(stateObj?.common?.name) ??
