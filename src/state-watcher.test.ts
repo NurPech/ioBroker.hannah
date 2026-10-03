@@ -1206,6 +1206,166 @@ describe('StateWatcher', () => {
             expect(model.targets.get(base).get('on').stateId).to.equal(`${base}.on`);
         });
 
+        describe('grouping', () => {
+            function publishState(id: string, common: Record<string, unknown>): void {
+                database.publishObject({
+                    _id: id,
+                    type: 'state',
+                    common: { write: true, name: '', ...common } as unknown as ioBroker.StateCommon,
+                    native: {},
+                });
+            }
+
+            async function snapshotOf(
+                values: Record<string, unknown>,
+                roomMembers: string[],
+                functionMembers: string[],
+                pattern: string,
+            ): Promise<any[]> {
+                (adapter as any).getForeignStatesAsync = sinon
+                    .stub()
+                    .resolves(Object.fromEntries(Object.entries(values).map(([id, val]) => [id, { val, ack: true }])));
+                (adapter as any).getEnumAsync = sinon.stub().callsFake((name: string) =>
+                    Promise.resolve(
+                        name === 'rooms'
+                            ? {
+                                  result: {
+                                      'enum.rooms.wohnzimmer': {
+                                          _id: 'enum.rooms.wohnzimmer',
+                                          type: 'enum',
+                                          common: { name: 'Wohnzimmer', members: roomMembers },
+                                      },
+                                  },
+                              }
+                            : {
+                                  result: {
+                                      'enum.functions.licht': {
+                                          _id: 'enum.functions.licht',
+                                          type: 'enum',
+                                          common: { name: 'Licht', members: functionMembers },
+                                      },
+                                  },
+                              },
+                    ),
+                );
+                const sendWithAck = sinon.stub().resolves({ kind: 'ack', ack: { ackId: 1n, unknownFields: [] } });
+                const sw = new StateWatcher(adapterInstance, sinon.stub(), sendWithAck, sinon.stub());
+                internals(sw).subscribedIds.add(pattern);
+
+                await internals(sw)._sendSnapshot();
+
+                return sendWithAck.firstCall.args[0].typedSnapshot.devices;
+            }
+
+            it('makes every state at instance level a device of its own, named after itself', async () => {
+                publishState('alias.0.Lampe', { role: 'switch.light', type: 'boolean', name: 'Stehlampe' });
+                publishState('alias.0.Heizung', { role: 'level.temperature', type: 'number' });
+
+                const devices = await snapshotOf(
+                    { 'alias.0.Lampe': true, 'alias.0.Heizung': 21 },
+                    ['alias.0.Lampe', 'alias.0.Heizung'],
+                    [],
+                    'alias.0.*',
+                );
+
+                expect(devices.map((d: any) => [d.deviceId, d.name]).sort()).to.deep.equal([
+                    ['alias.0.Heizung', 'Heizung'],
+                    ['alias.0.Lampe', 'Stehlampe'],
+                ]);
+            });
+
+            it('merges sibling channels of the same room and function that use different slots', async () => {
+                database.publishObject({
+                    _id: 'dev.0.D',
+                    type: 'device',
+                    common: { name: 'Doppel' },
+                    native: {},
+                } as unknown as ioBroker.Object);
+                publishState('dev.0.D.1.on', { role: 'switch.light', type: 'boolean' });
+                publishState('dev.0.D.2.power', { role: 'value.power', type: 'number', write: false, unit: 'W' });
+                const ids = ['dev.0.D.1.on', 'dev.0.D.2.power'];
+
+                const devices = await snapshotOf(
+                    { 'dev.0.D.1.on': true, 'dev.0.D.2.power': 12 },
+                    ['dev.0.D.1', 'dev.0.D.2'],
+                    ids,
+                    'dev.0.D.*',
+                );
+
+                expect(devices).to.have.length(1);
+                expect(devices[0]).to.include({ deviceId: 'dev.0.D', name: 'Doppel' });
+                expect(devices[0].slots.map((s: any) => s.slotId).sort()).to.deep.equal(['on', 'power']);
+            });
+
+            it('recognizes an alias like its target: role, type and unit are inherited, writing goes to the alias', async () => {
+                publishState('shelly.0.plug.Switch', { role: 'switch', type: 'boolean' });
+                publishState('shelly.0.plug.Power', { role: 'value.power', type: 'number', write: false, unit: 'kW' });
+                publishState('alias.0.Plug.on', { alias: { id: 'shelly.0.plug.Switch' } });
+                publishState('alias.0.Plug.power', { alias: { id: 'shelly.0.plug.Power' }, write: false });
+                const ids = ['alias.0.Plug.on', 'alias.0.Plug.power'];
+
+                const devices = await snapshotOf(
+                    { 'alias.0.Plug.on': true, 'alias.0.Plug.power': 1.5 },
+                    ['alias.0.Plug'],
+                    ids,
+                    'alias.0.Plug.*',
+                );
+
+                expect(devices).to.have.length(1);
+                expect(devices[0].slots.map((s: any) => s.slotId).sort()).to.deep.equal(['on', 'power']);
+                const power = devices[0].slots.find((s: any) => s.slotId === 'power');
+                expect(power.value).to.deep.equal({ number: 1500 });
+                expect(devices[0].slots.find((s: any) => s.slotId === 'on').identifier).to.equal('alias.0.Plug.on');
+            });
+
+            it('does not inherit unit and range when the alias converts the value itself', async () => {
+                publishState('shelly.0.plug.Power', { role: 'value.power', type: 'number', write: false, unit: 'kW' });
+                publishState('alias.0.Plug.on', { role: 'switch', type: 'boolean' });
+                publishState('alias.0.Plug.power', {
+                    alias: { id: 'shelly.0.plug.Power', read: 'val * 1000' },
+                    write: false,
+                });
+
+                const devices = await snapshotOf(
+                    { 'alias.0.Plug.on': true, 'alias.0.Plug.power': 1500 },
+                    ['alias.0.Plug'],
+                    ['alias.0.Plug.on', 'alias.0.Plug.power'],
+                    'alias.0.Plug.*',
+                );
+
+                expect(devices[0].slots.find((s: any) => s.slotId === 'power').value).to.deep.equal({ number: 1500 });
+            });
+
+            it('keeps the relays of a multi-relay plug as devices of their own', async () => {
+                const ids = [
+                    'plug.0.P.Relay0.on',
+                    'plug.0.P.Relay0.power',
+                    'plug.0.P.Relay1.on',
+                    'plug.0.P.Relay1.power',
+                ];
+                for (const id of ids) {
+                    publishState(
+                        id,
+                        id.endsWith('.on')
+                            ? { role: 'switch', type: 'boolean' }
+                            : { role: 'value.power', type: 'number', write: false, unit: 'W' },
+                    );
+                }
+
+                const devices = await snapshotOf(
+                    Object.fromEntries(ids.map(id => [id, id.endsWith('.on') ? true : 5])),
+                    ['plug.0.P.Relay0', 'plug.0.P.Relay1'],
+                    ids,
+                    'plug.0.P.*',
+                );
+
+                expect(devices.map((d: any) => d.deviceId).sort()).to.deep.equal([
+                    'plug.0.P.Relay0',
+                    'plug.0.P.Relay1',
+                ]);
+            });
+        });
+
         it('lets the device detector name the states: an air quality device becomes a sensor with index, CO2 and VOC', async () => {
             publish('aqi', { role: 'value.airquality', type: 'number', write: false });
             publish('co2', { role: 'value.co2', type: 'number', write: false });

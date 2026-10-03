@@ -3,10 +3,12 @@ import { v1, v2 } from '@m1kad0/hannah-proto';
 import agent = v2.agent;
 import shared = v1.shared;
 import { DeviceDetector, type DetectedState } from './device-detection';
+import { groupIdFor, planMerges, type MergeCandidate } from './device-grouping';
 import {
     buildDeviceModel,
     fromSlotValue,
     slotKey,
+    standardKindsOf,
     toSlotValue,
     type DeviceInput,
     type DeviceModel,
@@ -56,6 +58,8 @@ interface DeviceMeta {
     room: string;
     roomNames: { [key: string]: string };
     device: string;
+    /** the name of the state itself, for a state that is a device of its own */
+    ownName: string;
     type: string;
     floor: string;
     functions: string[];
@@ -484,7 +488,7 @@ export class StateWatcher {
         this.trustByState = new Map(collected.map(c => [c.id, c.meta.requiredTrustLevel]));
 
         if (this.generation === 'v2') {
-            this._sendTypedSnapshot(collected, { ...allRooms.result, ...allFunctions.result });
+            await this._sendTypedSnapshot(collected, { ...allRooms.result, ...allFunctions.result });
         } else {
             this._sendLegacySnapshot(collected);
         }
@@ -496,13 +500,14 @@ export class StateWatcher {
      * @param collected - Every subscribed state with its resolved meta data
      * @param enums - The room and function enums, the device detector uses them too
      */
-    private _sendTypedSnapshot(
+    private async _sendTypedSnapshot(
         collected: Array<{ id: string; state: ioBroker.State; meta: DeviceMeta }>,
         enums: Record<string, ioBroker.Object>,
-    ): void {
+    ): Promise<void> {
         const detector = new DeviceDetector(this._detectionObjects(collected, enums));
         const detectedByGroup = new Map<string, Map<string, DetectedState>>();
         const inputs = new Map<string, DeviceInput>();
+        const groupFunctions = new Map<string, string[]>();
         const seen = new Set<string>();
         for (const { id, state, meta } of collected) {
             if (seen.has(id)) {
@@ -510,10 +515,11 @@ export class StateWatcher {
             }
             seen.add(id);
             const suffix = id.split('.').at(-1) ?? id;
-            let detected = detectedByGroup.get(meta.deviceId);
+            const groupId = groupIdFor(id);
+            let detected = detectedByGroup.get(groupId);
             if (!detected) {
-                detected = detector.detect(meta.deviceId);
-                detectedByGroup.set(meta.deviceId, detected);
+                detected = detector.detect(groupId);
+                detectedByGroup.set(groupId, detected);
             }
             const found = detected.get(id);
             const deviceState: DeviceState = {
@@ -538,20 +544,23 @@ export class StateWatcher {
                 requiredTrustLevel: meta.requiredTrustLevel,
                 options: Object.keys(meta.enumValues?.values ?? {}),
             };
-            const input = inputs.get(meta.deviceId);
+            groupFunctions.set(groupId, [...(groupFunctions.get(groupId) ?? []), ...meta.functions]);
+            const input = inputs.get(groupId);
             if (input) {
                 input.floor ||= meta.floor;
                 input.states.push(deviceState);
             } else {
-                inputs.set(meta.deviceId, {
-                    deviceId: meta.deviceId,
-                    name: meta.device,
+                inputs.set(groupId, {
+                    deviceId: groupId,
+                    // a state at root or instance level is a device of its own, named after itself
+                    name: groupId === id ? meta.ownName : meta.device,
                     room: meta.room,
                     floor: meta.floor,
                     states: [deviceState],
                 });
             }
         }
+        await this._mergeSiblingChannels(inputs, groupFunctions);
 
         const model = buildDeviceModel([...inputs.values()]);
         this.deviceModel = model;
@@ -566,6 +575,50 @@ export class StateWatcher {
         }
         const slots = model.devices.reduce((n, d) => n + d.slots.length, 0);
         this.adapter.log.info(`[states] Snapshot: ${model.devices.length} devices with ${slots} slots sent.`);
+    }
+
+    /**
+     * Sibling channels of one device that clearly belong together become one device (same room
+     * and function, no slot used twice, see `planMerges()`). The merged device is named after
+     * the device object, and takes the ID of it.
+     *
+     * @param inputs - The devices of the snapshot by group ID, merged in place
+     * @param groupFunctions - The functions of the states of every group
+     */
+    private async _mergeSiblingChannels(
+        inputs: Map<string, DeviceInput>,
+        groupFunctions: Map<string, string[]>,
+    ): Promise<void> {
+        const candidates: MergeCandidate[] = [...inputs.values()].map(input => ({
+            groupId: input.deviceId,
+            room: input.room,
+            functions: groupFunctions.get(input.deviceId) ?? [],
+            kinds: standardKindsOf(input.states),
+        }));
+        for (const merge of planMerges(candidates)) {
+            const members = merge.groupIds.map(id => inputs.get(id)).filter((i): i is DeviceInput => i !== undefined);
+            let name = members[0].name;
+            try {
+                const object = await this.adapter.getForeignObjectAsync(merge.deviceId);
+                const objectName = object?.common?.name;
+                if (typeof objectName === 'string' && objectName && !objectName.includes('.')) {
+                    name = objectName;
+                }
+            } catch {
+                // the name of the first channel does
+            }
+            for (const id of merge.groupIds) {
+                inputs.delete(id);
+            }
+            inputs.set(merge.deviceId, {
+                deviceId: merge.deviceId,
+                name,
+                room: members[0].room,
+                floor: members.map(m => m.floor).find(Boolean) ?? '',
+                states: members.flatMap(m => m.states),
+            });
+            this.adapter.log.debug(`[states] Merged channels ${merge.groupIds.join(', ')} into ${merge.deviceId}`);
+        }
     }
 
     /**
@@ -675,10 +728,11 @@ export class StateWatcher {
     ): Promise<DeviceMeta> {
         const deviceId = stateId.split('.').slice(0, -1).join('.');
 
-        const [stateObj, deviceObj] = await Promise.all([
+        const [ownStateObj, deviceObj] = await Promise.all([
             this.adapter.getForeignObjectAsync(stateId),
             this.adapter.getForeignObjectAsync(deviceId),
         ]);
+        const stateObj = await this._inheritFromAliasTarget(ownStateObj);
 
         // hannah#164/#256/#257: common.custom["hannah.0"] overrides — shared here so both
         // the type/canonicalKey resolution below and the device-name fallback chain read
@@ -892,6 +946,11 @@ export class StateWatcher {
         return {
             room: roomId,
             roomNames: roomNames,
+            ownName:
+                readableName(stateCustom?.enabled && stateCustom?.name) ??
+                readableName(stateObj?.common?.name) ??
+                stateId.split('.').at(-1) ??
+                '',
             device:
                 readableName(nameOverride) ??
                 readableName(deviceObj?.common?.name) ??
@@ -917,6 +976,46 @@ export class StateWatcher {
             inverted,
             requiredTrustLevel,
         };
+    }
+
+    /**
+     * An alias state often carries only a name, the room and the function, while role, type,
+     * unit and range are those of the state it points to. What the alias lacks is taken from
+     * that target, so it is recognized like the target would be. A value the alias converts
+     * with a read or write function has its own scale: unit and range are then not inherited.
+     *
+     * @param obj - The state's own object
+     */
+    private async _inheritFromAliasTarget(
+        obj: ioBroker.Object | null | undefined,
+    ): Promise<ioBroker.Object | null | undefined> {
+        const alias = (obj?.common as { alias?: any } | undefined)?.alias;
+        if (!obj || !alias) {
+            return obj;
+        }
+        const targetId: unknown = typeof alias.id === 'string' ? alias.id : (alias.id?.read ?? alias.id?.write);
+        if (typeof targetId !== 'string' || !targetId) {
+            return obj;
+        }
+        let target: ioBroker.Object | null | undefined;
+        try {
+            target = await this.adapter.getForeignObjectAsync(targetId);
+        } catch {
+            return obj;
+        }
+        if (!target?.common) {
+            return obj;
+        }
+        const own = obj.common as Record<string, unknown>;
+        const from = target.common as Record<string, unknown>;
+        const converted = Boolean(alias.read || alias.write);
+        const inherited: Record<string, unknown> = {};
+        for (const field of converted ? ['role', 'type', 'states'] : ['role', 'type', 'unit', 'min', 'max', 'states']) {
+            if (own[field] === undefined && from[field] !== undefined) {
+                inherited[field] = from[field];
+            }
+        }
+        return { ...obj, common: { ...own, ...inherited } } as ioBroker.Object;
     }
 
     /**

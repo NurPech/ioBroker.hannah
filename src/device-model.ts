@@ -563,6 +563,18 @@ function resolveKinds(states: DeviceState[], blind: boolean, climate: boolean): 
 }
 
 /**
+ * The standard slot kinds the states of a group would carry, what the grouping looks at to
+ * tell whether two channels would use the same slot.
+ *
+ * @param states - The states of one group
+ */
+export function standardKindsOf(states: DeviceState[]): Set<SlotKind> {
+    const blind = states.some(s => s.typeHint === 'blind');
+    const climate = states.some(s => s.typeHint === CLIMATE_HINT);
+    return new Set(resolveKinds(states, blind, climate).values());
+}
+
+/**
  * A state in a unit that belongs to another quantity (power in mA) can't carry the kind.
  *
  * @param kind - Slot kind a state competes for
