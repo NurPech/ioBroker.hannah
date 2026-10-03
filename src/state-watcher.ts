@@ -2,6 +2,7 @@ import type * as utils from '@iobroker/adapter-core';
 import { v1, v2 } from '@m1kad0/hannah-proto';
 import agent = v2.agent;
 import shared = v1.shared;
+import { DeviceDetector, type DetectedState } from './device-detection';
 import {
     buildDeviceModel,
     fromSlotValue,
@@ -73,6 +74,10 @@ interface DeviceMeta {
     max: number | undefined;
     /** `canonicalKey` from common.custom, empty = none */
     canonicalKeyOverride: string;
+    /** the object of the state, for the device detector */
+    stateObject: ioBroker.Object | null | undefined;
+    /** the object of the state's parent (channel or device), for the device detector */
+    deviceObject: ioBroker.Object | null | undefined;
     inverted: boolean | undefined;
     requiredTrustLevel: number | undefined;
 }
@@ -479,7 +484,7 @@ export class StateWatcher {
         this.trustByState = new Map(collected.map(c => [c.id, c.meta.requiredTrustLevel]));
 
         if (this.generation === 'v2') {
-            this._sendTypedSnapshot(collected);
+            this._sendTypedSnapshot(collected, { ...allRooms.result, ...allFunctions.result });
         } else {
             this._sendLegacySnapshot(collected);
         }
@@ -489,8 +494,14 @@ export class StateWatcher {
      * hannah.v2: the typed devices (class and slots) from the states of the snapshot.
      *
      * @param collected - Every subscribed state with its resolved meta data
+     * @param enums - The room and function enums, the device detector uses them too
      */
-    private _sendTypedSnapshot(collected: Array<{ id: string; state: ioBroker.State; meta: DeviceMeta }>): void {
+    private _sendTypedSnapshot(
+        collected: Array<{ id: string; state: ioBroker.State; meta: DeviceMeta }>,
+        enums: Record<string, ioBroker.Object>,
+    ): void {
+        const detector = new DeviceDetector(this._detectionObjects(collected, enums));
+        const detectedByGroup = new Map<string, Map<string, DetectedState>>();
         const inputs = new Map<string, DeviceInput>();
         const seen = new Set<string>();
         for (const { id, state, meta } of collected) {
@@ -499,11 +510,18 @@ export class StateWatcher {
             }
             seen.add(id);
             const suffix = id.split('.').at(-1) ?? id;
+            let detected = detectedByGroup.get(meta.deviceId);
+            if (!detected) {
+                detected = detector.detect(meta.deviceId);
+                detectedByGroup.set(meta.deviceId, detected);
+            }
+            const found = detected.get(id);
             const deviceState: DeviceState = {
                 stateId: id,
                 suffix,
                 key: slotKey({
                     canonicalKeyOverride: meta.canonicalKeyOverride,
+                    detectedKey: found?.key,
                     role: meta.role,
                     canonicalKey: meta.canonicalKey,
                     suffix,
@@ -515,7 +533,7 @@ export class StateWatcher {
                 value: state.val,
                 valueType: VALUE_TYPE_BY_STATE_TYPE[meta.stateType] ?? 'text',
                 writable: meta.writable,
-                typeHint: meta.type,
+                typeHint: meta.type || found?.typeHint || '',
                 inverted: meta.inverted === true,
                 requiredTrustLevel: meta.requiredTrustLevel,
                 options: Object.keys(meta.enumValues?.values ?? {}),
@@ -548,6 +566,29 @@ export class StateWatcher {
         }
         const slots = model.devices.reduce((n, d) => n + d.slots.length, 0);
         this.adapter.log.info(`[states] Snapshot: ${model.devices.length} devices with ${slots} slots sent.`);
+    }
+
+    /**
+     * The objects the device detector looks at: the states of the snapshot, their channels and
+     * devices, and the enums.
+     *
+     * @param collected - Every subscribed state with its resolved meta data
+     * @param enums - The room and function enums
+     */
+    private _detectionObjects(
+        collected: Array<{ id: string; meta: DeviceMeta }>,
+        enums: Record<string, ioBroker.Object>,
+    ): Record<string, ioBroker.Object> {
+        const objects: Record<string, ioBroker.Object> = { ...enums };
+        for (const { id, meta } of collected) {
+            if (meta.deviceObject) {
+                objects[meta.deviceId] = meta.deviceObject;
+            }
+            if (meta.stateObject) {
+                objects[id] = meta.stateObject;
+            }
+        }
+        return objects;
     }
 
     /**
@@ -871,6 +912,8 @@ export class StateWatcher {
             max: typeof stateObj?.common?.max === 'number' ? stateObj.common.max : undefined,
             canonicalKeyOverride:
                 stateCustom?.enabled && stateCustom?.canonicalKey ? String(stateCustom.canonicalKey) : '',
+            stateObject: stateObj,
+            deviceObject: deviceObj,
             inverted,
             requiredTrustLevel,
         };

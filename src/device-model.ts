@@ -120,6 +120,8 @@ const MEASUREMENT_KINDS = new Set<SlotKind>([
     SlotKind.SLOT_KIND_VOC,
     SlotKind.SLOT_KIND_POWER,
     SlotKind.SLOT_KIND_ENERGY,
+    SlotKind.SLOT_KIND_VOLTAGE,
+    SlotKind.SLOT_KIND_CURRENT,
     SlotKind.SLOT_KIND_MOTION,
 ]);
 const ENUM_KINDS = new Set<SlotKind>([SlotKind.SLOT_KIND_MODE, SlotKind.SLOT_KIND_FAN_SPEED]);
@@ -152,6 +154,16 @@ const KIND_BY_KEY: Record<string, SlotKind> = {
     voc_equiv: SlotKind.SLOT_KIND_VOC,
     power: SlotKind.SLOT_KIND_POWER,
     energy: SlotKind.SLOT_KIND_ENERGY,
+    voltage: SlotKind.SLOT_KIND_VOLTAGE,
+    electricCurrent: SlotKind.SLOT_KIND_CURRENT,
+    // `current` is the old key for temperature and humidity alike, these two are unambiguous
+    temperature: SlotKind.SLOT_KIND_TEMPERATURE,
+    humidity: SlotKind.SLOT_KIND_HUMIDITY,
+    pressure: SlotKind.SLOT_KIND_PRESSURE,
+    valve: SlotKind.SLOT_KIND_VALVE,
+    tilt: SlotKind.SLOT_KIND_TILT,
+    stop: SlotKind.SLOT_KIND_STOP,
+    motion: SlotKind.SLOT_KIND_MOTION,
 };
 
 /** Roles that name a slot kind exactly, the first tie-break step. */
@@ -229,24 +241,29 @@ function tokens(name: string): Set<string> {
 }
 
 /**
- * The semantic key of a state: an explicit `canonicalKey` override first, then the colour
- * role (a colour temperature is not a colour), then the key the adapter resolved, then the
- * state name.
+ * The semantic key of a state: an explicit `canonicalKey` override first, then the key the
+ * device detector found, then the colour role (a colour temperature is not a colour), then the
+ * key the adapter resolved, then the state name.
  *
  * @param s - What is known about the state
  * @param s.canonicalKeyOverride - `canonicalKey` from common.custom, empty = none
+ * @param s.detectedKey - Key the device detector found for the state, empty or missing = none
  * @param s.role - common.role of the state
  * @param s.canonicalKey - Key the role table resolved, empty = none
  * @param s.suffix - Last segment of the state ID
  */
 export function slotKey(s: {
     canonicalKeyOverride: string;
+    detectedKey?: string;
     role: string;
     canonicalKey: string;
     suffix: string;
 }): string {
     if (s.canonicalKeyOverride) {
         return s.canonicalKeyOverride;
+    }
+    if (s.detectedKey) {
+        return s.detectedKey;
     }
     if (s.role.startsWith('level.color')) {
         const sub = s.role.slice('level.color'.length).replace(/^\./, '');
@@ -343,6 +360,10 @@ export function transformFor(
                 return linear(0.001);
             }
             return u === 'mwh' ? linear(1000) : undefined;
+        case SlotKind.SLOT_KIND_VOLTAGE:
+            return u === 'mv' ? linear(0.001) : undefined;
+        case SlotKind.SLOT_KIND_CURRENT:
+            return u === 'ma' ? linear(0.001) : undefined;
         default:
             return undefined;
     }

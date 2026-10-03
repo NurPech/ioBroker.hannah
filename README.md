@@ -80,6 +80,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
+- Added (with a `hannah.v2` Core): devices are now also recognized with the ioBroker type detector (`@iobroker/type-detector`, pinned to 6.0.1). It tells a dimmer from a plain light, a socket from a switch, and which state of a thermostat, blind, air conditioner, air quality sensor or contact plays which part (setpoint, actual temperature, humidity, power, consumption, mode, fan speed, position, ...). A `canonicalKey` or `type` set in `common.custom` still wins, and a state the detector has no part for is handled as before
 - Added (with a `hannah.v2` Core): values are now reported on the scale Hannah expects, from the unit and range of the state: brightness and cover position as 0-100 % (also from 0-255 or 0-1), colour temperature in Kelvin (also from mired), temperature in °C (also from °F or K), power in W (also from kW or mW) and energy in kWh (also from Wh or MWh). A colour is also understood as `rrggbb`, `0xrrggbb`, `#rgb` and `rgb(r, g, b)`, and is written back in the notation the state already has
 - Changed (with a `hannah.v2` Core): if several states of a device fit one slot, the adapter now narrows them down by exact role, then unit, then writability and only then by name. A temperature in °C wins over a °F duplicate, a state in mA is no power, and a consumption role is energy rather than power. If there is still no clear winner, none is picked and the states stay generic slots
 

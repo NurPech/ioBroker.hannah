@@ -2,7 +2,7 @@ import type * as adapterCore from '@iobroker/adapter-core';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { utils } from '@iobroker/testing';
-import { v1 } from '@m1kad0/hannah-proto';
+import { v1, v2 } from '@m1kad0/hannah-proto';
 import shared = v1.shared;
 import { StateWatcher, trustLevelSupported } from './state-watcher';
 
@@ -1204,6 +1204,29 @@ describe('StateWatcher', () => {
             const model = (sw as any).deviceModel;
             expect(model.bySlotState.get(`${base}.level`)).to.deep.include({ deviceId: base, slotId: 'brightness' });
             expect(model.targets.get(base).get('on').stateId).to.equal(`${base}.on`);
+        });
+
+        it('lets the device detector name the states: an air quality device becomes a sensor with index, CO2 and VOC', async () => {
+            publish('aqi', { role: 'value.airquality', type: 'number', write: false });
+            publish('co2', { role: 'value.co2', type: 'number', write: false });
+            publish('tvoc', { role: 'value.tvoc', type: 'number', write: false });
+            (adapter as any).getForeignStatesAsync = sinon.stub().resolves({
+                [`${base}.aqi`]: { val: 42, ack: true },
+                [`${base}.co2`]: { val: 800, ack: true },
+                [`${base}.tvoc`]: { val: 120, ack: true },
+            });
+            (adapter as any).getEnumAsync = sinon
+                .stub()
+                .callsFake((name: string) => Promise.resolve(name === 'rooms' ? room(base) : { result: {} }));
+            const sendWithAck = sinon.stub().resolves({ kind: 'ack', ack: { ackId: 1n, unknownFields: [] } });
+            const sw = new StateWatcher(adapterInstance, sinon.stub(), sendWithAck, sinon.stub());
+            internals(sw).subscribedIds.add(`${base}.*`);
+
+            await internals(sw)._sendSnapshot();
+
+            const [dev] = sendWithAck.firstCall.args[0].typedSnapshot.devices;
+            expect(dev.slots.map((s: any) => s.slotId).sort()).to.deep.equal(['co2', 'iaq', 'voc']);
+            expect(dev.deviceClass).to.equal(v2.device_model.DeviceClass.DEVICE_CLASS_SENSOR);
         });
     });
 
