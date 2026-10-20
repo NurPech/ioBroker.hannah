@@ -79,7 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.6.1 (2026-10-20)
 - Fixed: if the ioBroker database was unavailable or restarting while the adapter (re)connected to Hannah Core, the sync right after the connect could fail or hang and was never repeated. The adapter then stayed connected without Hannah Core having its devices, and commands were rejected as an unknown slot until the adapter was restarted. A sync that fails or has no result after 120 seconds now closes the connection and connects again after 10 seconds, until the sync goes through. A failing read of the room and function enums fails the sync, too, instead of carrying on with an empty discovery
 
 ### 1.6.0 (2026-10-03)
