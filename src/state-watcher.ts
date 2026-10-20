@@ -1161,8 +1161,10 @@ export class StateWatcher {
                 }),
             ]);
         } catch (e) {
+            // Not swallowed: start() would go on with an empty discovery and the sync would look
+            // done. Failing it makes the connection retry the whole sync.
             this.adapter.log.error(`[states] getObjectViewAsync failed: ${(e as Error).message}`);
-            return;
+            throw e;
         }
 
         // Room enums contain device IDs; function enums contain state IDs directly

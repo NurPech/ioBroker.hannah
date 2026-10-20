@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { GrpcClient } from './grpc-client';
@@ -121,6 +122,118 @@ describe('GrpcClient', () => {
 
         it('resolves disconnected without a stream', async () => {
             expect(await makeClient().sendWithAck(typedSnapshot)).to.deep.equal({ kind: 'disconnected' });
+        });
+    });
+
+    // A sync after the connect that throws or hangs must not leave the adapter connected but without
+    // the device snapshot in Core (Redis restarting while the adapter reconnects)
+    describe('sync after connect', () => {
+        const flush = (): Promise<void> => new Promise(resolve => setImmediate(resolve));
+
+        type Opened = {
+            client: GrpcClient;
+            internals: {
+                running: boolean;
+                reconnectTimer: number | null;
+                _openStream(resolved: unknown, host: string, port: number): void;
+            };
+            stream: EventEmitter & { write: sinon.SinonStub; end: sinon.SinonStub };
+            timers: Array<{ fn: () => void; ms: number }>;
+            log: { info: sinon.SinonStub; warn: sinon.SinonStub; error: sinon.SinonStub; debug: sinon.SinonStub };
+        };
+
+        function open(
+            onConnected: () => void | Promise<void>,
+            onDisconnected: () => void | Promise<void> = sinon.stub(),
+        ): Opened {
+            const timers: Array<{ fn: () => void; ms: number }> = [];
+            const log = { info: sinon.stub(), warn: sinon.stub(), error: sinon.stub(), debug: sinon.stub() };
+            const client = new GrpcClient({
+                onCommand: sinon.stub(),
+                onConnected,
+                onDisconnected,
+                log,
+                setTimeout: (fn, ms) => timers.push({ fn, ms }),
+                clearTimeout: sinon.stub(),
+            });
+            const stream = Object.assign(new EventEmitter(), { write: sinon.stub(), end: sinon.stub() });
+            const internals = client as unknown as Opened['internals'];
+            internals.running = true;
+            internals._openStream({ client: { agentConnect: () => stream } }, 'core', 50051);
+            return { client, internals, stream, timers, log };
+        }
+
+        it('closes the stream and reconnects when the sync throws', async () => {
+            const onDisconnected = sinon.stub();
+            const { client, stream, timers, log } = open(() => Promise.reject(new Error('boom')), onDisconnected);
+            await flush();
+
+            expect(stream.end.calledOnce).to.equal(true);
+            expect(client.generation).to.equal(null);
+            expect(onDisconnected.calledOnce).to.equal(true);
+            expect(timers.some(t => t.ms === 10_000)).to.equal(true);
+            expect(log.error.firstCall.args[0]).to.match(/onConnected error: boom/);
+        });
+
+        it('closes the stream and reconnects when the sync does not settle in time', async () => {
+            const onDisconnected = sinon.stub();
+            const { client, stream, timers } = open(() => new Promise<void>(() => {}), onDisconnected);
+            await flush();
+            expect(client.generation).to.equal('v2');
+
+            timers.find(t => t.ms === 120_000)!.fn();
+
+            expect(stream.end.calledOnce).to.equal(true);
+            expect(client.generation).to.equal(null);
+            expect(onDisconnected.calledOnce).to.equal(true);
+            expect(timers.some(t => t.ms === 10_000)).to.equal(true);
+        });
+
+        it('leaves the connection alone when the sync goes through, even if its timer fires later', async () => {
+            const onDisconnected = sinon.stub();
+            const { client, stream, timers } = open(() => Promise.resolve(), onDisconnected);
+            await flush();
+
+            timers.find(t => t.ms === 120_000)!.fn();
+
+            expect(stream.end.called).to.equal(false);
+            expect(client.generation).to.equal('v2');
+            expect(onDisconnected.called).to.equal(false);
+        });
+
+        it('retries a sync that throws synchronously', async () => {
+            const { client, timers } = open(() => {
+                throw new Error('sync boom');
+            });
+            await flush();
+
+            expect(client.generation).to.equal(null);
+            expect(timers.some(t => t.ms === 10_000)).to.equal(true);
+        });
+
+        it('does not let a failing onDisconnected escape', async () => {
+            const { timers, log } = open(
+                () => Promise.reject(new Error('boom')),
+                () => Promise.reject(new Error('db down')),
+            );
+            await flush();
+
+            expect(log.warn.firstCall.args[0]).to.match(/onDisconnected error: db down/);
+            expect(timers.some(t => t.ms === 10_000)).to.equal(true);
+        });
+
+        it('ignores the end of a stream that was closed already, instead of scheduling another reconnect', async () => {
+            const onDisconnected = sinon.stub();
+            const { internals, stream, timers } = open(() => Promise.reject(new Error('boom')), onDisconnected);
+            await flush();
+            const scheduled = timers.length;
+            // the reconnect timer fired and cleared itself meanwhile
+            internals.reconnectTimer = null;
+
+            stream.emit('end');
+
+            expect(onDisconnected.calledOnce).to.equal(true);
+            expect(timers.length).to.equal(scheduled);
         });
     });
 
