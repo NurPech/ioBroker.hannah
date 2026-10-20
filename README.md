@@ -79,6 +79,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: if the ioBroker database was unavailable or restarting while the adapter (re)connected to Hannah Core, the sync right after the connect could fail or hang and was never repeated. The adapter then stayed connected without Hannah Core having its devices, and commands were rejected as an unknown slot until the adapter was restarted. A sync that fails or has no result after 120 seconds now closes the connection and connects again after 10 seconds, until the sync goes through. A failing read of the room and function enums fails the sync, too, instead of carrying on with an empty discovery
+
 ### 1.6.0 (2026-10-03)
 - Added (with a `hannah.v2` Core): devices are now also recognized with the ioBroker type detector (`@iobroker/type-detector`, pinned to 6.0.1). It tells a dimmer from a plain light, a socket from a switch, and which state of a thermostat, blind, air conditioner, air quality sensor or contact plays which part (setpoint, actual temperature, humidity, power, consumption, mode, fan speed, position, ...). A `canonicalKey` or `type` set in `common.custom` still wins, and a state the detector has no part for is handled as before
 - Changed (with a `hannah.v2` Core): a device none of whose states is recognized (a config channel such as a Shelly's cloud or WiFi settings, or a block of status values) is no longer reported to Hannah. The states a recognized device has beyond what Hannah knows are still reported as generic slots

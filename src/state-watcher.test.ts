@@ -750,6 +750,26 @@ describe('StateWatcher', () => {
             });
         }
 
+        it('fails when the enum views cannot be read, so the sync is retried instead of carrying on with nothing', async () => {
+            const original = adapter.getObjectViewAsync;
+            adapter.getObjectViewAsync = sinon.stub().rejects(new Error('DB closed'));
+            const sw = internals(makeWatcher());
+
+            try {
+                let error: Error | undefined;
+                try {
+                    await sw._subscribeEnumStates([], []);
+                } catch (e) {
+                    error = e as Error;
+                }
+
+                expect(error?.message).to.equal('DB closed');
+                expect(sw.subscribedIds.size).to.equal(0);
+            } finally {
+                adapter.getObjectViewAsync = original;
+            }
+        });
+
         it('subscribes a room enum member as a single state, not only as a wildcard prefix, since a room can be assigned directly to a leaf state', async () => {
             const stateId = 'alias.0.EnOcean.Schalten.Wohnzimmer.status';
             publishEnum('enum.rooms.wohnzimmer', [stateId]);

@@ -30,6 +30,8 @@ export type AckingMessageSender = (msg: agent.AgentMessage) => Promise<AckResult
 export type LegacyAckingMessageSender = (msg: v1.agent.AgentMessage) => Promise<AckResult>;
 
 const ACK_TIMEOUT_MS = 10_000;
+/** How long the sync after a connect (onConnected) may take before it counts as stuck. */
+const SYNC_TIMEOUT_MS = 120_000;
 
 interface LogAdapter {
     info: (s: string) => void;
@@ -40,8 +42,8 @@ interface LogAdapter {
 
 interface GrpcClientOptions {
     onCommand: CommandHandler;
-    onConnected: (generation: Generation) => void;
-    onDisconnected: () => void;
+    onConnected: (generation: Generation) => void | Promise<void>;
+    onDisconnected: () => void | Promise<void>;
     log: LogAdapter;
     setTimeout: (fn: () => void, ms: number) => number;
     clearTimeout: (t: number) => void;
@@ -62,8 +64,8 @@ export class GrpcClient {
     private reconnectTimer: number | null = null;
     private running = false;
     private onCommand: CommandHandler;
-    private onConnected: (generation: Generation) => void;
-    private onDisconnected: () => void;
+    private onConnected: (generation: Generation) => void | Promise<void>;
+    private onDisconnected: () => void | Promise<void>;
     private log: LogAdapter;
     private _setTimeout: (fn: () => void, ms: number) => number;
     private _clearTimeout: (t: number) => void;
@@ -170,9 +172,7 @@ export class GrpcClient {
         // so the 'metadata' event never fires. Trigger onConnected immediately — if the
         // server is unreachable we will get an 'error' event shortly after.
         this.log.info(`[grpc] Connected to Hannah Core (hannah.${generation}).`);
-        (this.onConnected(generation) as unknown as Promise<void>).catch((e: Error) => {
-            this.log.error(`[grpc] onConnected error: ${e.message}`);
-        });
+        this._runConnectSync(stream, generation, host, port);
 
         stream.on('data', (raw: unknown) => {
             // a hannah.v1 Core speaks hannah.v1 on the stream, everything above works with hannah.v2
@@ -185,15 +185,75 @@ export class GrpcClient {
         });
 
         stream.on('error', (err: Error) => {
+            if (this.stream !== stream) {
+                return; // a stream that was closed or replaced already
+            }
             this.log.warn(`[grpc] Stream error: ${err.message}`);
             this._scheduleReconnect(host, port);
         });
 
         stream.on('end', () => {
+            if (this.stream !== stream) {
+                return; // a stream that was closed or replaced already
+            }
             this.log.info('[grpc] Stream ended.');
-            this.onDisconnected();
+            this._notifyDisconnected();
             this._scheduleReconnect(host, port);
         });
+    }
+
+    /**
+     * Runs the sync that follows a connect (onConnected). If it throws, or does not settle within
+     * SYNC_TIMEOUT_MS, the adapter would stay connected without Core having its device snapshot
+     * (a call into the ioBroker database can fail or hang while that database restarts). So the
+     * stream is closed and opened again, until the sync goes through.
+     *
+     * @param stream - The stream the sync belongs to
+     * @param generation - API generation of that stream
+     * @param host - gRPC server host, for the reconnect
+     * @param port - gRPC server port, for the reconnect
+     */
+    private _runConnectSync(stream: unknown, generation: Generation, host: string, port: number): void {
+        let settled = false;
+        let timer = 0;
+        const fail = (reason: string): void => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            this._clearTimeout(timer);
+            if (this.stream !== stream) {
+                return; // closed or replaced in the meantime, nothing left to retry
+            }
+            this.log.error(`[grpc] onConnected error: ${reason} — closing the stream to retry.`);
+            this._closeConnection();
+            this._notifyDisconnected();
+            this._scheduleReconnect(host, port);
+        };
+        timer = this._setTimeout(() => fail(`no result after ${SYNC_TIMEOUT_MS / 1000}s`), SYNC_TIMEOUT_MS);
+
+        // an async wrapper turns a synchronous throw into a rejection, too
+        const sync = (async (): Promise<void> => {
+            await this.onConnected(generation);
+        })();
+        sync.then(
+            () => {
+                settled = true;
+                this._clearTimeout(timer);
+            },
+            (e: Error) => fail(e.message),
+        );
+    }
+
+    /** Tells the adapter the connection is gone. Never throws: the database may be down just now. */
+    private _notifyDisconnected(): void {
+        try {
+            Promise.resolve(this.onDisconnected()).catch((e: Error) => {
+                this.log.warn(`[grpc] onDisconnected error: ${e.message}`);
+            });
+        } catch (e) {
+            this.log.warn(`[grpc] onDisconnected error: ${(e as Error).message}`);
+        }
     }
 
     /** Generation of the open AgentConnect stream, null while not connected. */
