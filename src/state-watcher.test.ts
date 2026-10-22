@@ -4,6 +4,7 @@ import * as sinon from 'sinon';
 import { utils } from '@iobroker/testing';
 import { v1, v2 } from '@m1kad0/hannah-proto';
 import shared = v1.shared;
+import { statesToEnumValues } from './device-meta';
 import { StateWatcher, trustLevelSupported } from './state-watcher';
 
 const { createMocks } = utils.unit;
@@ -30,9 +31,6 @@ type StateWatcherInternals = {
         inverted: boolean | undefined;
         requiredTrustLevel: number | undefined;
     }>;
-    _statesToEnumValues(
-        rawStates: Record<string, string> | string[] | string | undefined,
-    ): shared.EnumValues | undefined;
     _isManaged(id: string): boolean;
     _extractViewMembers(rows: Array<{ id: string; value: ioBroker.Object | null }>, selected: string[]): Set<string>;
     _subscribeEnumStates(selectedRooms: string[], selectedFunctions: string[]): Promise<void>;
@@ -632,9 +630,9 @@ describe('StateWatcher', () => {
         // @iobroker/testing mock's publishObject() deep-clones common.states through
         // alcalzone-shared's extend(), which turns a real array into a plain object with
         // numeric-string keys ({0: 'rot', ...}) — a mock-only artifact, not real ioBroker
-        // behavior. Calling the private helper directly avoids that distortion.
+        // behavior. Calling the helper directly avoids that distortion.
         it('resolves common.states (array form) as ENUM, value used as its own label', () => {
-            const values = internals(makeWatcher())._statesToEnumValues(['rot', 'gruen', 'blau']);
+            const values = statesToEnumValues(['rot', 'gruen', 'blau']);
 
             expect(values?.values).to.deep.equal({ rot: 'rot', gruen: 'gruen', blau: 'blau' });
         });

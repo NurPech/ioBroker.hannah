@@ -1,20 +1,11 @@
 import type * as utils from '@iobroker/adapter-core';
-import { v1, v2 } from '@m1kad0/hannah-proto';
+import type { v1 } from '@m1kad0/hannah-proto';
+import { v2 } from '@m1kad0/hannah-proto';
 import agent = v2.agent;
-import shared = v1.shared;
-import { DeviceDetector, type DetectedState } from './device-detection';
-import { groupIdFor, planMerges, type MergeCandidate } from './device-grouping';
-import {
-    buildDeviceModel,
-    fromSlotValue,
-    slotKey,
-    standardKindsOf,
-    toSlotValue,
-    type DeviceInput,
-    type DeviceModel,
-    type DeviceState,
-    type ValueType,
-} from './device-model';
+import { parentId } from './device-grouping';
+import { aliasTargetId, resolveDeviceMeta, resolveNeededTrust, type DeviceMeta, type ObjectMap } from './device-meta';
+import { fromSlotValue, toSlotValue, type DeviceModel } from './device-model';
+import { buildTypedDevices, mergeDeviceIds } from './device-snapshot';
 import type {
     AckResult,
     AckingMessageSender,
@@ -52,52 +43,6 @@ export function trustLevelSupported(result: AckResult, generation: Generation = 
             return null;
     }
 }
-
-/** What the StateWatcher resolves about one ioBroker state: its device, room, type hint and shape. */
-interface DeviceMeta {
-    room: string;
-    roomNames: { [key: string]: string };
-    device: string;
-    /** the name of the state itself, for a state that is a device of its own */
-    ownName: string;
-    /**
-     * IDs of the function enums the state, its device or its channel's device is a member of,
-     * for the typed device model. `functions` only has the exact matches (hannah.v1 snapshot).
-     */
-    functionIds: string[];
-    type: string;
-    floor: string;
-    functions: string[];
-    stateType: shared.StateType;
-    enumValues: shared.EnumValues | undefined;
-    writable: boolean;
-    deviceId: string;
-    canonicalKey: string;
-    /** common.role of the state, for the typed device model */
-    role: string;
-    /** common.unit of the state, empty = none */
-    unit: string;
-    /** common.min of the state, undefined = none */
-    min: number | undefined;
-    /** common.max of the state, undefined = none */
-    max: number | undefined;
-    /** `canonicalKey` from common.custom, empty = none */
-    canonicalKeyOverride: string;
-    /** the object of the state, for the device detector */
-    stateObject: ioBroker.Object | null | undefined;
-    /** the object of the state's parent (channel or device), for the device detector */
-    deviceObject: ioBroker.Object | null | undefined;
-    inverted: boolean | undefined;
-    requiredTrustLevel: number | undefined;
-}
-
-const VALUE_TYPE_BY_STATE_TYPE: Partial<Record<shared.StateType, ValueType>> = {
-    [shared.StateType.BOOLEAN]: 'boolean',
-    [shared.StateType.NUMERIC]: 'number',
-    [shared.StateType.ENUM]: 'enum',
-    [shared.StateType.COLOR]: 'color',
-    [shared.StateType.TEXT]: 'text',
-};
 
 /**
  * Called after every device snapshot whose support verdict is known.
@@ -509,65 +454,19 @@ export class StateWatcher {
         collected: Array<{ id: string; state: ioBroker.State; meta: DeviceMeta }>,
         enums: Record<string, ioBroker.Object>,
     ): Promise<void> {
-        const detector = new DeviceDetector(this._detectionObjects(collected, enums));
-        const detectedByGroup = new Map<string, Map<string, DetectedState>>();
-        const inputs = new Map<string, DeviceInput>();
-        const groupFunctions = new Map<string, string[]>();
-        const seen = new Set<string>();
-        for (const { id, state, meta } of collected) {
-            if (seen.has(id)) {
-                continue;
-            }
-            seen.add(id);
-            const suffix = id.split('.').at(-1) ?? id;
-            const groupId = groupIdFor(id);
-            let detected = detectedByGroup.get(groupId);
-            if (!detected) {
-                detected = detector.detect(groupId);
-                detectedByGroup.set(groupId, detected);
-            }
-            const found = detected.get(id);
-            const deviceState: DeviceState = {
-                stateId: id,
-                suffix,
-                key: slotKey({
-                    canonicalKeyOverride: meta.canonicalKeyOverride,
-                    detectedKey: found?.key,
-                    role: meta.role,
-                    canonicalKey: meta.canonicalKey,
-                    suffix,
-                }),
-                role: meta.role,
-                unit: meta.unit,
-                min: meta.min,
-                max: meta.max,
-                value: state.val,
-                valueType: VALUE_TYPE_BY_STATE_TYPE[meta.stateType] ?? 'text',
-                writable: meta.writable,
-                typeHint: meta.type || found?.typeHint || '',
-                inverted: meta.inverted === true,
-                requiredTrustLevel: meta.requiredTrustLevel,
-                options: Object.keys(meta.enumValues?.values ?? {}),
-            };
-            groupFunctions.set(groupId, [...(groupFunctions.get(groupId) ?? []), ...meta.functionIds]);
-            const input = inputs.get(groupId);
-            if (input) {
-                input.floor ||= meta.floor;
-                input.states.push(deviceState);
-            } else {
-                inputs.set(groupId, {
-                    deviceId: groupId,
-                    // a state at root or instance level is a device of its own, named after itself
-                    name: groupId === id ? meta.ownName : meta.device,
-                    room: meta.room,
-                    floor: meta.floor,
-                    states: [deviceState],
-                });
+        // the device objects a merged device is named after
+        const objects: ObjectMap = {};
+        for (const id of mergeDeviceIds(collected)) {
+            try {
+                objects[id] = await this.adapter.getForeignObjectAsync(id);
+            } catch {
+                // the name of the first channel does
             }
         }
-        await this._mergeSiblingChannels(inputs, groupFunctions);
-
-        const model = buildDeviceModel([...inputs.values()]);
+        const { model, merges } = buildTypedDevices(collected, objects, enums);
+        for (const merge of merges) {
+            this.adapter.log.debug(`[states] Merged channels ${merge.groupIds.join(', ')} into ${merge.deviceId}`);
+        }
         this.deviceModel = model;
         const msg: agent.AgentMessage = { typedSnapshot: { devices: model.devices } };
         const configured = model.devices.some(d => d.slots.some(s => s.requiredTrustLevel !== undefined));
@@ -580,73 +479,6 @@ export class StateWatcher {
         }
         const slots = model.devices.reduce((n, d) => n + d.slots.length, 0);
         this.adapter.log.info(`[states] Snapshot: ${model.devices.length} devices with ${slots} slots sent.`);
-    }
-
-    /**
-     * Sibling channels of one device that clearly belong together become one device (same room
-     * and function, no slot used twice, see `planMerges()`). The merged device is named after
-     * the device object, and takes the ID of it.
-     *
-     * @param inputs - The devices of the snapshot by group ID, merged in place
-     * @param groupFunctions - The functions of the states of every group
-     */
-    private async _mergeSiblingChannels(
-        inputs: Map<string, DeviceInput>,
-        groupFunctions: Map<string, string[]>,
-    ): Promise<void> {
-        const candidates: MergeCandidate[] = [...inputs.values()].map(input => ({
-            groupId: input.deviceId,
-            room: input.room,
-            functions: groupFunctions.get(input.deviceId) ?? [],
-            kinds: standardKindsOf(input.states),
-        }));
-        for (const merge of planMerges(candidates)) {
-            const members = merge.groupIds.map(id => inputs.get(id)).filter((i): i is DeviceInput => i !== undefined);
-            let name = members[0].name;
-            try {
-                const object = await this.adapter.getForeignObjectAsync(merge.deviceId);
-                const objectName = object?.common?.name;
-                if (typeof objectName === 'string' && objectName && !objectName.includes('.')) {
-                    name = objectName;
-                }
-            } catch {
-                // the name of the first channel does
-            }
-            for (const id of merge.groupIds) {
-                inputs.delete(id);
-            }
-            inputs.set(merge.deviceId, {
-                deviceId: merge.deviceId,
-                name,
-                room: members[0].room,
-                floor: members.map(m => m.floor).find(Boolean) ?? '',
-                states: members.flatMap(m => m.states),
-            });
-            this.adapter.log.debug(`[states] Merged channels ${merge.groupIds.join(', ')} into ${merge.deviceId}`);
-        }
-    }
-
-    /**
-     * The objects the device detector looks at: the states of the snapshot, their channels and
-     * devices, and the enums.
-     *
-     * @param collected - Every subscribed state with its resolved meta data
-     * @param enums - The room and function enums
-     */
-    private _detectionObjects(
-        collected: Array<{ id: string; meta: DeviceMeta }>,
-        enums: Record<string, ioBroker.Object>,
-    ): Record<string, ioBroker.Object> {
-        const objects: Record<string, ioBroker.Object> = { ...enums };
-        for (const { id, meta } of collected) {
-            if (meta.deviceObject) {
-                objects[meta.deviceId] = meta.deviceObject;
-            }
-            if (meta.stateObject) {
-                objects[id] = meta.stateObject;
-            }
-        }
-        return objects;
     }
 
     /**
@@ -731,396 +563,52 @@ export class StateWatcher {
         allRooms: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
         allFunctions: Awaited<ReturnType<utils.AdapterInstance['getEnumAsync']>>,
     ): Promise<DeviceMeta> {
-        const deviceId = stateId.split('.').slice(0, -1).join('.');
+        const objects = await this._loadObjects(stateId);
+        const { meta, warnings } = resolveDeviceMeta(stateId, objects, allRooms.result, allFunctions.result, {
+            namespace: this.adapter.namespace, // e.g. "hannah.0"
+            floorMappings: this.floorMappings,
+        });
+        for (const warning of warnings) {
+            this.adapter.log.warn(`[states] ${warning}`);
+        }
+        return meta;
+    }
 
-        const [ownStateObj, deviceObj] = await Promise.all([
+    /**
+     * The objects `resolveDeviceMeta()` needs for a state: the state, its parent (channel or
+     * device) and, for an alias, the state it points to.
+     *
+     * @param stateId - ioBroker state ID
+     */
+    private async _loadObjects(stateId: string): Promise<ObjectMap> {
+        const deviceId = parentId(stateId);
+        const [state, device] = await Promise.all([
             this.adapter.getForeignObjectAsync(stateId),
             this.adapter.getForeignObjectAsync(deviceId),
         ]);
-        const stateObj = await this._inheritFromAliasTarget(ownStateObj);
-
-        // hannah#164/#256/#257: common.custom["hannah.0"] overrides — shared here so both
-        // the type/canonicalKey resolution below and the device-name fallback chain read
-        // the same enabled/state-vs-device lookup instead of duplicating it.
-        const ns = this.adapter.namespace; // e.g. "hannah.0"
-        const stateCustom = (stateObj?.common?.custom as any)?.[ns];
-        const deviceCustom = (deviceObj?.common?.custom as any)?.[ns];
-
-        const requiredTrustLevel = this._resolveNeededTrust(stateCustom);
-        const rawFloorFromObj =
-            typeof deviceObj?.common?.floor === 'string' && deviceObj.common.floor ? deviceObj.common.floor : null;
-
-        const knownFloors = new Set(['EG', 'OG', 'UG', 'DG', 'KG', 'ZG']);
-
-        const resolveFloor = (value: string): string | null => {
-            const upper = value.toUpperCase();
-            const match = this.floorMappings.find(
-                m => m.label.toUpperCase() === upper || m.abbreviation.toUpperCase() === upper,
-            );
-            if (match) {
-                return match.abbreviation;
-            }
-            if (knownFloors.has(upper)) {
-                return upper;
-            }
-            return null;
-        };
-
-        const floorFromObj = rawFloorFromObj !== null ? (resolveFloor(rawFloorFromObj) ?? rawFloorFromObj) : null;
-
-        let floorFromId = '';
-        for (const part of deviceId.split('.')) {
-            const resolved = resolveFloor(part);
-            if (resolved !== null) {
-                floorFromId = resolved;
-                break;
+        const objects: ObjectMap = { [stateId]: state, [deviceId]: device };
+        const targetId = aliasTargetId(state);
+        if (targetId) {
+            try {
+                objects[targetId] = await this.adapter.getForeignObjectAsync(targetId);
+            } catch {
+                // the alias is then resolved without its target
             }
         }
-
-        const floor = floorFromObj ?? floorFromId;
-
-        // hannah-iobroker#187: a room can be assigned directly to the leaf state instead of
-        // its parent channel/device (common for manually-built alias constructs with no real
-        // device level) — check that before falling back to device/grandparent-device.
-        let roomObj = Object.values(allRooms.result).find(
-            (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(stateId),
-        );
-
-        if (roomObj == null) {
-            roomObj = Object.values(allRooms.result).find(
-                (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(deviceId),
-            );
-        }
-
-        if (roomObj == null) {
-            const parentId = deviceId.split('.').slice(0, -1).join('.');
-            roomObj = Object.values(allRooms.result).find(
-                (obj: any) => obj?._id?.startsWith('enum.rooms.') && obj.common?.members?.includes(parentId),
-            );
-        }
-
-        const roomId = roomObj ? (roomObj._id.split('.').pop() ?? '') : '';
-        const roomNamesRaw = roomObj?.common?.name;
-        const roomNames: { [key: string]: string } = {};
-        if (roomNamesRaw) {
-            if (typeof roomNamesRaw === 'string') {
-                roomNames.de = roomNamesRaw;
-            } else if (typeof roomNamesRaw === 'object') {
-                for (const [lang, val] of Object.entries(roomNamesRaw)) {
-                    if (typeof val === 'string') {
-                        roomNames[lang] = val;
-                    }
-                }
-            }
-        }
-
-        const matchingFunctionObjs = Object.values(allFunctions.result).filter(
-            (obj: any) => obj?._id?.startsWith('enum.functions.') && obj.common?.members?.includes(stateId),
-        );
-
-        const functions = matchingFunctionObjs.map((obj: any) =>
-            String(obj.common?.name?.de ?? obj.common?.name ?? obj._id),
-        );
-
-        // like rooms, a function is often assigned to the device or channel, not to each state
-        const functionHolders = [stateId, deviceId, deviceId.split('.').slice(0, -1).join('.')];
-        const functionIds = Object.values(allFunctions.result)
-            .filter(
-                (obj: any) =>
-                    obj?._id?.startsWith('enum.functions.') &&
-                    functionHolders.some(id => obj.common?.members?.includes(id)),
-            )
-            .map((obj: any) => String(obj._id));
-
-        // Rolle → {Kategorie, kanonischer State-Key}. Die Kategorie wird pro Gerät aggregiert
-        // (erster nicht-leerer Wert über alle Sibling-States gewinnt, siehe hannah#133 auf
-        // Core-Seite); der kanonische Key wird dagegen direkt pro State übernommen, ohne
-        // Aggregation — ein Thermostat trägt z.B. gleichzeitig "current" (value.temperature)
-        // und "expected" (level.temperature) auf zwei verschiedenen Sibling-States desselben
-        // Geräts (hannah#257). Roh-Suffixe ohne passende Rolle liefern hier canonicalKey='' —
-        // Core fällt dafür auf sein eigenes iobroker.state_names-Default zurück (hannah#256).
-        const ROLE_TABLE: Record<string, { type: string; canonicalKey: string }> = {
-            'level.dimmer': { type: 'light', canonicalKey: 'level' },
-            'switch.light': { type: 'light', canonicalKey: 'on' },
-            'level.temperature': { type: 'thermostat', canonicalKey: 'expected' },
-            'value.temperature': { type: 'temperature_sensor', canonicalKey: 'current' },
-            'value.humidity': { type: 'humidity_sensor', canonicalKey: 'current' },
-            'value.brightness': { type: 'illuminance_sensor', canonicalKey: 'illuminance' },
-            'value.power': { type: '', canonicalKey: 'power' },
-            'sensor.door': { type: 'door', canonicalKey: 'open' },
-            'indicator.open': { type: 'door', canonicalKey: 'open' },
-            'sensor.window': { type: 'window', canonicalKey: 'open' },
-            'level.blind': { type: 'blind', canonicalKey: 'level' },
-            'level.curtain': { type: 'blind', canonicalKey: 'level' },
-            'value.blind': { type: 'blind', canonicalKey: 'level' },
-            'value.curtain': { type: 'blind', canonicalKey: 'level' },
-        };
-
-        const role = stateObj?.common?.role ?? '';
-
-        const resolveTypeAndCanonicalKey = (): { type: string; canonicalKey: string } => {
-            const typeOverride =
-                (stateCustom?.enabled && stateCustom?.type) || (deviceCustom?.enabled && deviceCustom?.type);
-            // Nur State-Level, nie Device-Level — anders als die Kategorie ist der kanonische
-            // Key pro State unterschiedlich (s.o.), ein Device-weiter Override ergäbe keinen Sinn.
-            const canonicalKeyOverride = stateCustom?.enabled && stateCustom?.canonicalKey;
-
-            const roleMatch = ROLE_TABLE[role];
-
-            if (role.startsWith('level.color')) {
-                return {
-                    type: String(typeOverride || 'light'),
-                    canonicalKey: String(canonicalKeyOverride || 'color'),
-                };
-            }
-            if (roleMatch) {
-                return {
-                    type: String(typeOverride || roleMatch.type),
-                    canonicalKey: String(canonicalKeyOverride || roleMatch.canonicalKey),
-                };
-            }
-
-            if (typeOverride) {
-                return { type: String(typeOverride), canonicalKey: String(canonicalKeyOverride || '') };
-            }
-
-            const funcIds = matchingFunctionObjs.map((obj: any) => (obj._id as string).toLowerCase());
-            // Read-only Helligkeits-/Lux-Sensoren landen oft mit unter der "Licht"-Funktion einsortiert —
-            // deshalb vor dem generischen light/licht-Fallback geprüft, und nur bei write===false gematcht,
-            // damit ein tatsächlich steuerbares Licht (write möglich) nicht fälschlich als Sensor erkannt wird.
-            if (
-                stateObj?.common?.write === false &&
-                funcIds.some(id => id.includes('helligkeit') || id.includes('lux'))
-            ) {
-                return { type: 'illuminance_sensor', canonicalKey: String(canonicalKeyOverride || '') };
-            }
-            if (funcIds.some(id => id.includes('light') || id.includes('licht'))) {
-                return { type: 'light', canonicalKey: String(canonicalKeyOverride || '') };
-            }
-            if (funcIds.some(id => id.includes('scene') || id.includes('szene'))) {
-                return { type: 'scene', canonicalKey: String(canonicalKeyOverride || '') };
-            }
-            if (funcIds.some(id => id.includes('socket') || id.includes('stecker') || id.includes('plug'))) {
-                return { type: 'socket', canonicalKey: String(canonicalKeyOverride || '') };
-            }
-            if (funcIds.some(id => id.includes('heat') || id.includes('heiz') || id.includes('therm'))) {
-                return { type: 'thermostat', canonicalKey: String(canonicalKeyOverride || '') };
-            }
-            if (funcIds.some(id => id.includes('window') || id.includes('fenster'))) {
-                return { type: 'window', canonicalKey: String(canonicalKeyOverride || '') };
-            }
-            if (funcIds.some(id => id.includes('door') || id.includes('tuer') || id.includes('türen'))) {
-                return { type: 'door', canonicalKey: String(canonicalKeyOverride || '') };
-            }
-            if (funcIds.some(id => id.includes('temp'))) {
-                return { type: 'temperature_sensor', canonicalKey: String(canonicalKeyOverride || '') };
-            }
-            if (funcIds.some(id => id.includes('klima') || id.includes('aircon') || id.includes('climate'))) {
-                return { type: 'climate', canonicalKey: String(canonicalKeyOverride || '') };
-            }
-
-            if ((role === 'switch' || role === 'switch.power') && stateObj?.common?.write) {
-                return { type: 'socket', canonicalKey: String(canonicalKeyOverride || 'on') };
-            }
-
-            return { type: '', canonicalKey: String(canonicalKeyOverride || '') };
-        };
-
-        const readableName = (n: unknown): string | null => {
-            if (typeof n !== 'string' || !n || n.includes('.')) {
-                return null;
-            }
-            return n;
-        };
-
-        // hannah#164: lets users fix Hannah's voice-matching name for devices whose
-        // ioBroker friendly name is unsuited for it (too long, technical prefixes,
-        // duplicates across rooms, ...) without renaming the actual object. Same
-        // enabled/state-vs-device precedence as the type override above.
-        const nameOverride =
-            (stateCustom?.enabled && stateCustom?.name) || (deviceCustom?.enabled && deviceCustom?.name);
-
-        const { stateType, enumValues } = this._resolveStateType(stateObj);
-        const { type, canonicalKey } = resolveTypeAndCanonicalKey();
-
-        // hannah#177/hannah-proto#4: analog zum type/name-Override, aber nur für über die
-        // ROLE_TABLE als 'blind' aufgelöste States relevant — Rolladen/Markise-Aktoren, die
-        // von sich aus die umgekehrte Konvention (0%=auf/100%=zu) nutzen (z.B. Homematic/KNX).
-        // State-Level gewinnt vor Device-Level, wie bei type/name. undefined (nicht false)
-        // wenn kein Override gesetzt ist — Core unterscheidet "kein Override" von "explizit
-        // nicht invertiert" nicht, aber das Proto-Feld erlaubt die Unterscheidung bewusst.
-        const stateShutterInverted = stateCustom?.enabled ? stateCustom?.shutterInverted : undefined;
-        const deviceShutterInverted = deviceCustom?.enabled ? deviceCustom?.shutterInverted : undefined;
-        const shutterInvertedOverride =
-            stateShutterInverted !== undefined ? stateShutterInverted : deviceShutterInverted;
-        const inverted =
-            ROLE_TABLE[role]?.type === 'blind' && shutterInvertedOverride !== undefined
-                ? Boolean(shutterInvertedOverride)
-                : undefined;
-
-        return {
-            room: roomId,
-            roomNames: roomNames,
-            functionIds,
-            ownName:
-                readableName(stateCustom?.enabled && stateCustom?.name) ??
-                readableName(stateObj?.common?.name) ??
-                stateId.split('.').at(-1) ??
-                '',
-            device:
-                readableName(nameOverride) ??
-                readableName(deviceObj?.common?.name) ??
-                readableName(stateObj?.common?.name) ??
-                deviceId.split('.').at(-1) ??
-                '',
-            type,
-            floor,
-            functions,
-            stateType,
-            enumValues,
-            writable: Boolean(stateObj?.common?.write),
-            deviceId,
-            canonicalKey,
-            role,
-            unit: typeof stateObj?.common?.unit === 'string' ? stateObj.common.unit : '',
-            min: typeof stateObj?.common?.min === 'number' ? stateObj.common.min : undefined,
-            max: typeof stateObj?.common?.max === 'number' ? stateObj.common.max : undefined,
-            canonicalKeyOverride:
-                stateCustom?.enabled && stateCustom?.canonicalKey ? String(stateCustom.canonicalKey) : '',
-            stateObject: stateObj,
-            deviceObject: deviceObj,
-            inverted,
-            requiredTrustLevel,
-        };
+        return objects;
     }
 
     /**
-     * An alias state often carries only a name, the room and the function, while role, type,
-     * unit and range are those of the state it points to. What the alias lacks is taken from
-     * that target, so it is recognized like the target would be. A value the alias converts
-     * with a read or write function has its own scale: unit and range are then not inherited.
-     *
-     * @param obj - The state's own object
-     */
-    private async _inheritFromAliasTarget(
-        obj: ioBroker.Object | null | undefined,
-    ): Promise<ioBroker.Object | null | undefined> {
-        const alias = (obj?.common as { alias?: any } | undefined)?.alias;
-        if (!obj || !alias) {
-            return obj;
-        }
-        const targetId: unknown = typeof alias.id === 'string' ? alias.id : (alias.id?.read ?? alias.id?.write);
-        if (typeof targetId !== 'string' || !targetId) {
-            return obj;
-        }
-        let target: ioBroker.Object | null | undefined;
-        try {
-            target = await this.adapter.getForeignObjectAsync(targetId);
-        } catch {
-            return obj;
-        }
-        if (!target?.common) {
-            return obj;
-        }
-        const own = obj.common as Record<string, unknown>;
-        const from = target.common as Record<string, unknown>;
-        const converted = Boolean(alias.read || alias.write);
-        const inherited: Record<string, unknown> = {};
-        for (const field of converted ? ['role', 'type', 'states'] : ['role', 'type', 'unit', 'min', 'max', 'states']) {
-            if (own[field] === undefined && from[field] !== undefined) {
-                inherited[field] = from[field];
-            }
-        }
-        return { ...obj, common: { ...own, ...inherited } } as ioBroker.Object;
-    }
-
-    /**
-     * #203: common.custom["hannah.0"].neededTrust — minimum trust level (0–10) needed to set
-     * this state. State-level only, like canonicalKey: a lock and its battery indicator sit
-     * on the same device but need different protection. undefined (not 0) when unset or
-     * invalid — the proto distinguishes "no restriction" from an explicit 0.
+     * #203: common.custom["hannah.0"].neededTrust of a state, see `resolveNeededTrust()`.
      *
      * @param stateCustom - The state's common.custom entry for this adapter instance
      */
     private _resolveNeededTrust(stateCustom: any): number | undefined {
-        if (!stateCustom?.enabled) {
-            return undefined;
-        }
-        const raw = stateCustom.neededTrust;
-        if (raw === undefined || raw === null || raw === '') {
-            return undefined;
-        }
-        const level = Number(raw);
-        if (!Number.isInteger(level) || level < 0 || level > 10) {
-            this.adapter.log.warn(`[states] Ignoring invalid neededTrust ${JSON.stringify(raw)} (expected 0–10)`);
-            return undefined;
+        const { level, warning } = resolveNeededTrust(stateCustom);
+        if (warning) {
+            this.adapter.log.warn(`[states] ${warning}`);
         }
         return level;
-    }
-
-    /**
-     * Classifies a state's value shape (#117) from ioBroker's own common.type/role/states —
-     * no separate discovery step needed, this metadata is already loaded alongside stateObj.
-     *
-     * @param stateObj - The state's own ioBroker object, as loaded in _resolveDeviceMeta
-     */
-    private _resolveStateType(stateObj: ioBroker.Object | null | undefined): {
-        stateType: shared.StateType;
-        enumValues: shared.EnumValues | undefined;
-    } {
-        const role = stateObj?.common?.role ?? '';
-        const rawStates = (stateObj?.common as { states?: Record<string, string> | string[] | string } | undefined)
-            ?.states;
-        const enumValues = this._statesToEnumValues(rawStates);
-
-        if (role.startsWith('level.color')) {
-            return { stateType: shared.StateType.COLOR, enumValues };
-        }
-        if (enumValues) {
-            return { stateType: shared.StateType.ENUM, enumValues };
-        }
-
-        const type = stateObj?.common?.type;
-        if (type === 'boolean') {
-            return { stateType: shared.StateType.BOOLEAN, enumValues: undefined };
-        }
-        if (type === 'number') {
-            return { stateType: shared.StateType.NUMERIC, enumValues: undefined };
-        }
-        return { stateType: shared.StateType.TEXT, enumValues: undefined };
-    }
-
-    /**
-     * Normalizes ioBroker's common.states (object map, string array, or the deprecated
-     * "val1:text1;val2:text2" string format) into the value->label shape EnumValues needs.
-     *
-     * @param rawStates - The state object's common.states field, in any of its supported shapes
-     */
-    private _statesToEnumValues(
-        rawStates: Record<string, string> | string[] | string | undefined,
-    ): shared.EnumValues | undefined {
-        if (!rawStates) {
-            return undefined;
-        }
-        if (Array.isArray(rawStates)) {
-            if (rawStates.length === 0) {
-                return undefined;
-            }
-            return { values: Object.fromEntries(rawStates.map(v => [v, v])) };
-        }
-        if (typeof rawStates === 'string') {
-            const values = Object.fromEntries(
-                rawStates
-                    .split(';')
-                    .map(pair => pair.split(':'))
-                    .filter((pair): pair is [string, string] => pair.length === 2),
-            );
-            return Object.keys(values).length > 0 ? { values } : undefined;
-        }
-        if (Object.keys(rawStates).length === 0) {
-            return undefined;
-        }
-        return { values: Object.fromEntries(Object.entries(rawStates).map(([k, v]) => [k, String(v)])) };
     }
 
     /**
