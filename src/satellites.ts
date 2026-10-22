@@ -1,5 +1,32 @@
 import type * as utils from '@iobroker/adapter-core';
-import type { AgentMessageSender, GrpcClient } from './grpc-client';
+import type { AckingMessageSender, AckResult, AgentMessageSender, GrpcClient } from './grpc-client';
+
+/** Where led_brightness sits in the satellite control of each generation (hannah-proto#27). */
+const LED_BRIGHTNESS_FIELD = 10;
+const LED_BRIGHTNESS_MESSAGE_TYPES = ['hannah.v1.AgentSatelliteControl', 'hannah.v2.AgentSatelliteControl'];
+
+/**
+ * Whether Core knows `AgentSatelliteControl.led_brightness`, judged from the AgentAck of a
+ * satellite control (hannah-proto#16). Core guarantees that every field it doesn't report as
+ * unknown is also evaluated, so an ack without the field means "supported". A Core too old to
+ * send an AgentAck at all can't know the field either. null = no verdict (disconnected).
+ *
+ * @param result - Outcome of sendWithAck() for a satellite control with led_brightness
+ */
+export function ledBrightnessSupported(result: AckResult): boolean | null {
+    switch (result.kind) {
+        case 'ack':
+            return !result.ack.unknownFields.some(
+                u =>
+                    LED_BRIGHTNESS_MESSAGE_TYPES.includes(u.messageType) &&
+                    u.fieldNumbers.includes(LED_BRIGHTNESS_FIELD),
+            );
+        case 'timeout':
+            return false;
+        case 'disconnected':
+            return null;
+    }
+}
 
 /**
  * Replaces characters forbidden in ioBroker object IDs with underscores.
@@ -42,16 +69,68 @@ export class SatelliteWatcher {
     private roomNames: Map<string, string> = new Map(); // roomPathKey(room) → original room
     private deviceToObjectKey: Map<string, string> = new Map(); // deviceId.lower → objectKey (== deviceId since v0.34)
     private objectKeyToDeviceId: Map<string, string> = new Map(); // objectKey.lower → deviceId
+    private sendWithAck: AckingMessageSender | undefined;
+    /** Whether the connected Core knows led_brightness; null = not known yet (this connection). */
+    private coreKnowsLedBrightness: boolean | null = null;
+    private ledBrightnessUnsupportedLogged = false;
 
     /**
      * @param adapter - ioBroker adapter instance
      * @param send - Sends AgentMessage frames to Hannah Core via gRPC
      * @param getGrpc - Lazy getter for the gRPC client (resolves after construction)
+     * @param sendWithAck - Like send, but resolves with Core's AgentAck; used to find out whether Core knows led_brightness
      */
-    constructor(adapter: utils.AdapterInstance, send: AgentMessageSender, getGrpc: () => GrpcClient | null) {
+    constructor(
+        adapter: utils.AdapterInstance,
+        send: AgentMessageSender,
+        getGrpc: () => GrpcClient | null,
+        sendWithAck?: AckingMessageSender,
+    ) {
         this.adapter = adapter;
         this.send = send;
         this.getGrpc = getGrpc;
+        this.sendWithAck = sendWithAck;
+    }
+
+    /**
+     * Forget what is known about the connected Core: a new connection may be to a Core with
+     * another version.
+     */
+    resetCoreSupport(): void {
+        this.coreKnowsLedBrightness = null;
+        this.ledBrightnessUnsupportedLogged = false;
+    }
+
+    /**
+     * Sends a new LED ring brightness to Core. The first write on a connection waits for the
+     * AgentAck to learn whether Core knows the field; a Core that doesn't gets one log line, not
+     * one per write (hannah-proto#27).
+     *
+     * @param room - Room the satellite is in (raw name)
+     * @param deviceId - Satellite device ID
+     * @param percent - Brightness in percent (0–100)
+     */
+    private async _sendLedBrightness(room: string, deviceId: string, percent: number): Promise<void> {
+        const msg = { satelliteControl: { room, deviceId, ledBrightness: percent } };
+        if (this.coreKnowsLedBrightness === false) {
+            this.adapter.log.debug(`[satellites] led_brightness for '${deviceId}' not sent — Core doesn't support it`);
+            return;
+        }
+        if (this.coreKnowsLedBrightness === true || !this.sendWithAck) {
+            this.send(msg);
+            return;
+        }
+        const supported = ledBrightnessSupported(await this.sendWithAck(msg));
+        if (supported === null) {
+            return;
+        }
+        this.coreKnowsLedBrightness = supported;
+        if (!supported && !this.ledBrightnessUnsupportedLogged) {
+            this.ledBrightnessUnsupportedLogged = true;
+            this.adapter.log.warn(
+                '[satellites] Hannah Core does not support the LED brightness yet — update Core to change it from ioBroker.',
+            );
+        }
     }
 
     /**
@@ -119,6 +198,7 @@ export class SatelliteWatcher {
      * @param lastSeen - UTC timestamp (Core DB format) of the last time this satellite was seen, if known
      * @param roomMismatch - true if the satellite is currently reporting a different room than assigned
      * @param ownerDisplayName - Display name of the Person (User) this satellite is assigned to, if any (#31)
+     * @param ledBrightness - Current LED ring brightness (0–100 percent), if reported
      */
     async handleSatelliteUpdate(
         deviceId: string,
@@ -132,6 +212,7 @@ export class SatelliteWatcher {
         lastSeen?: string,
         roomMismatch?: boolean,
         ownerDisplayName?: string,
+        ledBrightness?: number,
     ): Promise<void> {
         const objectKey = deviceId;
 
@@ -206,6 +287,12 @@ export class SatelliteWatcher {
                 val: dnd,
                 ack: true,
             });
+        }
+        if (ledBrightness !== undefined) {
+            await this.adapter.setState(
+                `satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}.led_brightness`,
+                { val: ledBrightness, ack: true },
+            );
         }
         if (lastSeen !== undefined) {
             await this.adapter.setState(`satellites.rooms.${roomPathKey(room)}.${sanitizeId(objectKey)}.last_seen`, {
@@ -314,6 +401,20 @@ export class SatelliteWatcher {
                 this.adapter.log.debug(
                     `[satellites] satellite_control device='${actualDeviceId}' room='${originalRoom}' ${key}=${state.val}`,
                 );
+            } else if (key === 'led_brightness') {
+                const percent = Number(state.val);
+                if (!Number.isFinite(percent)) {
+                    this.adapter.log.warn(
+                        `[satellites] led_brightness of '${actualDeviceId}': '${state.val}' is not a number — ignored`,
+                    );
+                } else {
+                    // The state is limited to 0–100, a script may still write beyond it
+                    const clamped = Math.round(Math.min(100, Math.max(0, percent)));
+                    void this._sendLedBrightness(originalRoom, actualDeviceId, clamped);
+                    this.adapter.log.debug(
+                        `[satellites] satellite_control device='${actualDeviceId}' room='${originalRoom}' led_brightness=${clamped}`,
+                    );
+                }
             } else if (key === 'announcement' || key === 'announcementSsml' || key === 'announcementRephrase') {
                 this.send({ satelliteControl: { room: originalRoom, deviceId: actualDeviceId, [key]: state.val } });
                 void this.adapter.setState(id, { val: '', ack: true });
@@ -579,6 +680,21 @@ export class SatelliteWatcher {
                 read: true,
                 write: true,
                 def: 80,
+                min: 0,
+                max: 100,
+            },
+            native: {},
+        });
+        await this.adapter.setObjectNotExistsAsync(`${base}.led_brightness`, {
+            type: 'state',
+            common: {
+                name: 'LED ring brightness (0–100)',
+                type: 'number',
+                role: 'level.dimmer',
+                unit: '%',
+                read: true,
+                write: true,
+                def: 100,
                 min: 0,
                 max: 100,
             },

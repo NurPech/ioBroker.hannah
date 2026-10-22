@@ -124,7 +124,12 @@ class Hannah extends utils.Adapter {
             location: cfg.weatherLocation || 'location_1',
             customMapping: cfg.weatherCustomMapping || {},
         });
-        this.satellites = new SatelliteWatcher(this, send, () => this.grpc);
+        this.satellites = new SatelliteWatcher(
+            this,
+            send,
+            () => this.grpc,
+            msg => this.grpc?.sendWithAck(msg) ?? Promise.resolve({ kind: 'disconnected' }),
+        );
         await this.satellites.ensureVirtualRooms();
         this.ble = new BleWatcher(this);
         this.sensorWatcher = new SensorWatcher(this);
@@ -143,6 +148,7 @@ class Hannah extends utils.Adapter {
             clearTimeout: t => this.clearTimeout(t as ioBroker.Timeout),
             onConnected: async generation => {
                 await this.setState('info.connection', true, true);
+                this.satellites?.resetCoreSupport();
                 await this.states!.start(
                     {
                         selectedRooms: cfg.selectedRooms || [],
@@ -189,6 +195,7 @@ class Hannah extends utils.Adapter {
                         sat.lastSeen || undefined,
                         sat.roomMismatch,
                         sat.ownerDisplayName || '',
+                        sat.ledBrightness,
                     );
                 }
                 await this.satellites!.removeUnknownSatellites(
@@ -238,6 +245,9 @@ class Hannah extends utils.Adapter {
                         s.dnd ?? undefined,
                         s.displayName || undefined,
                         lastSeen,
+                        undefined,
+                        undefined,
+                        s.ledBrightness ?? undefined,
                     );
                 } else if (cmd.watchMore?.stateIds) {
                     void this.states?.watchMore(cmd.watchMore.stateIds);
