@@ -2,7 +2,8 @@ import type * as adapterCore from '@iobroker/adapter-core';
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import { utils } from '@iobroker/testing';
-import { SatelliteWatcher } from './satellites';
+import type { AckResult } from './grpc-client';
+import { ledBrightnessSupported, SatelliteWatcher } from './satellites';
 
 const { createMocks } = utils.unit;
 
@@ -216,6 +217,223 @@ describe('SatelliteWatcher', () => {
         expect(send.calledWith({ satelliteControl: { room: 'kueche', deviceId: 'e072a1d01ad0', dnd: true } })).to.equal(
             true,
         );
+    });
+
+    describe('led_brightness', () => {
+        const ledId = 'hannah.0.satellites.rooms.kueche.e072a1d01adc.led_brightness';
+
+        async function onlineWatcher(
+            sendWithAck?: sinon.SinonStub,
+        ): Promise<{ watcher: SatelliteWatcher; send: sinon.SinonStub }> {
+            const send = sinon.stub();
+            const watcher = new SatelliteWatcher(adapterInstance, send, () => null, sendWithAck);
+            (adapter as unknown as PatchedAdapter).getForeignStatesAsync = sinon.stub().resolves({});
+            await watcher.handleSatelliteUpdate('e072a1d01adc', 'kueche', '10.0.0.5:5005', true);
+            return { watcher, send };
+        }
+
+        const unknown = (field: number): AckResult => ({
+            kind: 'ack',
+            ack: {
+                ackId: 1n,
+                unknownFields: [{ messageType: 'hannah.v2.AgentSatelliteControl', fieldNumbers: [field] }],
+            },
+        });
+
+        it('creates a writable 0–100 dimmer state per satellite, default 100', async () => {
+            await onlineWatcher();
+
+            const obj = await adapter.getObjectAsync(ledId);
+            expect(obj?.common).to.include({
+                type: 'number',
+                role: 'level.dimmer',
+                unit: '%',
+                min: 0,
+                max: 100,
+                def: 100,
+            });
+            expect(obj?.common.write).to.equal(true);
+        });
+
+        it('shows the value reported by Core as a confirmed state, 0 included', async () => {
+            const { watcher } = await onlineWatcher();
+
+            await watcher.handleSatelliteUpdate(
+                'e072a1d01adc',
+                'kueche',
+                '',
+                true,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                30,
+            );
+            expect((await adapter.getStateAsync(ledId))?.val).to.equal(30);
+
+            await watcher.handleSatelliteUpdate(
+                'e072a1d01adc',
+                'kueche',
+                '',
+                true,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                0,
+            );
+            const state = await adapter.getStateAsync(ledId);
+            expect(state?.val).to.equal(0);
+            expect(state?.ack).to.equal(true);
+        });
+
+        it('leaves the state alone when Core reports no value', async () => {
+            const { watcher } = await onlineWatcher();
+            await adapter.setStateAsync(ledId, { val: 40, ack: true });
+
+            await watcher.handleSatelliteUpdate('e072a1d01adc', 'kueche', '', true, 80);
+
+            expect((await adapter.getStateAsync(ledId))?.val).to.equal(40);
+        });
+
+        it('forwards a write with the satellite device_id', async () => {
+            const { watcher, send } = await onlineWatcher();
+
+            const handled = watcher.onStateChange(ledId, { val: 25, ack: false } as ioBroker.State);
+            await new Promise(resolve => setImmediate(resolve));
+
+            expect(handled).to.equal(true);
+            expect(
+                send.calledOnceWith({
+                    satelliteControl: { room: 'kueche', deviceId: 'e072a1d01adc', ledBrightness: 25 },
+                }),
+            ).to.equal(true);
+        });
+
+        it('forwards 0 (ring off) and clamps a value beyond the range', async () => {
+            const { watcher, send } = await onlineWatcher();
+
+            watcher.onStateChange(ledId, { val: 0, ack: false } as ioBroker.State);
+            watcher.onStateChange(ledId, { val: 150, ack: false } as ioBroker.State);
+            watcher.onStateChange(ledId, { val: -5, ack: false } as ioBroker.State);
+            await new Promise(resolve => setImmediate(resolve));
+
+            expect(send.args.map(a => a[0].satelliteControl.ledBrightness)).to.deep.equal([0, 100, 0]);
+        });
+
+        it('does not forward a value that is not a number', async () => {
+            const { watcher, send } = await onlineWatcher();
+
+            watcher.onStateChange(ledId, { val: 'hell', ack: false } as ioBroker.State);
+            await new Promise(resolve => setImmediate(resolve));
+
+            expect(send.called).to.equal(false);
+        });
+
+        it('does not forward a confirmed (ack) state', async () => {
+            const { watcher, send } = await onlineWatcher();
+
+            watcher.onStateChange(ledId, { val: 25, ack: true } as ioBroker.State);
+
+            expect(send.called).to.equal(false);
+        });
+
+        it('is not part of the room-level broadcast', async () => {
+            const { watcher, send } = await onlineWatcher();
+
+            const handled = watcher.onStateChange('hannah.0.satellites.rooms.kueche.led_brightness', {
+                val: 25,
+                ack: false,
+            } as ioBroker.State);
+
+            expect(handled).to.equal(false);
+            expect(send.called).to.equal(false);
+        });
+
+        it('asks for the ack on the first write only, once Core is known to support the field', async () => {
+            const sendWithAck = sinon.stub().resolves({ kind: 'ack', ack: { ackId: 1n, unknownFields: [] } });
+            const { watcher, send } = await onlineWatcher(sendWithAck);
+
+            watcher.onStateChange(ledId, { val: 25, ack: false } as ioBroker.State);
+            await new Promise(resolve => setImmediate(resolve));
+            watcher.onStateChange(ledId, { val: 50, ack: false } as ioBroker.State);
+            await new Promise(resolve => setImmediate(resolve));
+
+            expect(sendWithAck.callCount).to.equal(1);
+            expect(send.callCount).to.equal(1);
+            expect(send.firstCall.args[0].satelliteControl.ledBrightness).to.equal(50);
+        });
+
+        it('logs once and stops sending when Core does not know the field', async () => {
+            const sendWithAck = sinon.stub().resolves(unknown(10));
+            const { watcher, send } = await onlineWatcher(sendWithAck);
+            const warn = adapter.log.warn as unknown as sinon.SinonStub;
+
+            watcher.onStateChange(ledId, { val: 25, ack: false } as ioBroker.State);
+            await new Promise(resolve => setImmediate(resolve));
+            watcher.onStateChange(ledId, { val: 50, ack: false } as ioBroker.State);
+            watcher.onStateChange(ledId, { val: 75, ack: false } as ioBroker.State);
+            await new Promise(resolve => setImmediate(resolve));
+
+            expect(sendWithAck.callCount).to.equal(1);
+            expect(send.called).to.equal(false);
+            expect(warn.calledWithMatch('LED brightness')).to.equal(true);
+            expect(warn.callCount).to.equal(1);
+        });
+
+        it('asks again after a reconnect, a different Core may be there', async () => {
+            const sendWithAck = sinon.stub().resolves(unknown(10));
+            const { watcher } = await onlineWatcher(sendWithAck);
+
+            watcher.onStateChange(ledId, { val: 25, ack: false } as ioBroker.State);
+            await new Promise(resolve => setImmediate(resolve));
+            watcher.resetCoreSupport();
+            watcher.onStateChange(ledId, { val: 50, ack: false } as ioBroker.State);
+            await new Promise(resolve => setImmediate(resolve));
+
+            expect(sendWithAck.callCount).to.equal(2);
+        });
+    });
+
+    describe('ledBrightnessSupported', () => {
+        it('is true when the ack does not list the field', () => {
+            expect(ledBrightnessSupported({ kind: 'ack', ack: { ackId: 1n, unknownFields: [] } })).to.equal(true);
+        });
+
+        it('is true when the ack lists other unknown fields', () => {
+            const result: AckResult = {
+                kind: 'ack',
+                ack: {
+                    ackId: 1n,
+                    unknownFields: [{ messageType: 'hannah.v2.AgentSatelliteControl', fieldNumbers: [11] }],
+                },
+            };
+            expect(ledBrightnessSupported(result)).to.equal(true);
+        });
+
+        it('is false when Core lists the field as unknown, in either generation', () => {
+            for (const messageType of ['hannah.v1.AgentSatelliteControl', 'hannah.v2.AgentSatelliteControl']) {
+                const result: AckResult = {
+                    kind: 'ack',
+                    ack: { ackId: 1n, unknownFields: [{ messageType, fieldNumbers: [10] }] },
+                };
+                expect(ledBrightnessSupported(result)).to.equal(false);
+            }
+        });
+
+        it('is false when Core never answers, it is too old to send an ack', () => {
+            expect(ledBrightnessSupported({ kind: 'timeout' })).to.equal(false);
+        });
+
+        it('has no verdict while disconnected', () => {
+            expect(ledBrightnessSupported({ kind: 'disconnected' })).to.equal(null);
+        });
     });
 
     it('does not forward a room-level broadcast to a satellite in a different room', async () => {

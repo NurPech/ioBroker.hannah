@@ -79,6 +79,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added (with a Hannah Core that supports it): every satellite has a new state `satellites.rooms.<room>.<device>.led_brightness` (0–100 %) for the brightness of its LED ring, 0 switches the ring off. It shows the value Hannah Core keeps for the satellite and writing it changes the ring, for example to dim it at night from a script or a scene. The satellite is also in the device manager with a slider for it. With an older Hannah Core the state stays as it is, the adapter writes one warning to the log and keeps working as before
+
 ### 1.6.1 (2026-10-20)
 - Fixed: if the ioBroker database was unavailable or restarting while the adapter (re)connected to Hannah Core, the sync right after the connect could fail or hang and was never repeated. The adapter then stayed connected without Hannah Core having its devices, and commands were rejected as an unknown slot until the adapter was restarted. A sync that fails or has no result after 120 seconds now closes the connection and connects again after 10 seconds, until the sync goes through. A failing read of the room and function enums fails the sync, too, instead of carrying on with an empty discovery
 

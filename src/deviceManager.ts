@@ -54,6 +54,10 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
                 `${ns}.satellites.rooms.${room}.${deviceId}.volume`,
             );
 
+            const ledBrightnessState = await this.adapter.getForeignStateAsync(
+                `${ns}.satellites.rooms.${room}.${deviceId}.led_brightness`,
+            );
+
             // Fire-and-forget: the actual RPC call + result logging already lives in
             // satellites.ts' onStateChange (update_now/restart) — reuse it instead of
             // duplicating the gRPC call here, which would need its own getGrpc() wiring.
@@ -112,6 +116,23 @@ export default class HannahDeviceManagement extends DeviceManagement<AdapterInst
                     state: volumeState ?? ({ val: 80, ts: Date.now(), ack: true } as ioBroker.State),
                     handler: async (_deviceId, _actionId, state: ControlState): Promise<ioBroker.State> => {
                         await this.adapter.setStateAsync(`satellites.rooms.${room}.${deviceId}.volume`, {
+                            val: state as number,
+                            ack: false,
+                        });
+                        return { val: state, ts: Date.now(), ack: true } as ioBroker.State;
+                    },
+                },
+                {
+                    id: 'led_brightness',
+                    type: 'slider',
+                    stateId: `satellites.rooms.${room}.${deviceId}.led_brightness`,
+                    label: { en: 'LED ring brightness', de: 'Helligkeit des LED-Rings' },
+                    min: 0,
+                    max: 100,
+                    unit: '%',
+                    state: ledBrightnessState ?? ({ val: 100, ts: Date.now(), ack: true } as ioBroker.State),
+                    handler: async (_deviceId, _actionId, state: ControlState): Promise<ioBroker.State> => {
+                        await this.adapter.setStateAsync(`satellites.rooms.${room}.${deviceId}.led_brightness`, {
                             val: state as number,
                             ack: false,
                         });
