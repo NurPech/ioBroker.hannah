@@ -79,7 +79,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.7.0 (2026-10-23)
 - Added: a Diagnostics tab in the adapter settings. "Check devices" shows what Hannah gets from the setup with the room and function selection of the form, saved or not: the devices with their slots, and the states that are not read, with the reason (no room, no function, or a room or function that is not selected) and what to change in ioBroker. A state that stays a generic slot, or whose states fit one slot with no clear winner, is named, too
 - Fixed (with a `hannah.v2` Core): only the channels of one device are put together to one device (a switch channel and a power channel of one plug). Devices below a folder, such as two lamps in a room folder that each have a switch, were treated like channels as well, and two of them with different states could be put together to one lamp. They are devices of their own now
 - Changed: the `type`, `name` and `shutterInverted` overrides in `common.custom` are only read from the state itself. They were also read from the device or channel the state sits in, but ioBroker offers custom settings on states only, so that could only be set by editing the object by hand
