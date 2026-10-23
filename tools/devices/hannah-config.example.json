@@ -1,0 +1,5 @@
+{
+  "selectedRooms": ["enum.rooms.Wohnzimmer", "enum.rooms.Küche"],
+  "selectedFunctions": ["enum.functions.lighting", "enum.functions.socket"],
+  "extraStatePrefixes": [{ "prefix": "javascript.0.virtualDevice.Auto" }]
+}

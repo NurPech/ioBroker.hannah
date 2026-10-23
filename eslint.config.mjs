@@ -8,7 +8,7 @@ export default [
         // tsconfig.json excludes *.test.ts (separate tsconfig.test.json is used for those,
         // see test/mocha.setup.js) — the shared config's projectService doesn't know about
         // that second project, so point it there explicitly for test files.
-        files: ['src/**/*.test.ts'],
+        files: ['src/**/*.test.ts', 'tools/**/*.test.ts'],
         languageOptions: {
             parserOptions: {
                 projectService: false,

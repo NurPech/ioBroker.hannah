@@ -8,6 +8,7 @@
         "no-experimental-strip-types"
     ],
     "watch-files": [
-        "src/**/*.test.ts"
+        "src/**/*.test.ts",
+        "tools/**/*.test.ts"
     ]
 }

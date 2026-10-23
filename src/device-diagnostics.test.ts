@@ -96,6 +96,19 @@ describe('device-diagnostics', () => {
             ]);
         });
 
+        it('does not call a device unknown whose states fit a slot but are ambiguous', () => {
+            const doors = 'x.0.Auto.doors';
+            const objects: ObjectMap = {
+                [`${doors}.a`]: stateObject(`${doors}.a`, { role: 'sensor.door', type: 'boolean' }),
+                [`${doors}.b`]: stateObject(`${doors}.b`, { role: 'sensor.door', type: 'boolean' }),
+            };
+            const enums = { 'enum.rooms.garage': enumObject('enum.rooms.garage', [doors]) };
+
+            const found = explainedBuild({ [`${doors}.a`]: true, [`${doors}.b`]: false }, objects, enums);
+
+            expect(found.map(d => d.code)).to.deep.equal(['slot-ambiguous']);
+        });
+
         it('lists the states that fit one slot with no clear winner, and does not call them unknown as well', () => {
             const objects: ObjectMap = {
                 [`${lamp}.on`]: stateObject(`${lamp}.on`, { role: 'switch.light', type: 'boolean' }),
@@ -295,14 +308,14 @@ describe('device-diagnostics', () => {
             { code: 'merge-blocked', deviceId: 'a.0.x', groupIds: ['a.0.x.1', 'a.0.x.2'] },
         ];
 
-        it('gives every finding a text, and a fix unless it only explains a decision', () => {
+        it('gives every finding a text, and a fix unless it only explains a merge', () => {
             for (const diagnostic of all) {
                 const { text, fix } = describeDiagnostic(diagnostic);
                 expect(text, diagnostic.code).to.match(/a\.0\.x/);
-                if (severityOf(diagnostic) === 'warning') {
-                    expect(fix, diagnostic.code).to.not.equal('');
-                } else {
+                if (diagnostic.code === 'merged' || diagnostic.code === 'merge-blocked') {
                     expect(fix, diagnostic.code).to.equal('');
+                } else {
+                    expect(fix, diagnostic.code).to.not.equal('');
                 }
             }
         });
@@ -312,7 +325,10 @@ describe('device-diagnostics', () => {
             expect(describeDiagnostic(all[1]).fix).to.not.contain('Assign');
         });
 
-        it('takes the merges for information and everything that is not used for a warning', () => {
+        it('takes the merges and a generic slot for information and everything that is not used for a warning', () => {
+            expect(severityOf({ code: 'state-generic', deviceId: 'a', stateId: 'a.x', key: 'x', role: '' })).to.equal(
+                'info',
+            );
             expect(severityOf({ code: 'merged', deviceId: 'a', groupIds: [] })).to.equal('info');
             expect(severityOf({ code: 'merge-blocked', deviceId: 'a', groupIds: [] })).to.equal('info');
             expect(severityOf({ code: 'no-room', deviceId: 'a', stateIds: [] })).to.equal('warning');

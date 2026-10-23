@@ -21,3 +21,6 @@ Thumbs.db
 admin/i18n/flat.txt
 admin/i18n/*/flat.txt
 
+
+# Settings of the local adapter instance for tools/devices (see hannah-config.example.json)
+tools/devices/hannah-config.json

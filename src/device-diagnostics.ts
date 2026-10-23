@@ -22,6 +22,8 @@ export type Diagnostic =
           code: 'not-read';
           stateId: string;
           reasons: NotReadReason[];
+          /** for `outside-selection`: the rooms and functions the state is in that are not selected, as enum IDs */
+          unselected?: { rooms: string[]; functions: string[] };
       }
     | {
           /** none of the states of the device has a room, the device is not reported */
@@ -80,7 +82,7 @@ export type Diagnostic =
 /** Receives the findings. */
 export type Explain = (diagnostic: Diagnostic) => void;
 
-/** How much a finding matters: a `warning` means something is not used, `info` explains a decision. */
+/** How much a finding matters: a `warning` means something is not used the way it could be, `info` explains a decision or a state that stays a generic slot. */
 export type Severity = 'info' | 'warning';
 
 /** A finding in words. */
@@ -101,12 +103,47 @@ const NOT_READ_REASONS: Record<NotReadReason, string> = {
 };
 
 /**
+ * Why states are not read, and what to change.
+ *
+ * @param reasons - The reasons of a `not-read` finding
+ * @param unselected - The rooms and functions the state is in that are not selected, if known
+ * @param unselected.rooms - Room enum IDs
+ * @param unselected.functions - Function enum IDs
+ */
+export function describeNotRead(
+    reasons: NotReadReason[],
+    unselected?: { rooms: string[]; functions: string[] },
+): { reason: string; fix: string } {
+    const missing = reasons.flatMap(r => (r === 'no-room' ? ['a room'] : r === 'no-function' ? ['a function'] : []));
+    const name = (id: string): string => id.replace(/^enum.(rooms|functions)./, '');
+    const where = [
+        ...(unselected?.functions.length ? [`the function ${unselected.functions.map(name).join(', ')}`] : []),
+        ...(unselected?.rooms.length ? [`the room ${unselected.rooms.map(name).join(', ')}`] : []),
+    ];
+    if (reasons.includes('outside-selection') && where.length > 0) {
+        return {
+            reason: `it is only in ${where.join(' and ')}, which ${where.length > 1 || (unselected?.functions.length ?? 0) + (unselected?.rooms.length ?? 0) > 1 ? 'are' : 'is'} not selected in the adapter settings`,
+            fix: 'Select it in the adapter settings, or assign the state to a function and room that are selected.',
+        };
+    }
+    return {
+        reason: reasons.map(r => NOT_READ_REASONS[r]).join(' and '),
+        fix:
+            missing.length > 0
+                ? `Assign the state, its channel or its device to ${missing.join(' and ')} in ioBroker, or change the selection in the adapter settings.`
+                : 'Change the selection in the adapter settings, or assign the state to a selected room or function.',
+    };
+}
+
+/**
  * How much a finding matters.
  *
  * @param diagnostic - The finding
  */
 export function severityOf(diagnostic: Diagnostic): Severity {
-    return diagnostic.code === 'merged' || diagnostic.code === 'merge-blocked' ? 'info' : 'warning';
+    return diagnostic.code === 'merged' || diagnostic.code === 'merge-blocked' || diagnostic.code === 'state-generic'
+        ? 'info'
+        : 'warning';
 }
 
 /**
@@ -117,16 +154,8 @@ export function severityOf(diagnostic: Diagnostic): Severity {
 export function describeDiagnostic(diagnostic: Diagnostic): Explanation {
     switch (diagnostic.code) {
         case 'not-read': {
-            const missing = diagnostic.reasons.flatMap(r =>
-                r === 'no-room' ? ['a room'] : r === 'no-function' ? ['a function'] : [],
-            );
-            return {
-                text: `${diagnostic.stateId} is not read by Hannah: ${diagnostic.reasons.map(r => NOT_READ_REASONS[r]).join(' and ')}.`,
-                fix:
-                    missing.length > 0
-                        ? `Assign the state, its channel or its device to ${missing.join(' and ')} in ioBroker, or change the selection in the adapter settings.`
-                        : 'Change the selection in the adapter settings, or assign the state to a selected room or function.',
-            };
+            const { reason, fix } = describeNotRead(diagnostic.reasons, diagnostic.unselected);
+            return { text: `${diagnostic.stateId} is not read by Hannah: ${reason}.`, fix };
         }
         case 'no-room':
             return {
@@ -165,7 +194,7 @@ export function describeDiagnostic(diagnostic: Diagnostic): Explanation {
             };
         case 'merge-blocked':
             return {
-                text: `The channels ${diagnostic.groupIds.join(', ')} stay devices of their own: they would use the same slot twice, like the relays of a multi-relay plug.`,
+                text: `In ${diagnostic.deviceId}, ${diagnostic.groupIds.map(g => g.split('.').pop()).join(', ')} stay devices of their own: each has the same controls (for example on), so they are not combined into one device, like the relays of a multi-relay plug. Nothing to fix.`,
                 fix: '',
             };
     }
@@ -264,6 +293,30 @@ export function explainDiscovery(
         if (functionsSelected && ![...allFunctionMembers].some(m => covers(m, id))) {
             reasons.push('no-function');
         }
-        explain({ code: 'not-read', stateId: id, reasons: reasons.length > 0 ? reasons : ['outside-selection'] });
+        if (reasons.length > 0) {
+            explain({ code: 'not-read', stateId: id, reasons });
+            continue;
+        }
+        // in a room and a function, just not in the selected ones: say which
+        const notSelected = (
+            enums: Record<string, ioBroker.Object>,
+            selected: string[],
+            hit: (m: string) => boolean,
+        ): string[] =>
+            Object.entries(enums)
+                .filter(([enumId, obj]) => obj?.type === 'enum' && !selected.includes(enumId))
+                .filter(([, obj]) => ((obj.common as { members?: string[] }).members ?? []).some(hit))
+                .map(([enumId]) => enumId);
+        explain({
+            code: 'not-read',
+            stateId: id,
+            reasons: ['outside-selection'],
+            unselected: {
+                rooms: roomsSelected ? notSelected(rooms, config.selectedRooms, m => below(m, id)) : [],
+                functions: functionsSelected
+                    ? notSelected(functions, config.selectedFunctions, m => covers(m, id))
+                    : [],
+            },
+        });
     }
 }

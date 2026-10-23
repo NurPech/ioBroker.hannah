@@ -26,6 +26,36 @@ describe('device-grouping', () => {
     });
 
     describe('planMerges', () => {
+        it('does not take devices under a folder, or devices in general, for channels of one device', () => {
+            const found: Array<{ code: string }> = [];
+
+            const underFolder = planMerges(
+                [
+                    candidate('hm.0.Wohnzimmer.DeckeGarten', [1], { groupType: 'device', parentType: 'folder' }),
+                    candidate('hm.0.Wohnzimmer.DeckeSeite', [10], { groupType: 'device', parentType: 'folder' }),
+                ],
+                d => found.push(d),
+            );
+            const devices = planMerges([
+                candidate('hm.0.Wohnzimmer.A', [1], { groupType: 'device' }),
+                candidate('hm.0.Wohnzimmer.B', [10], { groupType: 'device' }),
+            ]);
+
+            expect(underFolder).to.deep.equal([]);
+            expect(devices).to.deep.equal([]);
+            expect(found).to.deep.equal([]);
+        });
+
+        it('still merges the channels of a device, and objects whose type is not known', () => {
+            const channels = planMerges([
+                candidate('dev.0.D.1', [1], { groupType: 'channel', parentType: 'device' }),
+                candidate('dev.0.D.2', [10], { groupType: 'channel', parentType: 'device' }),
+            ]);
+
+            expect(channels).to.have.length(1);
+            expect(planMerges([candidate('dev.0.E.1', [1]), candidate('dev.0.E.2', [10])])).to.have.length(1);
+        });
+
         it('merges sibling channels of one room and function that use different slots', () => {
             const merges = planMerges([candidate('dev.0.D.1', [1]), candidate('dev.0.D.2', [10])]);
 
