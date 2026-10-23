@@ -23,6 +23,7 @@
  * - name and room are mandatory, a device without room is not reported
  */
 import { v2 } from '@m1kad0/hannah-proto';
+import type { Explain } from './device-diagnostics';
 
 import DeviceClass = v2.device_model.DeviceClass;
 import DeviceSubtype = v2.device_model.DeviceSubtype;
@@ -543,22 +544,49 @@ function preliminaryKind(state: DeviceState, blind: boolean, climate: boolean): 
  * @param states - The states of one device
  * @param blind - The device is a blind (a level is a position)
  * @param climate - The device is an air conditioner (mode and fan speed are slots)
+ * @param report - Where to report what is not used the way it could have been, and for which device
+ * @param report.deviceId - ID of the device the states belong to
+ * @param report.explain - Receives the findings
  */
-function resolveKinds(states: DeviceState[], blind: boolean, climate: boolean): Map<string, SlotKind> {
+function resolveKinds(
+    states: DeviceState[],
+    blind: boolean,
+    climate: boolean,
+    report?: { deviceId: string; explain: Explain },
+): Map<string, SlotKind> {
     const groups = new Map<SlotKind, DeviceState[]>();
     for (const state of states) {
         const kind = preliminaryKind(state, blind, climate);
-        if (kind !== undefined && unitFits(kind, state.unit)) {
+        if (kind === undefined) {
+            continue;
+        }
+        if (unitFits(kind, state.unit)) {
             groups.set(kind, [...(groups.get(kind) ?? []), state]);
+        } else {
+            report?.explain({
+                code: 'unit-mismatch',
+                deviceId: report.deviceId,
+                stateId: state.stateId,
+                slot: slotIdForKind(kind),
+                unit: state.unit,
+            });
         }
     }
     const chosen = new Map<string, SlotKind>();
     for (const [kind, members] of groups) {
-        const winner = pickWinner(kind, members);
-        if (winner) {
-            chosen.set(winner.stateId, kind);
+        const left = narrowCandidates(kind, members);
+        if (left.length === 1) {
+            chosen.set(left[0].stateId, kind);
+        } else {
+            // no clear winner: nothing is chosen
+            report?.explain({
+                code: 'slot-ambiguous',
+                deviceId: report.deviceId,
+                slot: slotIdForKind(kind),
+                candidates: members.map(m => m.stateId),
+                remaining: left.map(m => m.stateId),
+            });
         }
-        // no clear winner: nothing is chosen
     }
     return chosen;
 }
@@ -603,8 +631,9 @@ const CONTROL_KINDS = new Set<SlotKind>([
  *
  * @param kind - The slot kind the candidates compete for
  * @param candidates - The states that fit the kind
+ * @returns The states that are left, exactly one if there is a winner
  */
-function pickWinner(kind: SlotKind, candidates: DeviceState[]): DeviceState | undefined {
+function narrowCandidates(kind: SlotKind, candidates: DeviceState[]): DeviceState[] {
     const preferredUnit = PREFERRED_UNIT[kind];
     const roles = ROLES_BY_KIND[kind];
     const steps: Array<(s: DeviceState) => boolean> = [
@@ -623,7 +652,7 @@ function pickWinner(kind: SlotKind, candidates: DeviceState[]): DeviceState | un
             left = narrowed;
         }
     }
-    return left.length === 1 ? left[0] : undefined;
+    return left;
 }
 
 function decideClass(slots: v2.device_model.Slot[], typeHints: Set<string>): DeviceClass {
@@ -687,11 +716,11 @@ function genericKind(state: DeviceState): SlotKind {
     return SlotKind.SLOT_KIND_GENERIC_TEXT;
 }
 
-function classifyDevice(input: DeviceInput, model: DeviceModel): v2.device_model.TypedDevice {
+function classifyDevice(input: DeviceInput, model: DeviceModel, explain?: Explain): v2.device_model.TypedDevice {
     const { states } = input;
     const blind = states.some(s => s.typeHint === 'blind');
     const climate = states.some(s => s.typeHint === CLIMATE_HINT);
-    const kinds = resolveKinds(states, blind, climate);
+    const kinds = resolveKinds(states, blind, climate, explain && { deviceId: input.deviceId, explain });
     const standardIds = new Set([...kinds.values()].map(slotIdForKind));
 
     const slots = new Map<string, v2.device_model.Slot>();
@@ -759,17 +788,55 @@ function classifyDevice(input: DeviceInput, model: DeviceModel): v2.device_model
  * Hannah could do with it. The generic slots of a recognized device stay.
  *
  * @param inputs - One entry per device, in the order the devices are reported
+ * @param explain - Receives the reasons why a device or a state was not used the way it could have been
  */
-export function buildDeviceModel(inputs: DeviceInput[]): DeviceModel {
+export function buildDeviceModel(inputs: DeviceInput[], explain?: Explain): DeviceModel {
     const model: DeviceModel = { devices: [], bySlotState: new Map(), targets: new Map() };
     for (const input of inputs) {
-        if (!input.room || !input.deviceId || input.states.length === 0) {
+        if (!input.deviceId || input.states.length === 0) {
             continue;
         }
-        const own: DeviceModel = { devices: [], bySlotState: new Map(), targets: new Map() };
-        const device = classifyDevice(input, own);
-        if (device.slots.every(slot => GENERIC_KINDS.has(slot.kind))) {
+        if (!input.room) {
+            explain?.({ code: 'no-room', deviceId: input.deviceId, stateIds: input.states.map(s => s.stateId) });
             continue;
+        }
+        // states that were already explained as ambiguous or in a foreign unit are not "unknown" as well
+        const explained = new Set<string>();
+        const own: DeviceModel = { devices: [], bySlotState: new Map(), targets: new Map() };
+        const device = classifyDevice(
+            input,
+            own,
+            explain &&
+                (d => {
+                    if (d.code === 'slot-ambiguous') {
+                        d.candidates.forEach(id => explained.add(id));
+                    } else if (d.code === 'unit-mismatch') {
+                        explained.add(d.stateId);
+                    }
+                    explain(d);
+                }),
+        );
+        if (device.slots.every(slot => GENERIC_KINDS.has(slot.kind))) {
+            explain?.({
+                code: 'no-recognized-slot',
+                deviceId: input.deviceId,
+                stateIds: input.states.map(s => s.stateId),
+            });
+            continue;
+        }
+        if (explain) {
+            for (const state of input.states) {
+                const slot = device.slots.find(s => s.identifier === state.stateId);
+                if (slot && GENERIC_KINDS.has(slot.kind) && !explained.has(state.stateId)) {
+                    explain({
+                        code: 'state-generic',
+                        deviceId: input.deviceId,
+                        stateId: state.stateId,
+                        key: state.key,
+                        role: state.role,
+                    });
+                }
+            }
         }
         model.devices.push(device);
         own.bySlotState.forEach((value, key) => model.bySlotState.set(key, value));

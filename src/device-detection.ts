@@ -12,6 +12,7 @@
  * the detector has no tag for keeps whatever the role table and the state name make of it.
  */
 import ChannelDetector from '@iobroker/type-detector';
+import type { Explain } from './device-diagnostics';
 
 /** What the detector made of one state. */
 export interface DetectedState {
@@ -160,8 +161,9 @@ export class DeviceDetector {
      * gets a key and the device a type hint; every other state is left out.
      *
      * @param groupId - ID of the channel or device whose states are looked at
+     * @param explain - Receives a finding for a state the detector took for a switch that is none
      */
-    detect(groupId: string): Map<string, DetectedState> {
+    detect(groupId: string, explain?: Explain): Map<string, DetectedState> {
         const found = new Map<string, DetectedState>();
         let patterns;
         try {
@@ -185,6 +187,7 @@ export class DeviceDetector {
             for (const state of pattern.states) {
                 const key = keys[state.name];
                 if (key === 'on' && !isPlausibleSwitch(this.objects[state.id]?.common?.role ?? '', state.id)) {
+                    explain?.({ code: 'switch-implausible', stateId: state.id });
                     continue;
                 }
                 if (state.id && key && !found.has(state.id)) {
