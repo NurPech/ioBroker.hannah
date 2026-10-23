@@ -36,6 +36,7 @@
     },
     "include": [
         "src/**/*.ts",
+        "tools/**/*.ts",
         "test/**/*.ts"
     ],
     "exclude": [
@@ -43,6 +44,7 @@
         "node_modules/**",
         "widgets/**",
         "src/**/*.test.ts",
+        "tools/**/*.test.ts",
         "test/**"
     ]
 }
