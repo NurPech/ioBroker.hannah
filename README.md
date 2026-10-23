@@ -80,6 +80,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
+- Changed: the `type`, `name` and `shutterInverted` overrides in `common.custom` are only read from the state itself. They were also read from the device or channel the state sits in, but ioBroker offers custom settings on states only, so that could only be set by editing the object by hand
 - Added (with a Hannah Core that supports it): every satellite has a new state `satellites.rooms.<room>.<device>.led_brightness` (0–100 %) for the brightness of its LED ring, 0 switches the ring off. It shows the value Hannah Core keeps for the satellite and writing it changes the ring, for example to dim it at night from a script or a scene. The satellite is also in the device manager with a slider for it. With an older Hannah Core the state stays as it is, the adapter writes one warning to the log and keeps working as before
 
 ### 1.6.1 (2026-10-20)
