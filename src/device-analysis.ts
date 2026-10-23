@@ -5,10 +5,10 @@
  * function of the objects (and optionally the values of the states).
  */
 import type { v2 } from '@m1kad0/hannah-proto';
-import { explainDiscovery, type Diagnostic } from '../../src/device-diagnostics';
-import { parentId } from '../../src/device-grouping';
-import { resolveDeviceMeta } from '../../src/device-meta';
-import { buildTypedDevices } from '../../src/device-snapshot';
+import { explainDiscovery, type Diagnostic } from './device-diagnostics';
+import { parentId } from './device-grouping';
+import { resolveDeviceMeta } from './device-meta';
+import { buildTypedDevices } from './device-snapshot';
 
 /** What to analyze and how the adapter would be configured. */
 export interface AnalysisOptions {

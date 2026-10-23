@@ -3,9 +3,8 @@
  * and why. Pure: the caller prints it.
  */
 import { v2 } from '@m1kad0/hannah-proto';
-import type { Analysis } from './device-analysis';
-import { describeDiagnostic, describeNotRead, severityOf, type Diagnostic } from '../../src/device-diagnostics';
-import { parentId } from '../../src/device-grouping';
+import type { Analysis } from '../../src/device-analysis';
+import { describeDiagnostic, groupNotRead, severityOf, type Diagnostic } from '../../src/device-diagnostics';
 
 import DeviceClass = v2.device_model.DeviceClass;
 import SlotKind = v2.device_model.SlotKind;
@@ -70,29 +69,20 @@ function shortId(stateId: string, deviceId: string): string {
  * @param all - List every object, not only the first ones
  */
 function notReadSection(findings: Diagnostic[], all: boolean): string[] {
-    const groups = new Map<string, { reason: string; fix: string; devices: Map<string, string[]> }>();
-    let states = 0;
-    for (const d of findings) {
-        if (d.code !== 'not-read') {
-            continue;
-        }
-        states++;
-        const { reason, fix } = describeNotRead(d.reasons, d.unselected);
-        const group = groups.get(reason) ?? { reason, fix, devices: new Map<string, string[]>() };
-        const device = parentId(d.stateId);
-        group.devices.set(device, [...(group.devices.get(device) ?? []), d.stateId.slice(device.length + 1)]);
-        groups.set(reason, group);
-    }
-    if (states === 0) {
+    const groups = groupNotRead(findings);
+    if (groups.length === 0) {
         return [];
     }
-    const lines = [`States the adapter does not read (${states})`];
-    for (const { reason, fix, devices } of groups.values()) {
-        const count = [...devices.values()].reduce((a, b) => a + b.length, 0);
-        lines.push(`  ${count} states in ${devices.size} objects: ${reason}.`, `  Fix: ${fix}`);
+    const count = (g: (typeof groups)[number]): number => g.objects.reduce((n, o) => n + o.states.length, 0);
+    const lines = [`States the adapter does not read (${groups.reduce((n, g) => n + count(g), 0)})`];
+    for (const group of groups) {
+        lines.push(
+            `  ${count(group)} states in ${group.objects.length} objects: ${group.reason}.`,
+            `  Fix: ${group.fix}`,
+        );
         lines.push(
             ...listLimited(
-                [...devices].map(([device, names]) => `    ${device}: ${names.join(', ')}`),
+                group.objects.map(o => `    ${o.id}: ${o.states.join(', ')}`),
                 all,
             ),
         );
