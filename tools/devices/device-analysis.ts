@@ -16,9 +16,9 @@ export interface AnalysisOptions {
     prefixes: string[];
     /** pretend every state is in a room and a function, to see what the parser understands regardless of the assignment */
     simulate: boolean;
-    /** room enum IDs the adapter reads, empty = all */
+    /** room enum IDs the adapter reads, `all` = every room of the dump (the default), empty = no selection, which reads every room */
     selectedRooms: string[];
-    /** function enum IDs the adapter reads, empty = all */
+    /** function enum IDs the adapter reads, `all` = every function of the dump (the default), empty = no selection, which needs no function */
     selectedFunctions: string[];
     /** state ID prefixes the adapter reads besides the enums */
     extraStatePrefixes: string[];
@@ -44,15 +44,26 @@ export interface Analysis {
     states: Map<string, AnalyzedState>;
     /** display name of every room by ID */
     rooms: Record<string, string>;
-    /** how many states were looked at, and how many of them the adapter reads */
-    counts: { states: number; read: number };
+    /** how many room enums the dump has, none means no state is in a room */
+    roomEnums: number;
+    /** the IDs of the room and function enums the dump has */
+    enumIds: { rooms: string[]; functions: string[] };
+    /** room and function enums that were selected but are not in the dump, so they match nothing */
+    unknownSelection: string[];
+    /** every state was taken as being in a room and a function */
+    simulated: boolean;
+    /** neither a room nor a function selection was given, so every room and function of the dump counted as selected */
+    defaultSelection: boolean;
+    /** how many states were looked at, how many of them the adapter reads, and how many of those only as raw states (extra prefixes) */
+    counts: { states: number; read: number; raw: number };
 }
 
 const DEFAULTS: AnalysisOptions = {
     prefixes: [],
     simulate: false,
-    selectedRooms: [],
-    selectedFunctions: [],
+    // every room and function of the dump: a state needs a room and a function to be read
+    selectedRooms: ['all'],
+    selectedFunctions: ['all'],
     extraStatePrefixes: [],
     namespace: 'hannah.0',
 };
@@ -82,20 +93,94 @@ function displayName(name: unknown, fallback: string): string {
 }
 
 /**
+ * An export with the system info carries the rooms and functions on the objects themselves
+ * (`common.enums`) instead of as enum objects with members. This turns them into enum objects: an
+ * object is a member of every enum it lists. Enum objects the dump has are kept, their members too.
+ *
+ * @param objects - The objects of the dump
+ */
+export function withEmbeddedEnums(objects: Record<string, ioBroker.Object>): Record<string, ioBroker.Object> {
+    const embedded = new Map<string, { enumObject: Record<string, any>; members: Set<string> }>();
+    for (const [id, obj] of Object.entries(objects)) {
+        const list = (obj?.common as { enums?: unknown } | undefined)?.enums;
+        if (!Array.isArray(list)) {
+            continue;
+        }
+        for (const entry of list) {
+            const enumId = (entry as { _id?: unknown } | undefined)?._id;
+            if (typeof enumId !== 'string') {
+                continue;
+            }
+            const found = embedded.get(enumId) ?? {
+                enumObject: entry as Record<string, any>,
+                members: new Set<string>(),
+            };
+            found.members.add(id);
+            embedded.set(enumId, found);
+        }
+    }
+    const result = { ...objects };
+    for (const [enumId, { enumObject, members }] of embedded) {
+        const existing = objects[enumId];
+        const known = (existing?.common as { members?: string[] } | undefined)?.members ?? [];
+        result[enumId] = {
+            ...(existing ?? { native: {} }),
+            _id: enumId,
+            type: 'enum',
+            common: {
+                ...(existing?.common ?? { name: enumObject.common?.name ?? enumId.split('.').pop() }),
+                members: [...new Set([...known, ...members])],
+            },
+        } as unknown as ioBroker.Object;
+    }
+    return result;
+}
+
+/**
+ * The states a finding is about.
+ *
+ * @param d - The finding
+ */
+function statesOf(d: Diagnostic): string[] {
+    switch (d.code) {
+        case 'no-room':
+        case 'no-recognized-slot':
+            return d.stateIds;
+        case 'slot-ambiguous':
+            return d.candidates;
+        case 'merged':
+        case 'merge-blocked':
+            return [];
+        default:
+            return [d.stateId];
+    }
+}
+
+/**
  * Analyzes an object dump.
  *
- * @param objects - The objects of the setup, with the `enum.rooms.*` and `enum.functions.*` enums
+ * @param dump - The objects of the setup, with the `enum.rooms.*` and `enum.functions.*` enums, or with `common.enums` on the objects
  * @param values - The values of the states by ID, missing = no value
  * @param options - What to look at, see `AnalysisOptions`
  */
 export function analyzeObjects(
-    objects: Record<string, ioBroker.Object>,
+    dump: Record<string, ioBroker.Object>,
     values: Record<string, unknown> = {},
     options: Partial<AnalysisOptions> = {},
 ): Analysis {
     const opts = { ...DEFAULTS, ...options };
+    const objects = withEmbeddedEnums(dump);
     let rooms = enumsWith(objects, 'enum.rooms.');
     let functions = enumsWith(objects, 'enum.functions.');
+    const roomEnums = Object.keys(rooms).length;
+    const enumIds = { rooms: Object.keys(rooms).sort(), functions: Object.keys(functions).sort() };
+    // "all" selects every enum of the dump, like an adapter setting with every room or function ticked
+    const selectedRooms = opts.selectedRooms.includes('all') ? Object.keys(rooms) : opts.selectedRooms;
+    const selectedFunctions = opts.selectedFunctions.includes('all') ? Object.keys(functions) : opts.selectedFunctions;
+    const unknownSelection = [
+        ...selectedRooms.filter(id => !(id in rooms)),
+        ...selectedFunctions.filter(id => !(id in functions)),
+    ];
     const roomNames = Object.fromEntries(
         Object.entries(rooms).map(([id, obj]) => {
             const roomId = id.split('.').pop() ?? id;
@@ -110,6 +195,8 @@ export function analyzeObjects(
 
     const findings: Diagnostic[] = [];
     let read = stateIds;
+    // states that are read only because of an extra prefix: raw states (car, weather), no devices
+    let raw = new Set<string>();
     if (opts.simulate) {
         // every device gets a room and a function of its own making, unless it has one
         const devices = [...new Set(stateIds.map(parentId))];
@@ -124,8 +211,8 @@ export function analyzeObjects(
             functions,
             objects,
             {
-                selectedRooms: opts.selectedRooms,
-                selectedFunctions: opts.selectedFunctions,
+                selectedRooms,
+                selectedFunctions,
                 extraStatePrefixes: opts.extraStatePrefixes,
             },
             d => {
@@ -136,6 +223,17 @@ export function analyzeObjects(
             },
         );
         read = stateIds.filter(id => !notRead.has(id));
+
+        const byEnums = new Set(read);
+        explainDiscovery(
+            read,
+            rooms,
+            functions,
+            objects,
+            { selectedRooms, selectedFunctions, extraStatePrefixes: [] },
+            d => d.code === 'not-read' && byEnums.delete(d.stateId),
+        );
+        raw = new Set(read.filter(id => !byEnums.has(id)));
     }
 
     const collected = read.map(id => ({
@@ -150,9 +248,18 @@ export function analyzeObjects(
 
     return {
         devices: model.devices,
-        findings,
+        // a raw state is no device: what is missing for one is no problem
+        findings: findings.filter(d => {
+            const states = statesOf(d);
+            return states.length === 0 || !states.every(id => raw.has(id));
+        }),
         states: new Map(collected.map(c => [c.id, { role: c.meta.role, unit: c.meta.unit }])),
         rooms: roomNames,
-        counts: { states: stateIds.length, read: read.length },
+        roomEnums,
+        enumIds,
+        unknownSelection,
+        simulated: opts.simulate,
+        defaultSelection: options.selectedRooms === undefined && options.selectedFunctions === undefined,
+        counts: { states: stateIds.length, read: read.length, raw: raw.size },
     };
 }

@@ -2,11 +2,12 @@
  * Shows how the adapter understands the devices of an ioBroker setup, from an object dump, without
  * an adapter and without ioBroker:
  *
- *     node build/cli.js objects.json --states states.json --simulate
+ *     npm run devices -- objects.json --states states.json --simulate
  *
  * See `printUsage()` for the options.
  */
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as zlib from 'node:zlib';
 import { analyzeObjects, type AnalysisOptions } from './device-analysis';
 import { formatReport } from './device-report';
@@ -18,6 +19,8 @@ export interface CliArguments {
     objectsFile: string;
     /** the file with the states, if any */
     statesFile: string | undefined;
+    /** the file with the adapter settings, if any */
+    configFile: string | undefined;
     /** print the analysis as JSON */
     json: boolean;
     /** list everything */
@@ -26,7 +29,7 @@ export interface CliArguments {
     analysis: Partial<AnalysisOptions>;
 }
 
-const USAGE = `Usage: node build/cli.js <objects-file> [options]
+const USAGE = `Usage: npm run devices -- <objects-file> [options]
 
 Shows how the adapter understands the devices of an ioBroker setup.
 
@@ -34,11 +37,19 @@ Shows how the adapter understands the devices of an ioBroker setup.
 
 Options:
   --states <file>         states of the setup (states.json or states.jsonl), for the values
+  --config <file>         the settings of the adapter instance (its "native" part, or the whole
+                          system.adapter.hannah.0 object as JSON): the room and function selection and
+                          the extra prefixes. This is what decides which states the adapter reads.
+                          --rooms, --functions and --extra-prefix override it.
+                          Without it, tools/devices/hannah-config.json is used if it exists (git ignores
+                          it, see hannah-config.example.json).
   --simulate              pretend every device is in a room and a function, to see what is
                           understood regardless of the assignment
   --prefix <id>           only states below this ID, e.g. hm-rpc.0. (repeatable, or comma separated)
-  --rooms <enum ids>      read only these rooms, like the adapter setting (comma separated)
-  --functions <enum ids>  read only these functions, like the adapter setting (comma separated)
+  --rooms <enum ids>      read only these rooms, like the adapter setting (comma separated, or "all")
+  --functions <enum ids>  read only these functions, like the adapter setting (comma separated, or "all")
+                          Without --config, --rooms and --functions every room and function of the dump
+                          counts as selected, so a state needs a room and a function to be read.
   --extra-prefix <id>     state ID prefix the adapter reads besides the enums (repeatable)
   --namespace <name>      adapter instance whose common.custom overrides count (default hannah.0)
   --all                   list every state and device that is left out, and what only explains a decision
@@ -65,7 +76,14 @@ function list(value: string): string[] {
  * @returns The arguments, or the text to tell the user what is wrong with them
  */
 export function parseArguments(argv: string[]): CliArguments | string {
-    const args: CliArguments = { objectsFile: '', statesFile: undefined, json: false, all: false, analysis: {} };
+    const args: CliArguments = {
+        objectsFile: '',
+        statesFile: undefined,
+        configFile: undefined,
+        json: false,
+        all: false,
+        analysis: {},
+    };
     const analysis: Partial<AnalysisOptions> = {};
     const value = (i: number, name: string): string => {
         const next = argv[i + 1];
@@ -80,6 +98,9 @@ export function parseArguments(argv: string[]): CliArguments | string {
             switch (arg) {
                 case '--states':
                     args.statesFile = value(i++, arg);
+                    break;
+                case '--config':
+                    args.configFile = value(i++, arg);
                     break;
                 case '--simulate':
                     analysis.simulate = true;
@@ -122,6 +143,30 @@ export function parseArguments(argv: string[]): CliArguments | string {
     return args;
 }
 
+/**
+ * The part of the adapter settings that decides which states are read.
+ *
+ * @param json - The settings: the `native` part of the instance, or the whole instance object
+ */
+export function adapterConfigOptions(json: unknown): Partial<AnalysisOptions> {
+    const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+    const root = isRecord(json) ? json : {};
+    const native = isRecord(root.native) ? root.native : root;
+    const strings = (v: unknown): string[] =>
+        Array.isArray(v)
+            ? // the extra prefixes are objects with a prefix, the selections are plain IDs
+              v.map(x => (typeof x === 'string' ? x : isRecord(x) && typeof x.prefix === 'string' ? x.prefix : ''))
+            : [];
+    return {
+        selectedRooms: strings(native.selectedRooms).filter(Boolean),
+        selectedFunctions: strings(native.selectedFunctions).filter(Boolean),
+        extraStatePrefixes: strings(native.extraStatePrefixes).filter(Boolean),
+    };
+}
+
+/** The settings the tool uses if none are given: a file next to it that git ignores. */
+const DEFAULT_CONFIG = path.join(__dirname, 'hannah-config.json');
+
 function readText(file: string): string {
     const raw = fs.readFileSync(file);
     return (file.endsWith('.gz') ? zlib.gunzipSync(raw) : raw).toString('utf8');
@@ -143,18 +188,23 @@ export function run(argv: string[]): { output: string; code: number } {
     }
     let objects;
     let values = {};
+    let fromConfig: Partial<AnalysisOptions> = {};
+    const configFile = args.configFile ?? (fs.existsSync(DEFAULT_CONFIG) ? DEFAULT_CONFIG : undefined);
     try {
         objects = parseObjectDump(readText(args.objectsFile));
         if (args.statesFile) {
             values = parseStateDump(readText(args.statesFile));
         }
+        if (configFile) {
+            fromConfig = adapterConfigOptions(JSON.parse(readText(configFile)));
+        }
     } catch (e) {
-        return { output: `Cannot read the dump: ${(e as Error).message}\n`, code: 1 };
+        return { output: `Cannot read the input: ${(e as Error).message}\n`, code: 1 };
     }
     if (Object.keys(objects).length === 0) {
         return { output: `No objects found in ${args.objectsFile}\n`, code: 1 };
     }
-    const analysis = analyzeObjects(objects, values, args.analysis);
+    const analysis = analyzeObjects(objects, values, { ...fromConfig, ...args.analysis });
     if (args.json) {
         const { devices, findings, counts } = analysis;
         // values of slots can be 64-bit numbers
@@ -165,7 +215,8 @@ export function run(argv: string[]): { output: string; code: number } {
         );
         return { output: `${output}\n`, code: 0 };
     }
-    return { output: formatReport(analysis, { all: args.all }), code: 0 };
+    const settings = configFile ? `Adapter settings: ${configFile}\n\n` : '';
+    return { output: settings + formatReport(analysis, { all: args.all }), code: 0 };
 }
 
 if (require.main === module) {

@@ -4,7 +4,8 @@
  */
 import { v2 } from '@m1kad0/hannah-proto';
 import type { Analysis } from './device-analysis';
-import { describeDiagnostic, severityOf, type Diagnostic } from '../../src/device-diagnostics';
+import { describeDiagnostic, describeNotRead, severityOf, type Diagnostic } from '../../src/device-diagnostics';
+import { parentId } from '../../src/device-grouping';
 
 import DeviceClass = v2.device_model.DeviceClass;
 import SlotKind = v2.device_model.SlotKind;
@@ -24,9 +25,8 @@ const GENERIC_KINDS = new Set<SlotKind>([
     SlotKind.SLOT_KIND_GENERIC_TEXT,
 ]);
 
-/** The findings that say a device or a state is left out altogether, in the order they are printed. */
+/** The findings that say a device is left out altogether, in the order they are printed. */
 const NOT_REPORTED: Array<{ code: Diagnostic['code']; title: string }> = [
-    { code: 'not-read', title: 'States the adapter does not read' },
     { code: 'no-room', title: 'Devices without a room' },
     { code: 'no-recognized-slot', title: 'Devices with no state Hannah knows' },
 ];
@@ -54,6 +54,53 @@ function listLimited(items: string[], all: boolean): string[] {
 }
 
 /**
+ * The ID of a state without the ID of its device, which the line above already names.
+ *
+ * @param stateId - ioBroker state ID
+ * @param deviceId - ID of the device the state belongs to
+ */
+function shortId(stateId: string, deviceId: string): string {
+    return stateId.startsWith(`${deviceId}.`) ? stateId.slice(deviceId.length) : stateId;
+}
+
+/**
+ * The states that are not read, by the object they sit in and the reason.
+ *
+ * @param findings - Every finding of the analysis
+ * @param all - List every object, not only the first ones
+ */
+function notReadSection(findings: Diagnostic[], all: boolean): string[] {
+    const groups = new Map<string, { reason: string; fix: string; devices: Map<string, string[]> }>();
+    let states = 0;
+    for (const d of findings) {
+        if (d.code !== 'not-read') {
+            continue;
+        }
+        states++;
+        const { reason, fix } = describeNotRead(d.reasons, d.unselected);
+        const group = groups.get(reason) ?? { reason, fix, devices: new Map<string, string[]>() };
+        const device = parentId(d.stateId);
+        group.devices.set(device, [...(group.devices.get(device) ?? []), d.stateId.slice(device.length + 1)]);
+        groups.set(reason, group);
+    }
+    if (states === 0) {
+        return [];
+    }
+    const lines = [`States the adapter does not read (${states})`];
+    for (const { reason, fix, devices } of groups.values()) {
+        const count = [...devices.values()].reduce((a, b) => a + b.length, 0);
+        lines.push(`  ${count} states in ${devices.size} objects: ${reason}.`, `  Fix: ${fix}`);
+        lines.push(
+            ...listLimited(
+                [...devices].map(([device, names]) => `    ${device}: ${names.join(', ')}`),
+                all,
+            ),
+        );
+    }
+    return [...lines, ''];
+}
+
+/**
  * The analysis as text.
  *
  * @param analysis - The result of `analyzeObjects()`
@@ -62,9 +109,31 @@ function listLimited(items: string[], all: boolean): string[] {
 export function formatReport(analysis: Analysis, options: Partial<ReportOptions> = {}): string {
     const all = options.all === true;
     const lines: string[] = [
-        `States looked at: ${analysis.counts.states}, read by the adapter: ${analysis.counts.read}, devices for Hannah: ${analysis.devices.length}`,
-        '',
+        `States looked at: ${analysis.counts.states}, read by the adapter: ${analysis.counts.read}${analysis.counts.raw > 0 ? ` (${analysis.counts.raw} of them raw states through extra prefixes, no devices)` : ''}, devices for Hannah: ${analysis.devices.length}`,
     ];
+    if (analysis.roomEnums === 0 && !analysis.simulated && analysis.counts.states > 0) {
+        lines.push(
+            '',
+            'Note: the dump has no room enums (enum.rooms.*), so no state is in a room. Export the enums with the objects, or use --simulate to see what is understood regardless of the assignment.',
+        );
+    }
+    if (analysis.unknownSelection.length > 0) {
+        const roomsWrong = analysis.unknownSelection.some(id => !id.startsWith('enum.functions.'));
+        const functionsWrong = analysis.unknownSelection.some(id => id.startsWith('enum.functions.'));
+        lines.push(
+            '',
+            `Note: ${analysis.unknownSelection.join(', ')} ${analysis.unknownSelection.length === 1 ? 'is' : 'are'} not in the dump, so nothing matches.`,
+            ...(roomsWrong ? [`  Rooms in the dump: ${analysis.enumIds.rooms.join(', ') || 'none'}`] : []),
+            ...(functionsWrong ? [`  Functions in the dump: ${analysis.enumIds.functions.join(', ') || 'none'}`] : []),
+        );
+    }
+    if (analysis.defaultSelection && !analysis.simulated) {
+        lines.push(
+            '',
+            'Assuming every room and function of the dump is selected in the adapter: a state needs a room and a function. Use --config <file> for the selection of your adapter.',
+        );
+    }
+    lines.push('');
 
     const reported = new Set(analysis.devices.map(d => d.deviceId));
     const shown = new Set<Diagnostic>();
@@ -85,7 +154,7 @@ export function formatReport(analysis: Analysis, options: Partial<ReportOptions>
             const state = analysis.states.get(slot.identifier);
             const detail = [state?.role, state?.unit].filter(Boolean).join(', ');
             lines.push(
-                `    ${slot.slotId.padEnd(20)} ${SlotKind[slot.kind].replace('SLOT_KIND_', '').padEnd(18)} ${slot.writable ? 'rw' : 'ro'}  ${slot.identifier}${detail ? ` (${detail})` : ''}`,
+                `    ${slot.slotId.padEnd(20)} ${SlotKind[slot.kind].replace('SLOT_KIND_', '').padEnd(18)} ${slot.writable ? 'rw' : 'ro'}  ${shortId(slot.identifier, device.deviceId)}${detail ? ` (${detail})` : ''}`,
             );
         }
         if (generic.length > 0) {
@@ -96,12 +165,18 @@ export function formatReport(analysis: Analysis, options: Partial<ReportOptions>
                 lines.push(`    merged from the channels ${d.groupIds.join(', ')}`);
                 shown.add(d);
             } else if (OF_DEVICE.has(d.code) && 'deviceId' in d && d.deviceId === device.deviceId) {
-                lines.push(indent(`! ${finding(d)}`, '    '));
                 shown.add(d);
+                // a state that stays a generic slot is listed above, its explanation only on request
+                if (all || severityOf(d) === 'warning') {
+                    lines.push(indent(`${severityOf(d) === 'warning' ? '!' : '-'} ${finding(d)}`, '    '));
+                }
             }
         }
         lines.push('');
     }
+
+    lines.push(...notReadSection(analysis.findings, all));
+    analysis.findings.filter(d => d.code === 'not-read').forEach(d => shown.add(d));
 
     for (const { code, title } of NOT_REPORTED) {
         const group = analysis.findings.filter(d => d.code === code);
@@ -123,7 +198,9 @@ export function formatReport(analysis: Analysis, options: Partial<ReportOptions>
     if (other.length > 0) {
         // a finding about a device that is not reported belongs to the devices that are left out
         const label = (d: Diagnostic): string =>
-            'deviceId' in d && !reported.has(d.deviceId) ? '(not reported) ' : '';
+            d.code !== 'merged' && d.code !== 'merge-blocked' && 'deviceId' in d && !reported.has(d.deviceId)
+                ? '(not reported) '
+                : '';
         lines.push(
             `Other findings (${other.length})`,
             ...listLimited(
