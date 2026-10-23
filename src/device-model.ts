@@ -817,11 +817,14 @@ export function buildDeviceModel(inputs: DeviceInput[], explain?: Explain): Devi
                 }),
         );
         if (device.slots.every(slot => GENERIC_KINDS.has(slot.kind))) {
-            explain?.({
-                code: 'no-recognized-slot',
-                deviceId: input.deviceId,
-                stateIds: input.states.map(s => s.stateId),
-            });
+            // states that fit a slot but were ambiguous or in a foreign unit are explained already
+            if (explained.size === 0) {
+                explain?.({
+                    code: 'no-recognized-slot',
+                    deviceId: input.deviceId,
+                    stateIds: input.states.map(s => s.stateId),
+                });
+            }
             continue;
         }
         if (explain) {
