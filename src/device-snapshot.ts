@@ -125,7 +125,8 @@ export function buildTypedDevices(
             });
         }
     }
-    const merges = mergeSiblingChannels(inputs, groupFunctions, objects, explain);
+    const groupTypes = new Map(collected.map(c => [c.meta.deviceId, c.meta.deviceObject?.type]));
+    const merges = mergeSiblingChannels(inputs, groupFunctions, objects, groupTypes, explain);
     return { model: buildDeviceModel([...inputs.values()], explain), merges };
 }
 
@@ -137,6 +138,7 @@ export function buildTypedDevices(
  * @param inputs - The devices of the snapshot by group ID, merged in place
  * @param groupFunctions - The functions of the states of every group
  * @param objects - Holds the device objects the merged devices are named after
+ * @param groupTypes - The ioBroker object type of every group, undefined = not known
  * @param explain - Receives a finding for every merge, and for channels that stay apart
  * @returns The merges that were made
  */
@@ -144,6 +146,7 @@ function mergeSiblingChannels(
     inputs: Map<string, DeviceInput>,
     groupFunctions: Map<string, string[]>,
     objects: ObjectMap,
+    groupTypes: Map<string, string | undefined>,
     explain?: Explain,
 ): Merge[] {
     const candidates: MergeCandidate[] = [...inputs.values()].map(input => ({
@@ -151,6 +154,8 @@ function mergeSiblingChannels(
         room: input.room,
         functions: groupFunctions.get(input.deviceId) ?? [],
         kinds: standardKindsOf(input.states),
+        groupType: groupTypes.get(input.deviceId),
+        parentType: objects[parentId(input.deviceId)]?.type,
     }));
     const merges = planMerges(candidates, explain);
     for (const merge of merges) {

@@ -47,6 +47,10 @@ export interface MergeCandidate {
     functions: string[];
     /** the standard slot kinds the group's states carry */
     kinds: Set<number>;
+    /** ioBroker object type of the group (`channel`, `device`, ...), undefined = not known */
+    groupType?: string;
+    /** ioBroker object type of the object the group sits in (`device`, `folder`, ...), undefined = not known */
+    parentType?: string;
 }
 
 /** Groups that become one device: the device object they all sit in and the groups to merge. */
@@ -72,6 +76,10 @@ export function planMerges(candidates: MergeCandidate[], explain?: Explain): Mer
     const buckets = new Map<string, MergeCandidate[]>();
     for (const candidate of candidates) {
         const parent = parentId(candidate.groupId);
+        // a device (or anything under a folder) is a device of its own: only the channels of one device can be parts of it
+        if (candidate.groupType === 'device' || candidate.parentType === 'folder') {
+            continue;
+        }
         if (!candidate.room || candidate.functions.length === 0 || isInstanceLevel(parent) || groupIds.has(parent)) {
             continue;
         }
