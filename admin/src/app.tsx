@@ -165,6 +165,8 @@ class App extends GenericApp<GenericAppProps, AppState> {
                     allRooms={this.state.allRooms}
                     allFunctions={this.state.allFunctions}
                     enumsLoaded={this.state.enumsLoaded}
+                    socket={this.socket}
+                    adapterNamespace={`${this.adapterName}.${this.instance}`}
                 />
                 {this.renderError()}
                 {this.renderToast()}

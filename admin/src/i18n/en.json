@@ -118,5 +118,19 @@
     "Condition text": "Condition text",
     "Precipitation (mm)": "Precipitation (mm)",
     "Wind speed (m/s)": "Wind speed (m/s)",
-    "Wind direction (text)": "Wind direction (text)"
+    "Wind direction (text)": "Wind direction (text)",
+    "Diagnostics": "Diagnostics",
+    "Check devices": "Check devices",
+    "Checking...": "Checking...",
+    "Fix": "Fix",
+    "States looked at": "States looked at",
+    "read by the adapter": "read by the adapter",
+    "of them raw states, no devices": "of them raw states, no devices",
+    "devices for Hannah": "devices for Hannah",
+    "Devices Hannah gets": "Devices Hannah gets",
+    "generic slots": "generic slots",
+    "States the adapter does not read": "States the adapter does not read",
+    "states": "states",
+    "Other findings": "Other findings",
+    "Shows what Hannah gets with the room and function selection above, saved or not, and what is left out.": "Shows what Hannah gets with the room and function selection in the Device Discovery tab, saved or not, and what is left out."
 }
