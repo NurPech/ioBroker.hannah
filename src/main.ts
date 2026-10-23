@@ -13,6 +13,7 @@ import { BleWatcher } from './ble';
 import { SensorWatcher } from './sensors';
 import { FirmwareManager } from './firmware-manager';
 import { updateSatelliteNvs } from './satellite-nvs';
+import { runDiagnostics, type DiagnosticsRequest } from './diagnostics-service';
 
 class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
@@ -451,6 +452,23 @@ class Hannah extends utils.Adapter {
                 })
                 .catch((err: Error) => {
                     this.log.warn(`[firmware] getFirmwareFiles failed: ${err.message}`);
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, { error: err.message }, obj.callback);
+                    }
+                });
+            return;
+        }
+        if (obj.command === 'getDiagnostics') {
+            // the settings come from the form of the admin UI, saved or not
+            const params = (obj.message ?? {}) as DiagnosticsRequest;
+            void runDiagnostics(this, params)
+                .then(result => {
+                    if (obj.callback) {
+                        this.sendTo(obj.from, obj.command, result, obj.callback);
+                    }
+                })
+                .catch((err: Error) => {
+                    this.log.warn(`[diagnostics] getDiagnostics failed: ${err.message}`);
                     if (obj.callback) {
                         this.sendTo(obj.from, obj.command, { error: err.message }, obj.callback);
                     }

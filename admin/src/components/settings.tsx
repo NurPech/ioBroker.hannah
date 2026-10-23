@@ -21,6 +21,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { I18n } from '@iobroker/gui-components';
 import type { EnumItem, WeatherLocation } from '../app';
+import DeviceDiagnostics from './DeviceDiagnostics';
 
 /** Default NVS values pre-filled when flashing or rewriting a satellite. */
 export interface SatelliteDefaults {
@@ -61,6 +62,8 @@ interface SettingsProps {
     allRooms: EnumItem[];
     allFunctions: EnumItem[];
     enumsLoaded: boolean;
+    socket: any;
+    adapterNamespace: string;
 }
 
 /** weatherCustomMapping field → example state ID shown as placeholder. */
@@ -769,6 +772,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                         <Tab label={I18n.t('Firmware')} />
                         <Tab label={I18n.t('Satellite Defaults')} />
                         <Tab label={I18n.t('Weather')} />
+                        <Tab label={I18n.t('Diagnostics')} />
                     </Tabs>
                 </AppBar>
                 <Box sx={{ flex: 1, overflowY: 'auto', pb: '70px' }}>
@@ -778,6 +782,13 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                     {activeTab === 3 && this.renderFirmwareTab()}
                     {activeTab === 4 && this.renderSatelliteDefaultsTab()}
                     {activeTab === 5 && this.renderWeatherTab()}
+                    {activeTab === 6 && (
+                        <DeviceDiagnostics
+                            native={this.props.native}
+                            socket={this.props.socket}
+                            adapterNamespace={this.props.adapterNamespace}
+                        />
+                    )}
                 </Box>
             </Box>
         );

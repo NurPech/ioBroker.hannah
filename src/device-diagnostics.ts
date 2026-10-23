@@ -10,6 +10,7 @@
  *
  * Pure: no adapter, no I/O.
  */
+import { parentId } from './device-grouping';
 import type { ObjectMap } from './device-meta';
 
 /** Why a state is not read at all: it is not subscribed. */
@@ -198,6 +199,40 @@ export function describeDiagnostic(diagnostic: Diagnostic): Explanation {
                 fix: '',
             };
     }
+}
+
+/** States that are not read, with the reason and what to change, by the object they sit in. */
+export interface NotReadGroup {
+    /** why the states are not read */
+    reason: string;
+    /** what to change in ioBroker */
+    fix: string;
+    /** the objects the states sit in, with the names of the states */
+    objects: Array<{ id: string; states: string[] }>;
+}
+
+/**
+ * The `not-read` findings grouped by reason, and within that by the object the states sit in.
+ *
+ * @param findings - Every finding of an analysis
+ */
+export function groupNotRead(findings: Diagnostic[]): NotReadGroup[] {
+    const groups = new Map<string, { reason: string; fix: string; objects: Map<string, string[]> }>();
+    for (const d of findings) {
+        if (d.code !== 'not-read') {
+            continue;
+        }
+        const { reason, fix } = describeNotRead(d.reasons, d.unselected);
+        const group = groups.get(reason) ?? { reason, fix, objects: new Map<string, string[]>() };
+        const object = parentId(d.stateId);
+        group.objects.set(object, [...(group.objects.get(object) ?? []), d.stateId.slice(object.length + 1)]);
+        groups.set(reason, group);
+    }
+    return [...groups.values()].map(g => ({
+        reason: g.reason,
+        fix: g.fix,
+        objects: [...g.objects].map(([id, states]) => ({ id, states })),
+    }));
 }
 
 /** What the adapter is configured to read, see `StateWatcher.start()`. */

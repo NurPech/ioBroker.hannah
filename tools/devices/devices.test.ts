@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { adapterConfigOptions, parseArguments, run } from './cli';
-import { analyzeObjects } from './device-analysis';
+import { analyzeObjects } from '../../src/device-analysis';
 import { formatReport } from './device-report';
 import { parseObjectDump, parseStateDump } from './object-dump';
 

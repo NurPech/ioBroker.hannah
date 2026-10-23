@@ -9,7 +9,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as zlib from 'node:zlib';
-import { analyzeObjects, type AnalysisOptions } from './device-analysis';
+import { analyzeObjects, type AnalysisOptions } from '../../src/device-analysis';
 import { formatReport } from './device-report';
 import { parseObjectDump, parseStateDump } from './object-dump';
 
