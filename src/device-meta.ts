@@ -268,9 +268,9 @@ export function resolveDeviceMeta(
 
     // hannah#164/#256/#257: common.custom["hannah.0"] overrides — shared here so both
     // the type/canonicalKey resolution below and the device-name fallback chain read
-    // the same enabled/state-vs-device lookup instead of duplicating it.
+    // the same enabled lookup instead of duplicating it. State-level only: ioBroker offers
+    // common.custom on states, not on channels or devices.
     const stateCustom = (stateObj?.common?.custom as any)?.[options.namespace];
-    const deviceCustom = (deviceObj?.common?.custom as any)?.[options.namespace];
 
     const trust = resolveNeededTrust(stateCustom);
     if (trust.warning) {
@@ -363,10 +363,9 @@ export function resolveDeviceMeta(
     const role = stateObj?.common?.role ?? '';
 
     const resolveTypeAndCanonicalKey = (): { type: string; canonicalKey: string } => {
-        const typeOverride =
-            (stateCustom?.enabled && stateCustom?.type) || (deviceCustom?.enabled && deviceCustom?.type);
-        // Nur State-Level, nie Device-Level — anders als die Kategorie ist der kanonische
-        // Key pro State unterschiedlich (s.o.), ein Device-weiter Override ergäbe keinen Sinn.
+        const typeOverride = stateCustom?.enabled && stateCustom?.type;
+        // Anders als die Kategorie ist der kanonische Key pro State unterschiedlich (s.o.),
+        // ein Device-weiter Override ergäbe keinen Sinn.
         const canonicalKeyOverride = stateCustom?.enabled && stateCustom?.canonicalKey;
 
         const roleMatch = ROLE_TABLE[role];
@@ -436,9 +435,8 @@ export function resolveDeviceMeta(
 
     // hannah#164: lets users fix Hannah's voice-matching name for devices whose
     // ioBroker friendly name is unsuited for it (too long, technical prefixes,
-    // duplicates across rooms, ...) without renaming the actual object. Same
-    // enabled/state-vs-device precedence as the type override above.
-    const nameOverride = (stateCustom?.enabled && stateCustom?.name) || (deviceCustom?.enabled && deviceCustom?.name);
+    // duplicates across rooms, ...) without renaming the actual object.
+    const nameOverride = stateCustom?.enabled && stateCustom?.name;
 
     const { stateType, enumValues } = resolveStateType(stateObj);
     const { type, canonicalKey } = resolveTypeAndCanonicalKey();
@@ -446,12 +444,10 @@ export function resolveDeviceMeta(
     // hannah#177/hannah-proto#4: analog zum type/name-Override, aber nur für über die
     // ROLE_TABLE als 'blind' aufgelöste States relevant — Rolladen/Markise-Aktoren, die
     // von sich aus die umgekehrte Konvention (0%=auf/100%=zu) nutzen (z.B. Homematic/KNX).
-    // State-Level gewinnt vor Device-Level, wie bei type/name. undefined (nicht false)
-    // wenn kein Override gesetzt ist — Core unterscheidet "kein Override" von "explizit
-    // nicht invertiert" nicht, aber das Proto-Feld erlaubt die Unterscheidung bewusst.
-    const stateShutterInverted = stateCustom?.enabled ? stateCustom?.shutterInverted : undefined;
-    const deviceShutterInverted = deviceCustom?.enabled ? deviceCustom?.shutterInverted : undefined;
-    const shutterInvertedOverride = stateShutterInverted !== undefined ? stateShutterInverted : deviceShutterInverted;
+    // undefined (nicht false) wenn kein Override gesetzt ist — Core unterscheidet "kein
+    // Override" von "explizit nicht invertiert" nicht, aber das Proto-Feld erlaubt die
+    // Unterscheidung bewusst.
+    const shutterInvertedOverride = stateCustom?.enabled ? stateCustom?.shutterInverted : undefined;
     const inverted =
         ROLE_TABLE[role]?.type === 'blind' && shutterInvertedOverride !== undefined
             ? Boolean(shutterInvertedOverride)

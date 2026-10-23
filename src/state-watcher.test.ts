@@ -131,13 +131,13 @@ describe('StateWatcher', () => {
             expect(meta.type).to.equal('custom_override');
         });
 
-        it('falls back to a common.custom override on the device object', async () => {
+        it('ignores a common.custom type override on the device object (state-level only)', async () => {
             publishState({ role: 'switch.light' });
             publishDevice({ custom: { 'hannah.0': { enabled: true, type: 'device_override' } } });
 
             const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
 
-            expect(meta.type).to.equal('device_override');
+            expect(meta.type).to.equal('light');
         });
 
         it('ignores a custom override that is not enabled', async () => {
@@ -311,21 +311,21 @@ describe('StateWatcher', () => {
             expect(meta.inverted).to.equal(true);
         });
 
-        it('falls back to a shutterInverted override on the device object', async () => {
+        it('ignores a shutterInverted override on the device object (state-level only)', async () => {
             publishState({ role: 'level.curtain' });
             publishDevice({ custom: { 'hannah.0': { enabled: true, shutterInverted: true } } });
 
             const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
 
-            expect(meta.inverted).to.equal(true);
+            expect(meta.inverted).to.be.undefined;
         });
 
-        it('prefers an explicit state-level shutterInverted=false over a device-level true', async () => {
+        it('reports an explicit state-level shutterInverted=false as false', async () => {
             publishState({
                 role: 'value.blind',
                 custom: { 'hannah.0': { enabled: true, shutterInverted: false } },
             });
-            publishDevice({ custom: { 'hannah.0': { enabled: true, shutterInverted: true } } });
+            publishDevice();
 
             const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
 
@@ -378,7 +378,7 @@ describe('StateWatcher', () => {
             expect(meta.device).to.equal('Stehlampe');
         });
 
-        it('falls back to a common.custom name override on the device object (hannah#164)', async () => {
+        it('ignores a common.custom name override on the device object (state-level only)', async () => {
             publishState({ role: 'switch.light', name: 'Technical_Name_1' });
             publishDevice({
                 name: 'Technical_Device_Name',
@@ -387,7 +387,7 @@ describe('StateWatcher', () => {
 
             const meta = await internals(makeWatcher())._resolveDeviceMeta(stateId, room(deviceId), noFunctions);
 
-            expect(meta.device).to.equal('Stehlampe');
+            expect(meta.device).to.equal('Technical_Device_Name');
         });
 
         it('ignores a common.custom name override that is not enabled (hannah#164)', async () => {
