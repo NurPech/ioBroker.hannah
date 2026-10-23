@@ -7,6 +7,7 @@
  * belong together. Pure functions of IDs, rooms, functions and slot kinds, so every rule is
  * testable without an adapter.
  */
+import type { Explain } from './device-diagnostics';
 
 /**
  * ID of the object a state sits in.
@@ -64,8 +65,9 @@ export interface Merge {
  * keeps its channels apart.
  *
  * @param candidates - Every group of the snapshot
+ * @param explain - Receives a finding for sibling channels that stay apart because a slot would be used twice
  */
-export function planMerges(candidates: MergeCandidate[]): Merge[] {
+export function planMerges(candidates: MergeCandidate[], explain?: Explain): Merge[] {
     const groupIds = new Set(candidates.map(c => c.groupId));
     const buckets = new Map<string, MergeCandidate[]>();
     for (const candidate of candidates) {
@@ -82,9 +84,15 @@ export function planMerges(candidates: MergeCandidate[]): Merge[] {
         // all or nothing: if two channels would use the same slot (the relays of a plug), it is
         // unclear what belongs to what, so nothing in the bucket is merged
         const all = bucket.flatMap(c => [...c.kinds]);
-        if (bucket.length > 1 && new Set(all).size === all.length) {
+        if (bucket.length > 1) {
             const sorted = [...bucket].sort((a, b) => a.groupId.localeCompare(b.groupId));
-            merges.push({ deviceId: parentId(sorted[0].groupId), groupIds: sorted.map(c => c.groupId) });
+            const deviceId = parentId(sorted[0].groupId);
+            const groupIds = sorted.map(c => c.groupId);
+            if (new Set(all).size === all.length) {
+                merges.push({ deviceId, groupIds });
+            } else {
+                explain?.({ code: 'merge-blocked', deviceId, groupIds });
+            }
         }
     }
     return merges;
