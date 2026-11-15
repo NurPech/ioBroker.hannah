@@ -14,6 +14,10 @@ describe('README', () => {
         }
     });
 
+    it('has no checkbox of its own for `enabled`: the admin adds that toggle to every custom settings dialog', () => {
+        expect(Object.keys(dialog.items)).to.not.include('enabled');
+    });
+
     it('names every value the dialog offers for category, canonical key and slot', () => {
         for (const field of ['type', 'canonicalKey', 'slot']) {
             for (const option of dialog.items[field].options ?? []) {
