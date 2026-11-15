@@ -304,6 +304,7 @@ describe('device-diagnostics', () => {
             },
             { code: 'unit-mismatch', deviceId: 'a.0.x', stateId: 'a.0.x.p', slot: 'power', unit: 'mA' },
             { code: 'switch-implausible', stateId: 'a.0.x.led' },
+            { code: 'slot-unknown', deviceId: 'a.0.x', stateId: 'a.0.x.foo', slot: 'helligkeit' },
             { code: 'name-conflict', deviceId: 'a.0.x', stateIds: ['a.0.x.on', 'a.0.x.power'], names: ['A', 'B'] },
             { code: 'merged', deviceId: 'a.0.x', groupIds: ['a.0.x.1', 'a.0.x.2'] },
             { code: 'merge-blocked', deviceId: 'a.0.x', groupIds: ['a.0.x.1', 'a.0.x.2'] },

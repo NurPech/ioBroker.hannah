@@ -68,6 +68,13 @@ export type Diagnostic =
           stateId: string;
       }
     | {
+          /** the `slot` override of a state names a slot that does not exist, it is ignored */
+          code: 'slot-unknown';
+          deviceId: string;
+          stateId: string;
+          slot: string;
+      }
+    | {
           /** the states of a device carry different `name` overrides, none is applied */
           code: 'name-conflict';
           deviceId: string;
@@ -194,6 +201,11 @@ export function describeDiagnostic(diagnostic: Diagnostic): Explanation {
             return {
                 text: `${diagnostic.stateId} is not taken for a switch: it has the plain role "state" and its name does not say it switches something.`,
                 fix: 'Set the role switch, switch.light or switch.power, or a canonicalKey "on" in its custom settings.',
+            };
+        case 'slot-unknown':
+            return {
+                text: `${diagnostic.stateId} names the slot "${diagnostic.slot}" in its custom settings, which does not exist, so the override is ignored.`,
+                fix: 'Pick one of the slots from the list in the custom settings of the state (for example on, brightness, target_temperature).',
             };
         case 'name-conflict':
             return {

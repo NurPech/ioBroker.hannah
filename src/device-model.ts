@@ -62,6 +62,8 @@ export interface DeviceState {
     requiredTrustLevel: number | undefined;
     /** values an enum state accepts (mode, fan speed) */
     options: string[];
+    /** `slot` from common.custom: the slot ID the admin says this state fills, empty or missing = none */
+    slotOverride?: string;
 }
 
 /** The states of one device with what is known about the device itself. */
@@ -292,6 +294,19 @@ export function slotKey(s: {
 export function slotIdForKind(kind: SlotKind): string {
     return SlotKind[kind].slice('SLOT_KIND_'.length).toLowerCase();
 }
+
+/** Slot ID → slot kind for the standard kinds, the IDs the `slot` override accepts (the generic kinds have none). */
+const STANDARD_KIND_BY_SLOT_ID = new Map<string, SlotKind>(
+    Object.values(SlotKind)
+        .filter(
+            (kind): kind is SlotKind =>
+                typeof kind === 'number' && kind > 0 && !GENERIC_KINDS.has(kind) && SlotKind[kind] !== undefined,
+        )
+        .map(kind => [slotIdForKind(kind), kind]),
+);
+
+/** The slot IDs the `slot` override accepts, sorted, for the settings dialog and the docs. */
+export const STANDARD_SLOT_IDS: string[] = [...STANDARD_KIND_BY_SLOT_ID.keys()].sort();
 
 // ------------------------------------------------------------------ values
 
@@ -555,7 +570,22 @@ function resolveKinds(
     report?: { deviceId: string; explain: Explain },
 ): Map<string, SlotKind> {
     const groups = new Map<SlotKind, DeviceState[]>();
+    // States the admin assigned to a slot (`slot` in common.custom): they beat the tie-breaking and the unit check
+    const explicit = new Map<SlotKind, DeviceState[]>();
     for (const state of states) {
+        if (state.slotOverride) {
+            const named = STANDARD_KIND_BY_SLOT_ID.get(state.slotOverride);
+            if (named !== undefined) {
+                explicit.set(named, [...(explicit.get(named) ?? []), state]);
+                continue;
+            }
+            report?.explain({
+                code: 'slot-unknown',
+                deviceId: report.deviceId,
+                stateId: state.stateId,
+                slot: state.slotOverride,
+            });
+        }
         const kind = preliminaryKind(state, blind, climate);
         if (kind === undefined) {
             continue;
@@ -573,6 +603,21 @@ function resolveKinds(
         }
     }
     const chosen = new Map<string, SlotKind>();
+    for (const [kind, members] of explicit) {
+        // the others that fit the kind lose either way: with one explicit state it wins, with several none is used
+        groups.delete(kind);
+        if (members.length === 1) {
+            chosen.set(members[0].stateId, kind);
+        } else {
+            report?.explain({
+                code: 'slot-ambiguous',
+                deviceId: report.deviceId,
+                slot: slotIdForKind(kind),
+                candidates: members.map(m => m.stateId),
+                remaining: members.map(m => m.stateId),
+            });
+        }
+    }
     for (const [kind, members] of groups) {
         const left = narrowCandidates(kind, members);
         if (left.length === 1) {

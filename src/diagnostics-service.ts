@@ -89,6 +89,7 @@ const OF_DEVICE = new Set<Diagnostic['code']>([
     'state-generic',
     'slot-ambiguous',
     'unit-mismatch',
+    'slot-unknown',
     'name-conflict',
     'merged',
 ]);

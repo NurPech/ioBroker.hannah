@@ -72,6 +72,8 @@ export interface DeviceMeta {
     canonicalKeyOverride: string;
     /** `name` from common.custom, empty or missing = none */
     nameOverride?: string;
+    /** `slot` from common.custom (a slot ID), empty or missing = none */
+    slotOverride?: string;
     /** the object of the state, for the device detector */
     stateObject: ioBroker.Object | null | undefined;
     /** the object of the state's parent (channel or device), for the device detector */
@@ -490,6 +492,7 @@ export function resolveDeviceMeta(
         max: typeof stateObj?.common?.max === 'number' ? stateObj.common.max : undefined,
         canonicalKeyOverride: stateCustom?.enabled && stateCustom?.canonicalKey ? String(stateCustom.canonicalKey) : '',
         nameOverride: readableName(nameOverride) ?? '',
+        slotOverride: stateCustom?.enabled && typeof stateCustom?.slot === 'string' ? stateCustom.slot.trim() : '',
         stateObject: stateObj,
         deviceObject: deviceObj,
         inverted,
