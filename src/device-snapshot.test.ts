@@ -117,6 +117,113 @@ describe('device-snapshot', () => {
         }
     });
 
+    describe('the name override', () => {
+        const plug = 'shelly.0.plug.Relay0';
+        const override = (name: string): Record<string, unknown> => ({
+            custom: { 'hannah.0': { enabled: true, name } },
+        });
+        const enums = {
+            'enum.rooms.arbeitszimmer': enumObject('enum.rooms.arbeitszimmer', [plug]),
+            'enum.functions.steckdose': enumObject('enum.functions.steckdose', [plug]),
+        };
+        const container: ObjectMap = {
+            [plug]: { _id: plug, type: 'channel', common: { name: 'Steckdose' }, native: {} },
+        };
+
+        /**
+         * A channel with a switch and a power state, the override on the given ones.
+         *
+         * @param names - The name override of the states, none = no override
+         * @param names.switch - Name override of the switch state
+         * @param names.power - Name override of the power state
+         */
+        function plugWith(names: { switch?: string; power?: string }): CollectedState[] {
+            const objects: ObjectMap = {
+                ...container,
+                [`${plug}.Switch`]: stateObject(`${plug}.Switch`, {
+                    role: 'switch',
+                    type: 'boolean',
+                    ...(names.switch ? override(names.switch) : {}),
+                }),
+                [`${plug}.Power`]: stateObject(`${plug}.Power`, {
+                    role: 'value.power',
+                    type: 'number',
+                    unit: 'W',
+                    write: false,
+                    ...(names.power ? override(names.power) : {}),
+                }),
+            };
+            return collect({ [`${plug}.Switch`]: true, [`${plug}.Power`]: 12 }, objects, enums);
+        }
+
+        it('counts wherever it sits on the device, not only on the first state', () => {
+            const { model } = buildTypedDevices(plugWith({ power: 'Schreibtischlampe' }), {}, enums);
+
+            expect(model.devices).to.have.length(1);
+            expect(model.devices[0].name).to.equal('Schreibtischlampe');
+        });
+
+        it('applies none and says so if the states of a device carry different names', () => {
+            const found: Array<{ code: string }> = [];
+
+            const { model } = buildTypedDevices(
+                plugWith({ switch: 'Lampe', power: 'Schreibtischlampe' }),
+                {},
+                enums,
+                d => found.push(d),
+            );
+
+            expect(model.devices[0].name).to.equal('Steckdose');
+            expect(found).to.deep.equal([
+                {
+                    code: 'name-conflict',
+                    deviceId: plug,
+                    stateIds: [`${plug}.Switch`, `${plug}.Power`],
+                    names: ['Lampe', 'Schreibtischlampe'],
+                },
+            ]);
+        });
+
+        it('is no conflict if several states carry the same name', () => {
+            const found: Array<{ code: string }> = [];
+
+            const { model } = buildTypedDevices(plugWith({ switch: 'Lampe', power: 'Lampe' }), {}, enums, d =>
+                found.push(d),
+            );
+
+            expect(model.devices[0].name).to.equal('Lampe');
+            expect(found).to.deep.equal([]);
+        });
+
+        it('beats the name of the device object for merged channels', () => {
+            const dev = 'dev.0.Kueche';
+            const objects: ObjectMap = {
+                [`${dev}.1.on`]: stateObject(`${dev}.1.on`, { role: 'switch.light', type: 'boolean' }),
+                [`${dev}.2.level`]: stateObject(`${dev}.2.level`, {
+                    role: 'level.dimmer',
+                    type: 'number',
+                    ...override('Küchenlicht'),
+                }),
+            };
+            const kitchen = {
+                'enum.rooms.kueche': enumObject('enum.rooms.kueche', [dev]),
+                'enum.functions.licht': enumObject('enum.functions.licht', [dev]),
+            };
+            const named: ObjectMap = {
+                [dev]: { _id: dev, type: 'device', common: { name: 'Küchenlampe' }, native: {} },
+            };
+
+            const { model, merges } = buildTypedDevices(
+                collect({ [`${dev}.1.on`]: true, [`${dev}.2.level`]: 40 }, objects, kitchen),
+                named,
+                kitchen,
+            );
+
+            expect(merges).to.have.length(1);
+            expect(model.devices[0].name).to.equal('Küchenlicht');
+        });
+    });
+
     it('lists the device objects that a merged device may be named after', () => {
         const ids = mergeDeviceIds([
             { id: 'dev.0.Kueche.1.on' },

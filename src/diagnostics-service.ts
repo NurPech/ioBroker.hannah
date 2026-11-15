@@ -85,7 +85,13 @@ export interface DiagnosticsResult {
 }
 
 /** The findings that belong to a device that is reported. */
-const OF_DEVICE = new Set<Diagnostic['code']>(['state-generic', 'slot-ambiguous', 'unit-mismatch', 'merged']);
+const OF_DEVICE = new Set<Diagnostic['code']>([
+    'state-generic',
+    'slot-ambiguous',
+    'unit-mismatch',
+    'name-conflict',
+    'merged',
+]);
 
 /** Last character of the ID range of a prefix, like the enum discovery uses it. */
 const RANGE_END = '香';

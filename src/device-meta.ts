@@ -33,8 +33,10 @@ export interface DeviceMeta {
     room: string;
     /** display names of the room by language */
     roomNames: { [key: string]: string };
-    /** name of the device the state belongs to */
+    /** name of the device the state belongs to, with the `name` override of the state */
     device: string;
+    /** name of the device the state belongs to, without any `name` override; missing = same as `device` */
+    plainDeviceName?: string;
     /** the name of the state itself, for a state that is a device of its own */
     ownName: string;
     /**
@@ -68,6 +70,8 @@ export interface DeviceMeta {
     max: number | undefined;
     /** `canonicalKey` from common.custom, empty = none */
     canonicalKeyOverride: string;
+    /** `name` from common.custom, empty or missing = none */
+    nameOverride?: string;
     /** the object of the state, for the device detector */
     stateObject: ioBroker.Object | null | undefined;
     /** the object of the state's parent (channel or device), for the device detector */
@@ -453,6 +457,14 @@ export function resolveDeviceMeta(
             ? Boolean(shutterInvertedOverride)
             : undefined;
 
+    // the name of the device without the override of this state: where the override sits on another
+    // state of the device, or two states disagree, the typed device model needs the name without it
+    const plainDeviceName =
+        readableName(deviceObj?.common?.name) ??
+        readableName(stateObj?.common?.name) ??
+        deviceId.split('.').at(-1) ??
+        '';
+
     const meta: DeviceMeta = {
         room: roomId,
         roomNames: roomNames,
@@ -462,12 +474,8 @@ export function resolveDeviceMeta(
             readableName(stateObj?.common?.name) ??
             stateId.split('.').at(-1) ??
             '',
-        device:
-            readableName(nameOverride) ??
-            readableName(deviceObj?.common?.name) ??
-            readableName(stateObj?.common?.name) ??
-            deviceId.split('.').at(-1) ??
-            '',
+        device: readableName(nameOverride) ?? plainDeviceName,
+        plainDeviceName,
         type,
         floor,
         functions: functionNames,
@@ -481,6 +489,7 @@ export function resolveDeviceMeta(
         min: typeof stateObj?.common?.min === 'number' ? stateObj.common.min : undefined,
         max: typeof stateObj?.common?.max === 'number' ? stateObj.common.max : undefined,
         canonicalKeyOverride: stateCustom?.enabled && stateCustom?.canonicalKey ? String(stateCustom.canonicalKey) : '',
+        nameOverride: readableName(nameOverride) ?? '',
         stateObject: stateObj,
         deviceObject: deviceObj,
         inverted,

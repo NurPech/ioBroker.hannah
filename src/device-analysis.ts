@@ -145,6 +145,7 @@ function statesOf(d: Diagnostic): string[] {
     switch (d.code) {
         case 'no-room':
         case 'no-recognized-slot':
+        case 'name-conflict':
             return d.stateIds;
         case 'slot-ambiguous':
             return d.candidates;
