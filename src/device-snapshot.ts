@@ -110,6 +110,7 @@ export function buildTypedDevices(
             inverted: meta.inverted === true,
             requiredTrustLevel: meta.requiredTrustLevel,
             options: Object.keys(meta.enumValues?.values ?? {}),
+            slotOverride: meta.slotOverride,
         };
         groupFunctions.set(groupId, [...(groupFunctions.get(groupId) ?? []), ...meta.functionIds]);
         if (meta.nameOverride && groupId !== id) {

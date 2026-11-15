@@ -1,9 +1,13 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect } from 'chai';
 import { v2 } from '@m1kad0/hannah-proto';
+import type { Diagnostic } from './device-diagnostics';
 import {
     buildDeviceModel,
     fromSlotValue,
     slotKey,
+    STANDARD_SLOT_IDS,
     toSlotValue,
     transformFor,
     type DeviceInput,
@@ -391,6 +395,98 @@ describe('device-model', () => {
             expect(fromSlotValue(target(SlotKind.SLOT_KIND_ON), { number: 1 }, false)).to.equal(undefined);
             expect(fromSlotValue(target(SlotKind.SLOT_KIND_COLOR), { text: 'rot' }, '#000000')).to.equal(undefined);
             expect(fromSlotValue(target(SlotKind.SLOT_KIND_ON), undefined, false)).to.equal(undefined);
+        });
+    });
+
+    describe('slot override', () => {
+        const slotOf = (dev: v2.device_model.TypedDevice, kind: SlotKind): v2.device_model.Slot | undefined =>
+            dev.slots.find(s => s.kind === kind);
+
+        function classifyWith(states: DeviceState[]): { dev: v2.device_model.TypedDevice; found: Diagnostic[] } {
+            const found: Diagnostic[] = [];
+            const [dev] = buildDeviceModel([device(states)], d => found.push(d)).devices;
+            return { dev, found };
+        }
+
+        it('puts a state that is nothing else into the slot the admin names', () => {
+            const { dev } = classifyWith([
+                state('foo', { key: 'foo', value: 55, writable: false, slotOverride: 'humidity' }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_HUMIDITY)?.identifier).to.equal(`${BASE}.foo`);
+        });
+
+        it('beats the tie-breaking: of two equal candidates the named one wins', () => {
+            const { dev } = classifyWith([
+                state('a', { key: 'level', value: 10 }),
+                state('b', { key: 'level', value: 80, slotOverride: 'brightness' }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_BRIGHTNESS)?.identifier).to.equal(`${BASE}.b`);
+            expect(dev.slots.filter(s => s.kind === SlotKind.SLOT_KIND_GENERIC_NUMBER)).to.have.length(1);
+        });
+
+        it('beats a candidate that would win by role', () => {
+            const { dev } = classifyWith([
+                state('soll', { key: 'expected', role: 'level.temperature', value: 20 }),
+                state('wunsch', { key: 'expected', value: 23, slotOverride: 'target_temperature' }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_TARGET_TEMPERATURE)?.identifier).to.equal(`${BASE}.wunsch`);
+        });
+
+        it('beats the unit check: the admin said what the state is', () => {
+            const { dev } = classifyWith([
+                state('on', { key: 'on', valueType: 'boolean', typeHint: 'socket' }),
+                state('power', { key: 'power', unit: 'mA', value: 80, writable: false, slotOverride: 'power' }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_POWER)?.identifier).to.equal(`${BASE}.power`);
+        });
+
+        it('uses none and says so if several states name the same slot', () => {
+            const { dev, found } = classifyWith([
+                state('on', { key: 'on', valueType: 'boolean', typeHint: 'light' }),
+                state('a', { key: 'level', slotOverride: 'brightness' }),
+                state('b', { key: 'level', slotOverride: 'brightness' }),
+                state('c', { key: 'level' }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_BRIGHTNESS)).to.equal(undefined);
+            // `c` fits the slot too, but loses against the named ones and stays a generic slot (an information)
+            expect(found.filter(d => d.code !== 'state-generic')).to.deep.equal([
+                {
+                    code: 'slot-ambiguous',
+                    deviceId: BASE,
+                    slot: 'brightness',
+                    candidates: [`${BASE}.a`, `${BASE}.b`],
+                    remaining: [`${BASE}.a`, `${BASE}.b`],
+                },
+            ]);
+        });
+
+        it('ignores a slot that does not exist, and says so', () => {
+            const { dev, found } = classifyWith([
+                state('level', { key: 'level', value: 40, slotOverride: 'helligkeit' }),
+            ]);
+
+            expect(slotOf(dev, SlotKind.SLOT_KIND_BRIGHTNESS)?.identifier).to.equal(`${BASE}.level`);
+            expect(found).to.deep.equal([
+                { code: 'slot-unknown', deviceId: BASE, stateId: `${BASE}.level`, slot: 'helligkeit' },
+            ]);
+        });
+
+        it('offers exactly the slot IDs of the model in the custom settings dialog', () => {
+            const dialog = JSON.parse(readFileSync(join(__dirname, '..', 'admin', 'jsonCustom.json'), 'utf8')) as {
+                items: { slot: { options: string[] } };
+            };
+
+            expect([...dialog.items.slot.options].sort()).to.deep.equal(STANDARD_SLOT_IDS);
+        });
+
+        it('knows the slot IDs the model sends, and none of the generic ones', () => {
+            expect(STANDARD_SLOT_IDS).to.include.members(['on', 'brightness', 'color', 'target_temperature']);
+            expect(STANDARD_SLOT_IDS).to.not.include.members(['generic_number', 'generic_bool', 'generic_text']);
         });
     });
 

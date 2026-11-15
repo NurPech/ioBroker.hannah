@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { v2 } from '@m1kad0/hannah-proto';
 import { resolveDeviceMeta, type ObjectMap } from './device-meta';
 import { buildTypedDevices, mergeDeviceIds, type CollectedState } from './device-snapshot';
 
@@ -115,6 +116,33 @@ describe('device-snapshot', () => {
         for (const dev of model.devices) {
             expect(dev.slots.map(s => s.slotId).sort(), dev.deviceId).to.deep.equal(['brightness', 'on']);
         }
+    });
+
+    it('reads the slot override from the custom settings of a state', () => {
+        const dev = 'zigbee.0.heater';
+        const objects: ObjectMap = {
+            [`${dev}.wunsch`]: stateObject(`${dev}.wunsch`, {
+                type: 'number',
+                custom: { 'hannah.0': { enabled: true, slot: 'target_temperature' } },
+            }),
+            [`${dev}.ist`]: stateObject(`${dev}.ist`, { role: 'value.temperature', type: 'number', write: false }),
+        };
+        const enums = {
+            'enum.rooms.bad': enumObject('enum.rooms.bad', [dev]),
+            'enum.functions.heizung': enumObject('enum.functions.heizung', [dev]),
+        };
+
+        const { model } = buildTypedDevices(
+            collect({ [`${dev}.wunsch`]: 22, [`${dev}.ist`]: 20.5 }, objects, enums),
+            {},
+            enums,
+        );
+
+        expect(model.devices).to.have.length(1);
+        expect(model.devices[0].slots.find(s => s.slotId === 'target_temperature')?.identifier).to.equal(
+            `${dev}.wunsch`,
+        );
+        expect(model.devices[0].deviceClass).to.equal(v2.device_model.DeviceClass.DEVICE_CLASS_THERMOSTAT);
     });
 
     describe('the name override', () => {
