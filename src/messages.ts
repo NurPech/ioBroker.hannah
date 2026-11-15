@@ -236,6 +236,16 @@ export class MessagesHandler {
         this.adapter.sendTo(cb.from, cb.command, { answer }, cb.cb);
     }
 
+    /**
+     * The title of a notification category as a plain string, without a trailing full stop.
+     *
+     * @param name - `category.name`: a text, or a text per language
+     */
+    private titleOf(name: string | { de?: string; en?: string } | undefined): string {
+        const text = typeof name === 'string' ? name : (name?.de ?? name?.en ?? '');
+        return text.trim().replace(/\.+$/, '');
+    }
+
     private extractText(notification: NotificationMessage | undefined): string | null {
         try {
             const instances = notification?.category?.instances ?? notification?.instances ?? {};
@@ -248,7 +258,11 @@ export class MessagesHandler {
                 }
             }
             if (parts.length) {
-                return [...new Set(parts)].join('. ');
+                const text = [...new Set(parts)].join('. ');
+                // The message alone is often only a value (a date, a device name): the title of the
+                // category says what it is about, and Core's LLM has nothing else to go on.
+                const title = this.titleOf(notification?.category?.name);
+                return title && !text.toLowerCase().includes(title.toLowerCase()) ? `${title}: ${text}` : text;
             }
 
             const desc = notification?.category?.description;
