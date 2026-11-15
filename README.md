@@ -79,6 +79,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed (with a `hannah.v2` Core): a read-only number with the plain role `value` in a light function, such as the `rssi` (dBm) of a Shelly, is no longer taken for the brightness of a light when the whole device is in the room and function. It stays a generic value, and the diagnostics say that its unit does not fit a brightness. A brightness in percent or without a unit is not affected.
+
 ### 1.7.1 (2026-11-06)
 - Changed: the adapter names the host it runs on to Hannah Core with every call, so a Hannah Core that lists its components (such as the version overview) shows the adapter by host instead of a random ID. It is the name the log collector shows for the adapter: `HANNAH_LOG_INSTANCE`, else the host name, `container` for a container without its own host name. This needs `@m1kad0/hannah-grpc-lib` 0.12 and `@m1kad0/hannah-proto` 5.6, both come along. Nothing changes for a Hannah Core that does not use it
 
