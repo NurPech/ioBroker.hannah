@@ -63,6 +63,55 @@ See the [Smart Home Integration guide](https://hannah-docs.leonie.network/manual
 |-------|-------------|
 | Residents Adapter Instance | Instance number of the Residents adapter for presence tracking |
 
+### Custom settings of a state
+
+If Hannah does not understand a device the way you want, you do not have to change the ioBroker objects. Every state has a "Custom settings" dialog in the objects tab of the admin (the wrench icon), with a section for this adapter instance. Tick **Override for Hannah**, then set what you need. The settings only apply to the state itself, never to a channel or device. With the **Diagnostics** tab of the adapter you can check what Hannah makes of the setup afterwards.
+
+| Field | Key | What it does |
+|-------|-----|--------------|
+| Override for Hannah | `enabled` | Switches the override on. Nothing below is read without it. |
+| Voice-matching name | `name` | The name Hannah uses for the device in voice commands and announcements, instead of the ioBroker name. The ioBroker object is not renamed. Any state of a device may carry it. If the states of one device carry different names, none is used and the Diagnostics tab says which states disagree. |
+| Device category | `type` | A hint for the kind of device. Not a command: what the device is follows from its slots, the hint decides in doubtful cases (a switch that is a light, a level that is a blind position). |
+| Canonical state key | `canonicalKey` | What this state means, in the older vocabulary. With a `hannah.v2` Core use **Slot** instead. |
+| Slot | `slot` | The slot of the device this state fills. It beats Hannah's guess from role, unit and name. If several states of a device name the same slot, none is used. A slot that does not exist is ignored. Needs a `hannah.v2` Core. |
+| Inverted blind | `shutterInverted` | For blinds whose percentage means 0 % = open and 100 % = closed (some Homematic and KNX actuators). |
+| Minimum trust level | `neededTrust` | Only users with at least this trust level (0–10) may switch this state via Hannah. Reading is never restricted. Needs a Hannah Core that supports it. |
+
+**Device category** (`type`): `light`, `socket`, `climate`, `blind`, `window`, `door`, `thermostat`, `temperature_sensor`, `humidity_sensor`, `illuminance_sensor`, `air_quality_sensor`. You can also type your own value.
+
+**Canonical state key** (`canonicalKey`): `on`, `level`, `color`, `colorTemp`, `current`, `expected`, `illuminance`, `open`, `iaq`, `co2_equiv`, `voc_equiv`, `power`. You can also type your own value.
+
+**Slots** (`slot`):
+
+| Slot | Meaning |
+|------|---------|
+| `on` | switched on or off |
+| `brightness` | brightness, 0–100 % |
+| `color` | colour (RGB) |
+| `color_temperature` | colour temperature in Kelvin |
+| `position` | position of a blind, 100 % = open |
+| `tilt` | tilt of the slats of a blind |
+| `stop` | stop command of a blind |
+| `target_temperature` | setpoint of a thermostat or air conditioner, in °C |
+| `temperature` | measured temperature, in °C |
+| `humidity` | relative humidity |
+| `illuminance` | ambient brightness |
+| `pressure` | air pressure |
+| `co2` | CO₂ value |
+| `iaq` | air quality index |
+| `voc` | VOC value |
+| `power` | power, in W |
+| `energy` | energy, in kWh |
+| `voltage` | voltage, in V |
+| `current` | current, in A |
+| `open` | contact open or closed (window, door) |
+| `motion` | motion detected |
+| `valve` | position of a valve |
+| `mode` | mode of an air conditioner |
+| `fan_speed` | fan speed of an air conditioner |
+
+See the [Smart Home Integration guide](https://hannah-docs.leonie.network/manual/smart-home-integration/) for examples.
+
 ## Adapter states
 
 | State | Type | Description |
