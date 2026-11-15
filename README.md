@@ -128,7 +128,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.8.0 (2026-11-15)
 - Fixed (with a `hannah.v2` Core): a read-only number with the plain role `value` in a light function, such as the `rssi` (dBm) of a Shelly, is no longer taken for the brightness of a light when the whole device is in the room and function. It stays a generic value, and the diagnostics say that its unit does not fit a brightness. A brightness in percent or without a unit is not affected.
 - Fixed: a notification forwarded from ioBroker to Hannah now starts with the title of its category (for example "Firmware-Update verfügbar: Power Strip 4 Gen4"). Before, only the messages were forwarded, and a message that is only a date or a device name left Hannah without any hint what it was about. A message that already contains the title is not doubled.
 - Fixed: the same notification from ioBroker is announced by Hannah only once a day, no matter how often the sending adapter repeats it (for example a firmware notice every 15 minutes). Alerts are never held back. After a restart of this adapter a notification is announced once more.
