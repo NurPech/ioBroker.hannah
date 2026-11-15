@@ -106,4 +106,138 @@ describe('messages', () => {
             expect(await forwarded({ category: {} })).to.equal(null);
         });
     });
+
+    describe('the same notification again', () => {
+        const HOUR = 60 * 60 * 1000;
+        const firmware = (ts: number, over: Record<string, unknown> = {}): unknown => ({
+            category: {
+                instances: { 'system.adapter.shelly.0': { messages: [{ message: 'Power Strip 4 Gen4', ts }] } },
+                name: 'Firmware-Update verfügbar',
+                severity: 'notify',
+                ...over,
+            },
+        });
+
+        /** One handler over several notifications, with a clock of its own and a notify that can fail. */
+        function setup(): {
+            send: (message: unknown) => Promise<{ sent?: boolean } | undefined>;
+            texts: string[];
+            clock: { at: number };
+            failing: { on: boolean };
+        } {
+            const texts: string[] = [];
+            const clock = { at: 1_000_000 };
+            const failing = { on: false };
+            const adapter = { log: { debug: () => {}, warn: () => {} }, sendTo: () => {} };
+            const handler = new MessagesHandler(
+                adapter as never,
+                text => {
+                    texts.push(text);
+                    return Promise.resolve({ ok: !failing.on });
+                },
+                () => {},
+                () => Promise.resolve({ ok: true }),
+                () => Promise.resolve(null),
+                () => clock.at,
+            );
+            const send = async (message: unknown): Promise<{ sent?: boolean } | undefined> => {
+                let answer: { sent?: boolean } | undefined;
+                const adapterWithAnswer = adapter as { sendTo: (...args: unknown[]) => void };
+                adapterWithAnswer.sendTo = (_from, _cmd, result) => {
+                    answer = result as { sent?: boolean };
+                };
+                handler.onMessage({
+                    command: 'sendNotification',
+                    message,
+                    from: 'system.adapter.shelly.0',
+                    callback: { message: 'x', id: 1, ack: false, time: 0 },
+                } as ioBroker.Message);
+                await new Promise(resolve => setImmediate(resolve));
+                return answer;
+            };
+            return { send, texts, clock, failing };
+        }
+
+        it('is announced once, whatever the timestamp of its message says', async () => {
+            const { send, texts, clock } = setup();
+
+            await send(firmware(1));
+            clock.at += 15 * 60 * 1000;
+            const second = await send(firmware(2));
+            clock.at += 15 * 60 * 1000;
+            await send(firmware(3));
+
+            expect(texts).to.deep.equal(['Firmware-Update verfügbar: Power Strip 4 Gen4']);
+            expect(second).to.deep.equal({ sent: true });
+        });
+
+        it('is announced again after a day, counted from the first announcement', async () => {
+            const { send, texts, clock } = setup();
+
+            await send(firmware(1));
+            clock.at += 23 * HOUR;
+            await send(firmware(2));
+            clock.at += 2 * HOUR;
+            await send(firmware(3));
+
+            expect(texts).to.have.length(2);
+        });
+
+        it('is another notification for another device, sender, title or text', async () => {
+            const { send, texts } = setup();
+
+            await send(firmware(1));
+            await send({
+                category: {
+                    instances: { 'system.adapter.shelly.0': { messages: [{ message: 'Plug S Gen3' }] } },
+                    name: 'Firmware-Update verfügbar',
+                },
+            });
+            await send({
+                category: {
+                    instances: { 'system.adapter.shelly.1': { messages: [{ message: 'Power Strip 4 Gen4' }] } },
+                    name: 'Firmware-Update verfügbar',
+                },
+            });
+            await send(firmware(4, { name: 'Neues Gerät' }));
+
+            expect(texts).to.have.length(4);
+        });
+
+        it('is the same one if the same messages come in another order', async () => {
+            const { send, texts } = setup();
+            const two = (first: string, second: string): unknown => ({
+                category: {
+                    instances: { 'system.adapter.x.0': { messages: [{ message: first }, { message: second }] } },
+                    name: 'Titel',
+                },
+            });
+
+            await send(two('A', 'B'));
+            await send(two('B', 'A'));
+
+            expect(texts).to.have.length(1);
+        });
+
+        it('is never held back as an alert', async () => {
+            const { send, texts } = setup();
+
+            await send(firmware(1, { severity: 'alert' }));
+            await send(firmware(2, { severity: 'alert' }));
+
+            expect(texts).to.have.length(2);
+        });
+
+        it('is tried again if Core did not take it', async () => {
+            const { send, texts, failing } = setup();
+
+            failing.on = true;
+            await send(firmware(1));
+            failing.on = false;
+            await send(firmware(2));
+            await send(firmware(3));
+
+            expect(texts).to.have.length(2);
+        });
+    });
 });
