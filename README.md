@@ -128,7 +128,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.8.1 (2026-11-15)
 - Fixed: the custom settings dialog of a state showed two checkboxes for the same switch, "Enabled" from the admin and "Override for Hannah" below it. Only the one from the admin is left.
 - Changed: the help text of the "Slot" field names the Hannah Core version it needs (0.94.0) instead of the name of the API.
 
