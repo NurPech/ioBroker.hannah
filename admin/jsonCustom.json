@@ -2,13 +2,6 @@
     "type": "panel",
     "i18n": false,
     "items": {
-        "enabled": {
-            "type": "checkbox",
-            "label": {
-                "en": "Override for Hannah",
-                "de": "Override für Hannah"
-            }
-        },
         "name": {
             "type": "text",
             "label": {
@@ -63,8 +56,8 @@
                 "de": "Slot"
             },
             "help": {
-                "en": "Says which slot of the device this state fills (for example on, brightness, target_temperature). It beats Hannah's own guess from role, unit and name. If several states of a device name the same slot, none is used. Leave empty to let Hannah decide. Only with a Hannah Core that supports typed devices (hannah.v2).",
-                "de": "Legt fest, welchen Slot des Geräts dieser State belegt (zum Beispiel on, brightness, target_temperature). Das gilt vor Hannahs eigener Einschätzung nach Rolle, Einheit und Name. Benennen mehrere States eines Geräts denselben Slot, wird keiner benutzt. Leer lassen, damit Hannah entscheidet. Nur mit einem Hannah Core, der typisierte Geräte unterstützt (hannah.v2)."
+                "en": "Says which slot of the device this state fills (for example on, brightness, target_temperature). It beats Hannah's own guess from role, unit and name. If several states of a device name the same slot, none is used. Leave empty to let Hannah decide. Needs Hannah Core 0.94.0 or newer.",
+                "de": "Legt fest, welchen Slot des Geräts dieser State belegt (zum Beispiel on, brightness, target_temperature). Das gilt vor Hannahs eigener Einschätzung nach Rolle, Einheit und Name. Benennen mehrere States eines Geräts denselben Slot, wird keiner benutzt. Leer lassen, damit Hannah entscheidet. Braucht Hannah Core ab 0.94.0."
             },
             "options": [
                 "brightness", "co2", "color", "color_temperature", "current", "energy",

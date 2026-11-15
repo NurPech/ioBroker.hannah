@@ -65,15 +65,15 @@ See the [Smart Home Integration guide](https://hannah-docs.leonie.network/manual
 
 ### Custom settings of a state
 
-If Hannah does not understand a device the way you want, you do not have to change the ioBroker objects. Every state has a "Custom settings" dialog in the objects tab of the admin (the wrench icon), with a section for this adapter instance. Tick **Override for Hannah**, then set what you need. The settings only apply to the state itself, never to a channel or device. With the **Diagnostics** tab of the adapter you can check what Hannah makes of the setup afterwards.
+If Hannah does not understand a device the way you want, you do not have to change the ioBroker objects. Every state has a "Custom settings" dialog in the objects tab of the admin (the wrench icon), with a section for this adapter instance. Tick **Enabled** (the toggle at the top of the section, it is provided by the admin), then set what you need. The settings only apply to the state itself, never to a channel or device. With the **Diagnostics** tab of the adapter you can check what Hannah makes of the setup afterwards.
 
 | Field | Key | What it does |
 |-------|-----|--------------|
-| Override for Hannah | `enabled` | Switches the override on. Nothing below is read without it. |
+| Enabled | `enabled` | Switches the override on. Nothing below is read without it. The toggle comes from the admin, the adapter has no field of its own for it. |
 | Voice-matching name | `name` | The name Hannah uses for the device in voice commands and announcements, instead of the ioBroker name. The ioBroker object is not renamed. Any state of a device may carry it. If the states of one device carry different names, none is used and the Diagnostics tab says which states disagree. |
 | Device category | `type` | A hint for the kind of device. Not a command: what the device is follows from its slots, the hint decides in doubtful cases (a switch that is a light, a level that is a blind position). |
-| Canonical state key | `canonicalKey` | What this state means, in the older vocabulary. With a `hannah.v2` Core use **Slot** instead. |
-| Slot | `slot` | The slot of the device this state fills. It beats Hannah's guess from role, unit and name. If several states of a device name the same slot, none is used. A slot that does not exist is ignored. Needs a `hannah.v2` Core. |
+| Canonical state key | `canonicalKey` | What this state means, in the older vocabulary. With Hannah Core 0.94.0 or newer use **Slot** instead. |
+| Slot | `slot` | The slot of the device this state fills. It beats Hannah's guess from role, unit and name. If several states of a device name the same slot, none is used. A slot that does not exist is ignored. Needs Hannah Core 0.94.0 or newer. |
 | Inverted blind | `shutterInverted` | For blinds whose percentage means 0 % = open and 100 % = closed (some Homematic and KNX actuators). |
 | Minimum trust level | `neededTrust` | Only users with at least this trust level (0–10) may switch this state via Hannah. Reading is never restricted. Needs a Hannah Core that supports it. |
 
@@ -128,6 +128,10 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Fixed: the custom settings dialog of a state showed two checkboxes for the same switch, "Enabled" from the admin and "Override for Hannah" below it. Only the one from the admin is left.
+- Changed: the help text of the "Slot" field names the Hannah Core version it needs (0.94.0) instead of the name of the API.
+
 ### 1.8.0 (2026-11-15)
 - Fixed (with a `hannah.v2` Core): a read-only number with the plain role `value` in a light function, such as the `rssi` (dBm) of a Shelly, is no longer taken for the brightness of a light when the whole device is in the room and function. It stays a generic value, and the diagnostics say that its unit does not fit a brightness. A brightness in percent or without a unit is not affected.
 - Fixed: a notification forwarded from ioBroker to Hannah now starts with the title of its category (for example "Firmware-Update verfügbar: Power Strip 4 Gen4"). Before, only the messages were forwarded, and a message that is only a date or a device name left Hannah without any hint what it was about. A message that already contains the title is not doubled.
