@@ -88,6 +88,35 @@ describe('device-snapshot', () => {
         expect(model.devices[0]).to.include({ deviceId: dev, name: 'Küchenlampe' });
     });
 
+    it('keeps a light group and its single lamps apart as devices of their own', () => {
+        const group = 'hue.0.Wohnzimmer';
+        const lamps = [`${group}.lamp1`, `${group}.lamp2`];
+        const objects: ObjectMap = {};
+        const values: Record<string, unknown> = {};
+        for (const id of [group, ...lamps]) {
+            objects[`${id}.on`] = stateObject(`${id}.on`, { role: 'switch.light', type: 'boolean' });
+            objects[`${id}.level`] = stateObject(`${id}.level`, { role: 'level.dimmer', type: 'number' });
+            values[`${id}.on`] = true;
+            values[`${id}.level`] = 50;
+        }
+        // the admin puts the group into the room and the function, the lamps below it come with it
+        const enums = {
+            'enum.rooms.wohnzimmer': enumObject('enum.rooms.wohnzimmer', [group]),
+            'enum.functions.licht': enumObject('enum.functions.licht', [group]),
+        };
+        const named: ObjectMap = {
+            [group]: { _id: group, type: 'channel', common: { name: 'Wohnzimmer' }, native: {} },
+        };
+
+        const { model, merges } = buildTypedDevices(collect(values, objects, enums), named, enums);
+
+        expect(merges).to.deep.equal([]);
+        expect(model.devices.map(d => d.deviceId).sort()).to.deep.equal([group, ...lamps]);
+        for (const dev of model.devices) {
+            expect(dev.slots.map(s => s.slotId).sort(), dev.deviceId).to.deep.equal(['brightness', 'on']);
+        }
+    });
+
     it('lists the device objects that a merged device may be named after', () => {
         const ids = mergeDeviceIds([
             { id: 'dev.0.Kueche.1.on' },
