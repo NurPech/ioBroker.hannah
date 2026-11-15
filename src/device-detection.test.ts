@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import type { Diagnostic } from './device-diagnostics';
 import { DeviceDetector } from './device-detection';
 
 type Common = Record<string, unknown>;
@@ -20,6 +21,10 @@ function channel(id: string, role = ''): [string, ioBroker.Object] {
         id,
         { _id: id, type: 'channel', common: { name: id.split('.').pop(), role }, native: {} } as ioBroker.Object,
     ];
+}
+
+function enumObject(id: string, members: string[]): ioBroker.Object {
+    return { _id: id, type: 'enum', common: { name: id.split('.').pop(), members }, native: {} } as ioBroker.Object;
 }
 
 function objects(...entries: Array<[string, ioBroker.Object]>): Record<string, ioBroker.Object> {
@@ -205,6 +210,40 @@ describe('device-detection', () => {
 
         expect(keysOf(withState.detect('hm.0.X.1'))).to.deep.equal({ STATE: 'on' });
         expect(keysOf(withSwitch.detect('hm.0.Y.1'))).to.deep.equal({ led_indication: 'on' });
+    });
+
+    describe('the actual level of a light', () => {
+        const device = 'shelly.0.shellyrgbw2#ABC#1';
+
+        function lightDevice(rssi: Common): Record<string, ioBroker.Object> {
+            return objects(
+                ['enum.functions.light', enumObject('enum.functions.light', [device])],
+                [device, { _id: device, type: 'device', common: { name: 'RGBW2' }, native: {} }],
+                channel(`${device}.white0`),
+                state(`${device}.white0.Switch`, 'switch', 'boolean'),
+                state(`${device}.white0.brightness`, 'level.dimmer', 'number', { unit: '%' }),
+                state(`${device}.rssi`, 'value', 'number', { write: false, ...rssi }),
+            );
+        }
+
+        it('is not a signal strength: the rssi of a Shelly in a light function is no brightness', () => {
+            const found: Diagnostic[] = [];
+
+            const keys = keysOf(new DeviceDetector(lightDevice({ unit: 'dBm' })).detect(device, d => found.push(d)));
+
+            expect(keys).to.deep.equal({ Switch: 'on', brightness: 'level' });
+            expect(found).to.deep.equal([
+                { code: 'unit-mismatch', deviceId: device, stateId: `${device}.rssi`, slot: 'brightness', unit: 'dBm' },
+            ]);
+        });
+
+        it('stays the actual level in percent, or without a unit', () => {
+            const inPercent = keysOf(new DeviceDetector(lightDevice({ unit: '%' })).detect(device));
+            const noUnit = keysOf(new DeviceDetector(lightDevice({})).detect(device));
+
+            expect(inPercent.rssi).to.equal('level');
+            expect(noUnit.rssi).to.equal('level');
+        });
     });
 
     it('recognizes nothing in a group without roles, and does not throw', () => {

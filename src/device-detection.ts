@@ -13,6 +13,7 @@
  */
 import ChannelDetector from '@iobroker/type-detector';
 import type { Explain } from './device-diagnostics';
+import { normalizeUnit } from './device-model';
 
 /** What the detector made of one state. */
 export interface DetectedState {
@@ -140,6 +141,13 @@ function isPlausibleSwitch(role: string, id: string): boolean {
     return (name.match(NAME_TOKEN) ?? []).some(t => SWITCH_NAMES.has(t.toLowerCase()));
 }
 
+/**
+ * Units the actual level of a light or blind can be in: percent, or none for a raw scale (0-254, 0-255).
+ * The detector takes every read-only number with the plain role `value` in a light function for the
+ * actual level, including the `rssi` (dBm) of a Shelly, which is no brightness.
+ */
+const LEVEL_UNITS = new Set(['', '%']);
+
 /** Detector types that only describe a side aspect of a device and are no device of their own. */
 const IGNORED_TYPES = new Set(['info', 'instance', 'unknown']);
 
@@ -189,6 +197,21 @@ export class DeviceDetector {
                 if (key === 'on' && !isPlausibleSwitch(this.objects[state.id]?.common?.role ?? '', state.id)) {
                     explain?.({ code: 'switch-implausible', stateId: state.id });
                     continue;
+                }
+                if (key === 'level' && state.name === 'ACTUAL') {
+                    const rawUnit = (this.objects[state.id]?.common as Record<string, unknown> | undefined)?.unit;
+                    const unit = typeof rawUnit === 'string' ? rawUnit : '';
+                    if (!LEVEL_UNITS.has(normalizeUnit(unit))) {
+                        // the key is only a suggestion: a canonicalKey override of the state still wins over it
+                        explain?.({
+                            code: 'unit-mismatch',
+                            deviceId: groupId,
+                            stateId: state.id,
+                            slot: 'brightness',
+                            unit,
+                        });
+                        continue;
+                    }
                 }
                 if (state.id && key && !found.has(state.id)) {
                     found.set(state.id, { key, typeHint });
