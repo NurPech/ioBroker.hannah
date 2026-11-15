@@ -73,6 +73,8 @@ export function buildTypedDevices(
     const detectedByGroup = new Map<string, Map<string, DetectedState>>();
     const inputs = new Map<string, DeviceInput>();
     const groupFunctions = new Map<string, string[]>();
+    /** group → name override → the states that carry it */
+    const nameOverrides = new Map<string, Map<string, string[]>>();
     const seen = new Set<string>();
     for (const { id, state, meta } of collected) {
         if (seen.has(id)) {
@@ -110,6 +112,11 @@ export function buildTypedDevices(
             options: Object.keys(meta.enumValues?.values ?? {}),
         };
         groupFunctions.set(groupId, [...(groupFunctions.get(groupId) ?? []), ...meta.functionIds]);
+        if (meta.nameOverride && groupId !== id) {
+            const byName = nameOverrides.get(groupId) ?? new Map<string, string[]>();
+            byName.set(meta.nameOverride, [...(byName.get(meta.nameOverride) ?? []), id]);
+            nameOverrides.set(groupId, byName);
+        }
         const input = inputs.get(groupId);
         if (input) {
             input.floor ||= meta.floor;
@@ -118,28 +125,48 @@ export function buildTypedDevices(
             inputs.set(groupId, {
                 deviceId: groupId,
                 // a state at root or instance level is a device of its own, named after itself
-                name: groupId === id ? meta.ownName : meta.device,
+                name: groupId === id ? meta.ownName : (meta.plainDeviceName ?? meta.device),
                 room: meta.room,
                 floor: meta.floor,
                 states: [deviceState],
             });
         }
     }
+    // The name override may sit on any state of the device. The same name on several states is one
+    // override, different names are a conflict: none is applied, the admin is told.
+    const nameOf = new Map<string, string>();
+    for (const [groupId, byName] of nameOverrides) {
+        const input = inputs.get(groupId);
+        if (byName.size === 1 && input) {
+            const [name] = byName.keys();
+            nameOf.set(groupId, name);
+            input.name = name;
+        } else if (byName.size > 1) {
+            explain?.({
+                code: 'name-conflict',
+                deviceId: groupId,
+                stateIds: [...byName.values()].flat(),
+                names: [...byName.keys()],
+            });
+        }
+    }
     const groupTypes = new Map(collected.map(c => [c.meta.deviceId, c.meta.deviceObject?.type]));
-    const merges = mergeSiblingChannels(inputs, groupFunctions, objects, groupTypes, explain);
+    const merges = mergeSiblingChannels(inputs, groupFunctions, objects, groupTypes, nameOf, nameOverrides, explain);
     return { model: buildDeviceModel([...inputs.values()], explain), merges };
 }
 
 /**
  * Sibling channels of one device that clearly belong together become one device (same room
- * and function, no slot used twice, see `planMerges()`). The merged device is named after
- * the device object, and takes the ID of it.
+ * and function, no slot used twice, see `planMerges()`). The merged device takes the ID of the
+ * device object and is named after the name override of one of its states, else after the device object.
  *
  * @param inputs - The devices of the snapshot by group ID, merged in place
  * @param groupFunctions - The functions of the states of every group
  * @param objects - Holds the device objects the merged devices are named after
  * @param groupTypes - The ioBroker object type of every group, undefined = not known
- * @param explain - Receives a finding for every merge, and for channels that stay apart
+ * @param nameOf - The name override of every group that has exactly one
+ * @param nameOverrides - Every name override by group, with the states that carry it
+ * @param explain - Receives a finding for every merge, for channels that stay apart, and for names that disagree
  * @returns The merges that were made
  */
 function mergeSiblingChannels(
@@ -147,6 +174,8 @@ function mergeSiblingChannels(
     groupFunctions: Map<string, string[]>,
     objects: ObjectMap,
     groupTypes: Map<string, string | undefined>,
+    nameOf: Map<string, string>,
+    nameOverrides: Map<string, Map<string, string[]>>,
     explain?: Explain,
 ): Merge[] {
     const candidates: MergeCandidate[] = [...inputs.values()].map(input => ({
@@ -164,6 +193,18 @@ function mergeSiblingChannels(
         const objectName = objects[merge.deviceId]?.common?.name;
         if (typeof objectName === 'string' && objectName && !objectName.includes('.')) {
             name = objectName;
+        }
+        // a name override of a member beats the name of the device object, different ones cancel out
+        const overrides = [...new Set(merge.groupIds.flatMap(id => nameOf.get(id) ?? []))];
+        if (overrides.length === 1) {
+            name = overrides[0];
+        } else if (overrides.length > 1) {
+            explain?.({
+                code: 'name-conflict',
+                deviceId: merge.deviceId,
+                stateIds: merge.groupIds.flatMap(id => [...(nameOverrides.get(id)?.values() ?? [])].flat()),
+                names: overrides,
+            });
         }
         for (const id of merge.groupIds) {
             inputs.delete(id);

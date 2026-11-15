@@ -68,6 +68,13 @@ export type Diagnostic =
           stateId: string;
       }
     | {
+          /** the states of a device carry different `name` overrides, none is applied */
+          code: 'name-conflict';
+          deviceId: string;
+          stateIds: string[];
+          names: string[];
+      }
+    | {
           /** sibling channels that were merged into one device */
           code: 'merged';
           deviceId: string;
@@ -187,6 +194,11 @@ export function describeDiagnostic(diagnostic: Diagnostic): Explanation {
             return {
                 text: `${diagnostic.stateId} is not taken for a switch: it has the plain role "state" and its name does not say it switches something.`,
                 fix: 'Set the role switch, switch.light or switch.power, or a canonicalKey "on" in its custom settings.',
+            };
+        case 'name-conflict':
+            return {
+                text: `${diagnostic.deviceId}: the states ${diagnostic.stateIds.join(', ')} carry different names (${diagnostic.names.join(', ')}) in their custom settings, so none is used and the device keeps its ioBroker name.`,
+                fix: 'Give the name to one state of the device, or the same name to all of them.',
             };
         case 'merged':
             return {
