@@ -96,6 +96,28 @@ export interface SlotTarget {
     requiredTrustLevel: number | undefined;
     /** how the raw value is turned into the scale of the kind, undefined = it already is */
     transform?: Transform;
+    /** the colour is not one state but hue and saturation: `stateId` is the hue state, see `ColorCompose` */
+    compose?: ColorCompose;
+}
+
+/** One of the two states a composed colour is made of. */
+export interface ColorPart {
+    /** ioBroker state ID */
+    stateId: string;
+    /** common.min of the state, undefined = none */
+    min: number | undefined;
+    /** common.max of the state, undefined = none */
+    max: number | undefined;
+    /** last raw value, kept up to date by `updateColorPart()` */
+    value: unknown;
+}
+
+/** A colour made of the hue and the saturation state of a lamp that has no RGB state. */
+export interface ColorCompose {
+    /** the state with the role `level.color.hue` */
+    hue: ColorPart;
+    /** the state with the role `level.color.saturation` */
+    saturation: ColorPart;
 }
 
 /** Which states say whether a device can be reached, and what they said last. */
@@ -594,6 +616,156 @@ export function fromSlotValue(
     return revertTransform(target.transform, slotValue);
 }
 
+// ------------------------------------------------------------------ composed colour
+
+/** The scale of a hue or saturation state without a range: degrees, percent. */
+const DEFAULT_HUE_MAX = 360;
+const DEFAULT_SATURATION_MAX = 100;
+
+const HUE_ROLE = 'level.color.hue';
+const SATURATION_ROLE = 'level.color.saturation';
+
+/**
+ * Where a raw value lies on the range of its state, 0 to 1. undefined = no number yet.
+ *
+ * @param part - The state
+ * @param defaultMax - Upper end of the range if the state names none
+ */
+function fractionOf(part: ColorPart, defaultMax: number): number | undefined {
+    const raw = part.value;
+    if (raw === null || raw === undefined || raw === '' || typeof raw === 'boolean') {
+        return undefined;
+    }
+    const n = typeof raw === 'number' ? raw : Number(raw);
+    const lo = part.min ?? 0;
+    const hi = part.max ?? defaultMax;
+    if (!Number.isFinite(n) || !(hi > lo)) {
+        return undefined;
+    }
+    return Math.min(1, Math.max(0, (n - lo) / (hi - lo)));
+}
+
+/**
+ * The raw value of a state for a position on its range. Whole numbers where the range is wide
+ * (0-360, 0-65535), two decimals where it is not (0-1).
+ *
+ * @param part - The state
+ * @param defaultMax - Upper end of the range if the state names none
+ * @param fraction - Position on the range, 0 to 1
+ */
+function rawOf(part: ColorPart, defaultMax: number, fraction: number): number {
+    const lo = part.min ?? 0;
+    const hi = part.max ?? defaultMax;
+    const raw = lo + fraction * (hi - lo);
+    return hi - lo >= 10 ? Math.round(raw) : round(raw);
+}
+
+/**
+ * Hue and saturation of a lamp that has no RGB state: the two states, if the device has exactly
+ * one of each and nothing that already is its colour.
+ *
+ * @param states - The states of one device
+ * @param taken - The states that already fill a standard slot
+ */
+function composableColor(states: DeviceState[], taken: Map<string, SlotKind>): ColorCompose | undefined {
+    const isNumber = (s: DeviceState): boolean => s.valueType === 'number' && !s.slotOverride;
+    const hues = states.filter(s => s.role === HUE_ROLE && isNumber(s));
+    const saturations = states.filter(s => s.role === SATURATION_ROLE && isNumber(s));
+    if (hues.length !== 1 || saturations.length !== 1) {
+        return undefined;
+    }
+    // a state that is the colour, even an ambiguous one or one the admin named, wins over the composition
+    const hasColor =
+        [...taken.values()].includes(SlotKind.SLOT_KIND_COLOR) ||
+        states.some(s => s.slotOverride === 'color' || preliminaryKind(s, false, false) === SlotKind.SLOT_KIND_COLOR);
+    if (hasColor) {
+        return undefined;
+    }
+    const part = (s: DeviceState): ColorPart => ({ stateId: s.stateId, min: s.min, max: s.max, value: s.value });
+    return { hue: part(hues[0]), saturation: part(saturations[0]) };
+}
+
+/**
+ * Takes a new raw value of the hue or saturation state into account.
+ *
+ * @param compose - The composed colour of a slot, updated in place
+ * @param stateId - The state that changed
+ * @param raw - Its new raw value
+ */
+export function updateColorPart(compose: ColorCompose, stateId: string, raw: unknown): void {
+    for (const part of [compose.hue, compose.saturation]) {
+        if (part.stateId === stateId) {
+            part.value = raw;
+        }
+    }
+}
+
+/**
+ * The colour of a lamp from its hue and saturation, as RGB at full brightness (the brightness is
+ * the lamp's own slot). undefined = one of the two has no value yet.
+ *
+ * @param compose - The two states with their last values
+ */
+export function composedColor(compose: ColorCompose): v2.device_model.SlotValue | undefined {
+    const hue = fractionOf(compose.hue, DEFAULT_HUE_MAX);
+    const saturation = fractionOf(compose.saturation, DEFAULT_SATURATION_MAX);
+    if (hue === undefined || saturation === undefined) {
+        return undefined;
+    }
+    // HSV with the value at 1
+    const h = (hue * 6) % 6;
+    const c = saturation;
+    const x = c * (1 - Math.abs((h % 2) - 1));
+    const m = 1 - c;
+    const [r, g, b] = [
+        [c, x, 0],
+        [x, c, 0],
+        [0, c, x],
+        [0, x, c],
+        [x, 0, c],
+        [c, 0, x],
+    ][Math.floor(h)];
+    const channel = (v: number): number => Math.round((v + m) * 255);
+    return { rgb: (channel(r) << 16) | (channel(g) << 8) | channel(b) };
+}
+
+/**
+ * What a SetSlot of a composed colour writes: the hue and the saturation of the requested RGB
+ * (its brightness is left to the lamp's brightness slot). undefined = the value is no colour.
+ *
+ * @param compose - The two states
+ * @param value - Value Hannah sent
+ */
+export function colorWrites(
+    compose: ColorCompose,
+    value: v2.device_model.SlotValue | undefined,
+): Array<{ stateId: string; value: number }> | undefined {
+    if (typeof value?.rgb !== 'number') {
+        return undefined;
+    }
+    const rgb = value.rgb & 0xffffff;
+    const r = ((rgb >> 16) & 0xff) / 255;
+    const g = ((rgb >> 8) & 0xff) / 255;
+    const b = (rgb & 0xff) / 255;
+    const max = Math.max(r, g, b);
+    const delta = max - Math.min(r, g, b);
+    let degrees = 0;
+    if (delta > 0) {
+        if (max === r) {
+            degrees = 60 * (((g - b) / delta + 6) % 6);
+        } else if (max === g) {
+            degrees = 60 * ((b - r) / delta + 2);
+        } else {
+            degrees = 60 * ((r - g) / delta + 4);
+        }
+    }
+    const saturation = max === 0 ? 0 : delta / max;
+    return [
+        { stateId: compose.hue.stateId, value: rawOf(compose.hue, DEFAULT_HUE_MAX, degrees / 360) },
+        { stateId: compose.saturation.stateId, value: rawOf(compose.saturation, DEFAULT_SATURATION_MAX, saturation) },
+    ];
+}
+
 // ------------------------------------------------------------------ classification
 
 function preliminaryKind(state: DeviceState, blind: boolean, climate: boolean): SlotKind | undefined {
@@ -827,6 +999,54 @@ function genericKind(state: DeviceState): SlotKind {
     return SlotKind.SLOT_KIND_GENERIC_TEXT;
 }
 
+/**
+ * The COLOR slot of a lamp whose colour is a hue and a saturation state.
+ *
+ * @param deviceId - ID of the device
+ * @param states - The states of the device
+ * @param compose - The hue and the saturation state
+ * @param slots - The slots of the device, the colour is added
+ * @param targets - The targets of the device, the colour is added
+ * @param model - The model, the two states are registered for live updates
+ */
+function addComposedColor(
+    deviceId: string,
+    states: DeviceState[],
+    compose: ColorCompose,
+    slots: Map<string, v2.device_model.Slot>,
+    targets: Map<string, SlotTarget>,
+    model: DeviceModel,
+): void {
+    const slotId = slotIdForKind(SlotKind.SLOT_KIND_COLOR);
+    const parts = states.filter(s => s.stateId === compose.hue.stateId || s.stateId === compose.saturation.stateId);
+    const trust = parts.map(s => s.requiredTrustLevel).filter((t): t is number => t !== undefined);
+    const requiredTrustLevel = trust.length > 0 ? Math.max(...trust) : undefined;
+    const writable = parts.every(s => s.writable);
+    const target: SlotTarget = {
+        stateId: compose.hue.stateId,
+        kind: SlotKind.SLOT_KIND_COLOR,
+        inverted: false,
+        writable,
+        valueType: 'color',
+        requiredTrustLevel,
+        compose,
+    };
+    slots.set(slotId, {
+        slotId,
+        kind: SlotKind.SLOT_KIND_COLOR,
+        value: composedColor(compose),
+        writable,
+        unit: '',
+        label: '',
+        requiredTrustLevel,
+        options: [],
+        identifier: compose.hue.stateId,
+    });
+    targets.set(slotId, target);
+    model.bySlotState.set(compose.hue.stateId, { deviceId, slotId, target });
+    model.bySlotState.set(compose.saturation.stateId, { deviceId, slotId, target });
+}
+
 function classifyDevice(input: DeviceInput, model: DeviceModel, explain?: Explain): v2.device_model.TypedDevice {
     const reachableStates = input.states.filter(isReachableState);
     const states = input.states.filter(s => !isReachableState(s));
@@ -839,10 +1059,17 @@ function classifyDevice(input: DeviceInput, model: DeviceModel, explain?: Explai
     const climate = states.some(s => s.typeHint === CLIMATE_HINT);
     const kinds = resolveKinds(states, blind, climate, explain && { deviceId: input.deviceId, explain });
     const standardIds = new Set([...kinds.values()].map(slotIdForKind));
+    const compose = composableColor(states, kinds);
+    if (compose) {
+        standardIds.add(slotIdForKind(SlotKind.SLOT_KIND_COLOR));
+    }
 
     const slots = new Map<string, v2.device_model.Slot>();
     const targets = new Map<string, SlotTarget>();
     for (const state of states) {
+        if (compose && (state.stateId === compose.hue.stateId || state.stateId === compose.saturation.stateId)) {
+            continue;
+        }
         let kind = kinds.get(state.stateId);
         let slotId: string;
         let label = '';
@@ -881,6 +1108,9 @@ function classifyDevice(input: DeviceInput, model: DeviceModel, explain?: Explai
         });
         targets.set(slotId, target);
         model.bySlotState.set(state.stateId, { deviceId: input.deviceId, slotId, target });
+    }
+    if (compose) {
+        addComposedColor(input.deviceId, states, compose, slots, targets, model);
     }
     model.targets.set(input.deviceId, targets);
 

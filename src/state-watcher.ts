@@ -4,7 +4,15 @@ import { v2 } from '@m1kad0/hannah-proto';
 import agent = v2.agent;
 import { parentId } from './device-grouping';
 import { aliasTargetId, resolveDeviceMeta, resolveNeededTrust, type DeviceMeta, type ObjectMap } from './device-meta';
-import { fromSlotValue, toSlotValue, updateReachability, type DeviceModel } from './device-model';
+import {
+    colorWrites,
+    composedColor,
+    fromSlotValue,
+    toSlotValue,
+    updateColorPart,
+    updateReachability,
+    type DeviceModel,
+} from './device-model';
 import { buildTypedDevices, mergeDeviceIds } from './device-snapshot';
 import type {
     AckResult,
@@ -283,11 +291,19 @@ export class StateWatcher {
             }
             const slot = this.deviceModel?.bySlotState.get(id);
             if (slot) {
+                let value: v2.device_model.SlotValue | undefined;
+                if (slot.target.compose) {
+                    // a colour made of hue and saturation: the other half is what the lamp reported last
+                    updateColorPart(slot.target.compose, id, state.val);
+                    value = composedColor(slot.target.compose);
+                } else {
+                    value = toSlotValue(slot.target.kind, state.val, slot.target.inverted, slot.target.transform);
+                }
                 this.send({
                     slotUpdate: {
                         deviceId: slot.deviceId,
                         slotId: slot.slotId,
-                        value: toSlotValue(slot.target.kind, state.val, slot.target.inverted, slot.target.transform),
+                        value,
                         ack: state.ack ?? false,
                         ts,
                     },
@@ -338,6 +354,27 @@ export class StateWatcher {
         }
         if (!target.writable) {
             this.adapter.log.warn(`[states] SetSlot rejected — ${deviceId}/${slotId} is read-only`);
+            return;
+        }
+        if (target.compose) {
+            // a colour made of hue and saturation: both states are written
+            const writes = colorWrites(target.compose, value);
+            if (!writes) {
+                this.adapter.log.warn(
+                    `[states] SetSlot rejected — value ${JSON.stringify(value)} does not fit ${deviceId}/${slotId}`,
+                );
+                return;
+            }
+            try {
+                for (const write of writes) {
+                    await this.adapter.setForeignStateAsync(write.stateId, { val: write.value, ack: false });
+                }
+                this.adapter.log.debug(
+                    `[states] SetSlot ${deviceId}/${slotId} → ${writes.map(w => `${w.stateId} = ${w.value}`).join(', ')}`,
+                );
+            } catch (e) {
+                this.adapter.log.error(`[states] SetSlot failed for ${deviceId}/${slotId}: ${(e as Error).message}`);
+            }
             return;
         }
         const current = (await this.adapter.getForeignStateAsync(target.stateId))?.val;
