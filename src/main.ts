@@ -14,6 +14,7 @@ import { SensorWatcher } from './sensors';
 import { FirmwareManager } from './firmware-manager';
 import { updateSatelliteNvs } from './satellite-nvs';
 import { runDiagnostics, type DiagnosticsRequest } from './diagnostics-service';
+import { COMMANDS, HELP } from './help';
 
 class Hannah extends utils.Adapter {
     private grpc: GrpcClient | null = null;
@@ -430,6 +431,13 @@ class Hannah extends utils.Adapter {
     }
 
     public onMessage(obj: ioBroker.Message): void {
+        if (obj.command === 'help') {
+            // A description of all commands for AI agents and script authors, also while Hannah Core is offline
+            if (obj.callback) {
+                this.sendTo(obj.from, obj.command, { help: HELP, commands: COMMANDS }, obj.callback);
+            }
+            return;
+        }
         if (obj.command === 'getFirmwareFiles') {
             this.log.debug(`[firmware] getFirmwareFiles request from ${obj.from}`);
             const url: string = this.config.firmwareSourceUrl || '';

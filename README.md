@@ -119,6 +119,10 @@ See the [Smart Home Integration guide](https://hannah-docs.leonie.network/manual
 | `hannah.<instance>.info.connection` | boolean | `true` while connected to Hannah Core |
 | `hannah.<instance>.textCommand` | string | Write a text query here (ack=false) to send it to Hannah |
 
+## Messages for scripts and AI agents
+
+`sendTo('hannah.0', 'help', {})` answers `{ help, commands }`: a description of all messages (`announce`, `ask`, `sendDirect`, `sendNotification` ...) and of the states for AI agents (e.g. pi-agent) and script authors, and the list of all commands with `write` (`true` if the command has an effect, e.g. speaks or changes a satellite).
+
 ## Hannah Core configuration
 
 The adapter expects `HannahService.AgentConnect` to be available on the configured host/port. No additional Hannah-side configuration is required — the adapter identifies itself automatically on connect.
@@ -129,7 +133,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
-
+- (@GermanBluefox) Added: the message "help", a description of all messages for AI agents (e.g. pi-agent), and common.supportedMessages.help
 - Added (with a `hannah.v2` Core): a device is reported as unreachable when a state with the role `indicator.reachable` in the same device is `false`, and as reachable again when it turns `true`. Before, every device counted as reachable. A device without such a state stays reachable. The state is no slot of the device any more (it was a generic slot before). Only the role counts, `indicator.unreach` is not used.
 
 ### 1.8.1 (2026-11-15)
