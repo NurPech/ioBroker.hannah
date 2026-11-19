@@ -942,6 +942,35 @@ describe('StateWatcher', () => {
                 },
             });
 
+            it('sends the colour made of hue and saturation as one SlotUpdate per change', () => {
+                const part = (id: string, value: unknown): any => ({
+                    stateId: id,
+                    min: undefined,
+                    max: undefined,
+                    value,
+                });
+                const compose = { hue: part('hannah.0.dev.hue', 0), saturation: part('hannah.0.dev.sat', 100) };
+                const target = { stateId: compose.hue.stateId, kind: 4, inverted: false, writable: true, compose };
+                const send = sinon.stub();
+                const sw = new StateWatcher(adapterInstance, send);
+                (sw as any).deviceModel = {
+                    ...model(),
+                    bySlotState: new Map([
+                        ['hannah.0.dev.hue', { deviceId: 'hannah.0.dev', slotId: 'color', target }],
+                        ['hannah.0.dev.sat', { deviceId: 'hannah.0.dev', slotId: 'color', target }],
+                    ]),
+                };
+                internals(sw).subscribedIds.add('hannah.0.dev.hue');
+                internals(sw).subscribedIds.add('hannah.0.dev.sat');
+
+                sw.onStateChange('hannah.0.dev.hue', makeState({ val: 240, ack: true, ts: 5 }));
+                sw.onStateChange('hannah.0.dev.sat', makeState({ val: 0, ack: true, ts: 6 }));
+
+                const values = send.getCalls().map(c => c.args[0].slotUpdate.value);
+                expect(values).to.deep.equal([{ rgb: 0x0000ff }, { rgb: 0xffffff }]);
+                expect(send.firstCall.args[0].slotUpdate).to.include({ deviceId: 'hannah.0.dev', slotId: 'color' });
+            });
+
             it('reports a device as unreachable and reachable again, once per change', () => {
                 const send = sinon.stub();
                 const sw = new StateWatcher(adapterInstance, send);
@@ -1053,6 +1082,28 @@ describe('StateWatcher', () => {
 
             it('refuses a value of the wrong kind', async () => {
                 await watcherWith(target).handleSetSlot('dev', 'brightness', { boolean: true });
+
+                expect(setForeignState).to.not.have.been.called;
+            });
+
+            it('writes a colour made of hue and saturation to both states', async () => {
+                const part = (id: string): any => ({ stateId: id, min: undefined, max: undefined, value: 0 });
+                const compose = { hue: part('hannah.0.dev.hue'), saturation: part('hannah.0.dev.sat') };
+                const colour = { stateId: compose.hue.stateId, kind: 4, inverted: false, writable: true, compose };
+
+                await watcherWith(colour).handleSetSlot('dev', 'brightness', { rgb: 0x0000ff });
+
+                expect(setForeignState).to.have.been.calledTwice;
+                expect(setForeignState.firstCall.args).to.deep.equal(['hannah.0.dev.hue', { val: 240, ack: false }]);
+                expect(setForeignState.secondCall.args).to.deep.equal(['hannah.0.dev.sat', { val: 100, ack: false }]);
+            });
+
+            it('refuses a composed colour that is not a colour value', async () => {
+                const part = (id: string): any => ({ stateId: id, min: undefined, max: undefined, value: 0 });
+                const compose = { hue: part('hannah.0.dev.hue'), saturation: part('hannah.0.dev.sat') };
+                const colour = { stateId: compose.hue.stateId, kind: 4, inverted: false, writable: true, compose };
+
+                await watcherWith(colour).handleSetSlot('dev', 'brightness', { number: 5 });
 
                 expect(setForeignState).to.not.have.been.called;
             });

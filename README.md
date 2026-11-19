@@ -135,6 +135,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
 ### **WORK IN PROGRESS**
 - (@GermanBluefox) Added: the message "help", a description of all messages for AI agents (e.g. pi-agent), and common.supportedMessages.help
 - Added (with a `hannah.v2` Core): a device is reported as unreachable when a state with the role `indicator.reachable` in the same device is `false`, and as reachable again when it turns `true`. Before, every device counted as reachable. A device without such a state stays reachable. The state is no slot of the device any more (it was a generic slot before). Only the role counts, `indicator.unreach` is not used.
+- Added (with a `hannah.v2` Core): a lamp that has a hue and a saturation state (roles `level.color.hue` and `level.color.saturation`) but no RGB state now gets a colour slot, so Hannah can colour it. The colour is composed from the two states at full brightness (the brightness stays the lamp's own slot), and the requested colour is written back as hue and saturation. The scale comes from the range of the states (0-360 and 0-100 if they name none). A real RGB state still comes first. The two states are no separate slots of the lamp any more. A lamp with only xy states is not covered yet.
 
 ### 1.8.1 (2026-11-15)
 - Fixed: the custom settings dialog of a state showed two checkboxes for the same switch, "Enabled" from the admin and "Override for Hannah" below it. Only the one from the admin is left.

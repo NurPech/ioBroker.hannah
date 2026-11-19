@@ -5,12 +5,16 @@ import { v2 } from '@m1kad0/hannah-proto';
 import type { Diagnostic } from './device-diagnostics';
 import {
     buildDeviceModel,
+    colorWrites,
+    composedColor,
     fromSlotValue,
     slotKey,
     STANDARD_SLOT_IDS,
     toSlotValue,
     transformFor,
+    updateColorPart,
     updateReachability,
+    type ColorCompose,
     type DeviceInput,
     type DeviceModel,
     type DeviceState,
@@ -780,6 +784,118 @@ describe('device-model', () => {
 
             it('ignores a state that is no reachable state of a device', () => {
                 expect(updateReachability(model(reachable(true)), `${BASE}.on`, false)).to.equal(undefined);
+            });
+        });
+    });
+
+    describe('composed colour (hue and saturation)', () => {
+        const on = state('on', { key: 'on', valueType: 'boolean', typeHint: 'light', value: true });
+        const hue = (value: unknown, over: Partial<DeviceState> = {}): DeviceState =>
+            state('hue', { key: 'hue', role: 'level.color.hue', value, ...over });
+        const saturation = (value: unknown, over: Partial<DeviceState> = {}): DeviceState =>
+            state('sat', { key: 'sat', role: 'level.color.saturation', value, ...over });
+        const colorOf = (dev: v2.device_model.TypedDevice): v2.device_model.Slot | undefined =>
+            dev.slots.find(s => s.kind === SlotKind.SLOT_KIND_COLOR);
+
+        it('a lamp with hue and saturation and no RGB state gets a COLOR slot', () => {
+            const dev = classify([on, hue(0), saturation(100)]);
+            const color = colorOf(dev);
+
+            expect(dev.deviceClass).to.equal(DeviceClass.DEVICE_CLASS_LIGHT);
+            expect(color?.slotId).to.equal('color');
+            expect(color?.writable).to.equal(true);
+            expect(color?.value).to.deep.equal({ rgb: 0xff0000 });
+            expect(dev.slots.map(s => s.slotId)).to.deep.equal(['on', 'color']);
+        });
+
+        it('composes the colour at full brightness, white without saturation', () => {
+            expect(colorOf(classify([on, hue(120), saturation(100)]))?.value).to.deep.equal({ rgb: 0x00ff00 });
+            expect(colorOf(classify([on, hue(240), saturation(50)]))?.value).to.deep.equal({ rgb: 0x8080ff });
+            expect(colorOf(classify([on, hue(200), saturation(0)]))?.value).to.deep.equal({ rgb: 0xffffff });
+        });
+
+        it('reads the scale from the range of the states', () => {
+            const dev = classify([on, hue(21845, { min: 0, max: 65535 }), saturation(254, { min: 0, max: 254 })]);
+
+            expect(colorOf(dev)?.value).to.deep.equal({ rgb: 0x00ff00 });
+        });
+
+        it('a real RGB state wins, hue and saturation stay generic slots', () => {
+            const rgb = state('rgb', { key: 'color', role: 'level.color.rgb', valueType: 'color', value: '#0000ff' });
+            const dev = classify([on, rgb, hue(0), saturation(100)]);
+
+            expect(colorOf(dev)?.identifier).to.equal(rgb.stateId);
+            expect(dev.slots.map(s => s.slotId)).to.include.members(['hue', 'sat']);
+        });
+
+        it('nothing is composed from hue alone, or from several hue states', () => {
+            expect(colorOf(classify([on, hue(0)]))).to.equal(undefined);
+            const second = { ...hue(0), stateId: `${BASE}.sub.hue` };
+            expect(colorOf(classify([on, hue(0), second, saturation(100)]))).to.equal(undefined);
+        });
+
+        it('a state the admin gave a slot is not used', () => {
+            expect(colorOf(classify([on, hue(0, { slotOverride: 'generic' }), saturation(100)]))).to.equal(undefined);
+        });
+
+        it('has no value until both states have one, and is read-only if one of them is', () => {
+            expect(colorOf(classify([on, hue(null), saturation(100)]))?.value).to.equal(undefined);
+            expect(colorOf(classify([on, hue(0), saturation(100, { writable: false })]))?.writable).to.equal(false);
+        });
+
+        it('feeds both states into one slot, for live updates and SetSlot', () => {
+            const model = buildDeviceModel([device([on, hue(0), saturation(100)])]);
+            const viaHue = model.bySlotState.get(`${BASE}.hue`);
+            const viaSat = model.bySlotState.get(`${BASE}.sat`);
+
+            expect(viaHue?.slotId).to.equal('color');
+            expect(viaSat?.target).to.equal(viaHue?.target);
+            expect(viaHue?.target.compose?.hue.stateId).to.equal(`${BASE}.hue`);
+        });
+
+        describe('live values and SetSlot', () => {
+            const compose = (): ColorCompose => {
+                const model = buildDeviceModel([device([on, hue(0), saturation(100)])]);
+                return model.targets.get(BASE)?.get('color')?.compose as ColorCompose;
+            };
+
+            it('takes a changed state into account, the other half stays what it was', () => {
+                const c = compose();
+
+                updateColorPart(c, `${BASE}.hue`, 240);
+
+                expect(composedColor(c)).to.deep.equal({ rgb: 0x0000ff });
+            });
+
+            it('writes the hue and the saturation of the requested colour', () => {
+                const c = compose();
+
+                expect(colorWrites(c, { rgb: 0x0000ff })).to.deep.equal([
+                    { stateId: `${BASE}.hue`, value: 240 },
+                    { stateId: `${BASE}.sat`, value: 100 },
+                ]);
+                expect(colorWrites(c, { rgb: 0xffff00 })).to.deep.equal([
+                    { stateId: `${BASE}.hue`, value: 60 },
+                    { stateId: `${BASE}.sat`, value: 100 },
+                ]);
+                expect(colorWrites(c, { rgb: 0x808080 })?.[1]).to.deep.equal({ stateId: `${BASE}.sat`, value: 0 });
+            });
+
+            it('writes on the scale of the states', () => {
+                const model = buildDeviceModel([
+                    device([on, hue(0, { min: 0, max: 65535 }), saturation(0, { min: 0, max: 254 })]),
+                ]);
+                const c = model.targets.get(BASE)?.get('color')?.compose as ColorCompose;
+
+                expect(colorWrites(c, { rgb: 0x0000ff })).to.deep.equal([
+                    { stateId: `${BASE}.hue`, value: 43690 },
+                    { stateId: `${BASE}.sat`, value: 254 },
+                ]);
+            });
+
+            it('writes nothing for a value that is no colour', () => {
+                expect(colorWrites(compose(), { number: 5 })).to.equal(undefined);
+                expect(colorWrites(compose(), undefined)).to.equal(undefined);
             });
         });
     });
