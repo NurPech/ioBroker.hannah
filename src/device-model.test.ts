@@ -10,7 +10,9 @@ import {
     STANDARD_SLOT_IDS,
     toSlotValue,
     transformFor,
+    updateReachability,
     type DeviceInput,
+    type DeviceModel,
     type DeviceState,
     type SlotTarget,
 } from './device-model';
@@ -696,5 +698,89 @@ describe('device-model', () => {
                 requiredTrustLevel: undefined,
             };
         }
+    });
+
+    describe('reachability', () => {
+        const lamp = (...extra: DeviceState[]): DeviceState[] => [
+            state('on', { key: 'on', valueType: 'boolean', typeHint: 'light', value: true }),
+            ...extra,
+        ];
+        const reachable = (value: unknown): DeviceState =>
+            state('reachable', { key: 'reachable', role: 'indicator.reachable', valueType: 'boolean', value });
+
+        it('a device without a reachable state is always available', () => {
+            expect(classify(lamp()).available).to.equal(true);
+        });
+
+        it('a device is unavailable while its reachable state is false', () => {
+            expect(classify(lamp(reachable(false))).available).to.equal(false);
+            expect(classify(lamp(reachable(true))).available).to.equal(true);
+        });
+
+        it('a reachable state without a value yet counts as reachable', () => {
+            expect(classify(lamp(reachable(null))).available).to.equal(true);
+        });
+
+        it('the reachable state is no slot', () => {
+            const dev = classify(lamp(reachable(true)));
+
+            expect(dev.slots.map(s => s.slotId)).to.deep.equal(['on']);
+        });
+
+        it('only the role indicator.reachable counts, not the name; indicator.unreach is not taken', () => {
+            const byName = state('reachable', { key: 'reachable', valueType: 'boolean', value: false });
+            const unreach = state('UNREACH', {
+                key: 'UNREACH',
+                role: 'indicator.unreach',
+                valueType: 'boolean',
+                value: true,
+            });
+            const dev = classify(lamp(byName, unreach));
+
+            expect(dev.available).to.equal(true);
+            expect(dev.slots.map(s => s.slotId)).to.include.members(['reachable', 'UNREACH']);
+        });
+
+        it('a reachable state the admin gave a slot is left alone', () => {
+            const dev = classify(lamp({ ...reachable(false), slotOverride: 'reachable' }));
+
+            expect(dev.available).to.equal(true);
+        });
+
+        it('a device is unavailable if any of its reachable states is false', () => {
+            const second = { ...reachable(false), stateId: `${BASE}.sub.reachable`, suffix: 'reachable' };
+            expect(classify(lamp(reachable(true), second)).available).to.equal(false);
+        });
+
+        describe('updateReachability', () => {
+            const model = (...states: DeviceState[]): DeviceModel => buildDeviceModel([device(lamp(...states))]);
+
+            it('reports a change of available, and only a change', () => {
+                const m = model(reachable(true));
+                const id = `${BASE}.reachable`;
+
+                expect(updateReachability(m, id, true)).to.equal(undefined);
+                expect(updateReachability(m, id, false)).to.deep.equal({ deviceId: BASE, available: false });
+                expect(updateReachability(m, id, false)).to.equal(undefined);
+                expect(updateReachability(m, id, true)).to.deep.equal({ deviceId: BASE, available: true });
+            });
+
+            it('a device with two reachable states is back only when both are', () => {
+                const second = { ...reachable(true), stateId: `${BASE}.sub.reachable` };
+                const m = model(reachable(true), second);
+
+                expect(updateReachability(m, `${BASE}.reachable`, false)).to.deep.equal({
+                    deviceId: BASE,
+                    available: false,
+                });
+                expect(updateReachability(m, second.stateId, false)).to.equal(undefined);
+                expect(updateReachability(m, `${BASE}.reachable`, true)).to.equal(undefined);
+                expect(updateReachability(m, second.stateId, true)).to.deep.equal({ deviceId: BASE, available: true });
+            });
+
+            it('ignores a state that is no reachable state of a device', () => {
+                expect(updateReachability(model(reachable(true)), `${BASE}.on`, false)).to.equal(undefined);
+            });
+        });
     });
 });

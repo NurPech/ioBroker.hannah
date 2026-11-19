@@ -98,6 +98,14 @@ export interface SlotTarget {
     transform?: Transform;
 }
 
+/** Which states say whether a device can be reached, and what they said last. */
+export interface Reachability {
+    /** state ID of an `indicator.reachable` state → the device it belongs to */
+    deviceOf: Map<string, string>;
+    /** device ID → state ID → the state is not `false` */
+    states: Map<string, Map<string, boolean>>;
+}
+
 /** The typed devices of a setup and the indexes live updates and SetSlot need. */
 export interface DeviceModel {
     /** the devices as sent to Core */
@@ -106,6 +114,64 @@ export interface DeviceModel {
     bySlotState: Map<string, { deviceId: string; slotId: string; target: SlotTarget }>;
     /** device ID → slot ID → target, for SetSlot */
     targets: Map<string, Map<string, SlotTarget>>;
+    /** the `indicator.reachable` states of the devices, for `available` and its live updates */
+    reachability: Reachability;
+}
+
+/** An empty device model. */
+export function emptyDeviceModel(): DeviceModel {
+    return {
+        devices: [],
+        bySlotState: new Map(),
+        targets: new Map(),
+        reachability: { deviceOf: new Map(), states: new Map() },
+    };
+}
+
+/** The role of the state that tells whether a device can be reached. */
+const REACHABLE_ROLE = 'indicator.reachable';
+
+/**
+ * A state that tells whether its device can be reached. It is no slot: Hannah has nothing to
+ * set or say about it, it only decides `available`. A state the admin gave a slot is left alone.
+ *
+ * @param state - The state to look at
+ */
+function isReachableState(state: DeviceState): boolean {
+    return state.role === REACHABLE_ROLE && state.valueType === 'boolean' && !state.slotOverride;
+}
+
+/**
+ * A device can be reached unless one of its reachable states says `false`; no state means yes.
+ *
+ * @param states - The reachable states of the device by state ID, undefined = it has none
+ */
+function isReachable(states: Map<string, boolean> | undefined): boolean {
+    return !states || [...states.values()].every(Boolean);
+}
+
+/**
+ * Takes the new value of a state into account if it is one of a device's reachable states.
+ *
+ * @param model - The device model of the last snapshot, updated in place
+ * @param stateId - The state that changed
+ * @param value - Its new value; only `false` means unreachable (no value yet counts as reachable)
+ * @returns The device and its new `available` if that changed, otherwise undefined
+ */
+export function updateReachability(
+    model: DeviceModel,
+    stateId: string,
+    value: unknown,
+): { deviceId: string; available: boolean } | undefined {
+    const deviceId = model.reachability.deviceOf.get(stateId);
+    const states = deviceId === undefined ? undefined : model.reachability.states.get(deviceId);
+    if (deviceId === undefined || !states) {
+        return undefined;
+    }
+    const before = isReachable(states);
+    states.set(stateId, value !== false);
+    const available = isReachable(states);
+    return available === before ? undefined : { deviceId, available };
 }
 
 const GENERIC_KINDS = new Set<SlotKind>([
@@ -762,7 +828,13 @@ function genericKind(state: DeviceState): SlotKind {
 }
 
 function classifyDevice(input: DeviceInput, model: DeviceModel, explain?: Explain): v2.device_model.TypedDevice {
-    const { states } = input;
+    const reachableStates = input.states.filter(isReachableState);
+    const states = input.states.filter(s => !isReachableState(s));
+    if (reachableStates.length > 0) {
+        const byState = new Map(reachableStates.map(s => [s.stateId, s.value !== false]));
+        model.reachability.states.set(input.deviceId, byState);
+        reachableStates.forEach(s => model.reachability.deviceOf.set(s.stateId, input.deviceId));
+    }
     const blind = states.some(s => s.typeHint === 'blind');
     const climate = states.some(s => s.typeHint === CLIMATE_HINT);
     const kinds = resolveKinds(states, blind, climate, explain && { deviceId: input.deviceId, explain });
@@ -821,7 +893,7 @@ function classifyDevice(input: DeviceInput, model: DeviceModel, explain?: Explai
         floor: input.floor,
         deviceClass,
         slots: [...slots.values()],
-        available: true,
+        available: isReachable(model.reachability.states.get(input.deviceId)),
         subtype: subtypeFor(deviceClass, typeHints),
     };
 }
@@ -836,7 +908,7 @@ function classifyDevice(input: DeviceInput, model: DeviceModel, explain?: Explai
  * @param explain - Receives the reasons why a device or a state was not used the way it could have been
  */
 export function buildDeviceModel(inputs: DeviceInput[], explain?: Explain): DeviceModel {
-    const model: DeviceModel = { devices: [], bySlotState: new Map(), targets: new Map() };
+    const model = emptyDeviceModel();
     for (const input of inputs) {
         if (!input.deviceId || input.states.length === 0) {
             continue;
@@ -847,7 +919,7 @@ export function buildDeviceModel(inputs: DeviceInput[], explain?: Explain): Devi
         }
         // states that were already explained as ambiguous or in a foreign unit are not "unknown" as well
         const explained = new Set<string>();
-        const own: DeviceModel = { devices: [], bySlotState: new Map(), targets: new Map() };
+        const own = emptyDeviceModel();
         const device = classifyDevice(
             input,
             own,
@@ -889,6 +961,8 @@ export function buildDeviceModel(inputs: DeviceInput[], explain?: Explain): Devi
         model.devices.push(device);
         own.bySlotState.forEach((value, key) => model.bySlotState.set(key, value));
         own.targets.forEach((value, key) => model.targets.set(key, value));
+        own.reachability.deviceOf.forEach((value, key) => model.reachability.deviceOf.set(key, value));
+        own.reachability.states.forEach((value, key) => model.reachability.states.set(key, value));
     }
     return model;
 }
