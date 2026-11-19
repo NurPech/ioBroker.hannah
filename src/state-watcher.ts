@@ -4,7 +4,7 @@ import { v2 } from '@m1kad0/hannah-proto';
 import agent = v2.agent;
 import { parentId } from './device-grouping';
 import { aliasTargetId, resolveDeviceMeta, resolveNeededTrust, type DeviceMeta, type ObjectMap } from './device-meta';
-import { fromSlotValue, toSlotValue, type DeviceModel } from './device-model';
+import { fromSlotValue, toSlotValue, updateReachability, type DeviceModel } from './device-model';
 import { buildTypedDevices, mergeDeviceIds } from './device-snapshot';
 import type {
     AckResult,
@@ -274,6 +274,13 @@ export class StateWatcher {
             // A state of a typed device → SlotUpdate. A state that isn't (a WatchMore state, or
             // one that came after the last snapshot) goes out as a plain AgentStateUpdate; a
             // WatchMore state that is also a slot gets both (Hannah's triggers watch state IDs).
+            const reachability = this.deviceModel && updateReachability(this.deviceModel, id, state.val);
+            if (reachability) {
+                this.send({ deviceAvailability: reachability });
+                this.adapter.log.debug(
+                    `[states] Device ${reachability.deviceId} is ${reachability.available ? 'reachable' : 'unreachable'}`,
+                );
+            }
             const slot = this.deviceModel?.bySlotState.get(id);
             if (slot) {
                 this.send({

@@ -936,6 +936,30 @@ describe('StateWatcher', () => {
                 ]),
                 targets: new Map(),
                 devices: [],
+                reachability: {
+                    deviceOf: new Map([['hannah.0.dev.reachable', 'hannah.0.dev']]),
+                    states: new Map([['hannah.0.dev', new Map([['hannah.0.dev.reachable', true]])]]),
+                },
+            });
+
+            it('reports a device as unreachable and reachable again, once per change', () => {
+                const send = sinon.stub();
+                const sw = new StateWatcher(adapterInstance, send);
+                (sw as any).deviceModel = model();
+                internals(sw).subscribedIds.add('hannah.0.dev.reachable');
+
+                sw.onStateChange('hannah.0.dev.reachable', makeState({ val: false, ack: true }));
+                sw.onStateChange('hannah.0.dev.reachable', makeState({ val: false, ack: true }));
+                sw.onStateChange('hannah.0.dev.reachable', makeState({ val: true, ack: true }));
+
+                const sent = send
+                    .getCalls()
+                    .map(c => c.args[0].deviceAvailability)
+                    .filter(Boolean);
+                expect(sent).to.deep.equal([
+                    { deviceId: 'hannah.0.dev', available: false },
+                    { deviceId: 'hannah.0.dev', available: true },
+                ]);
             });
 
             it('forwards a confirmed state of a typed device as a SlotUpdate, not as a state update', () => {
@@ -994,6 +1018,7 @@ describe('StateWatcher', () => {
                     devices: [],
                     bySlotState: new Map(),
                     targets: new Map([['dev', new Map([['brightness', target]])]]),
+                    reachability: { deviceOf: new Map(), states: new Map() },
                 };
                 return sw;
             }
