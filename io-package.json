@@ -175,7 +175,8 @@
     ],
     "supportedMessages": {
       "notifications": true,
-      "deviceManager": true
+      "deviceManager": true,
+      "help": true
     }
   },
   "notifications": [

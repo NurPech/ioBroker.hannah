@@ -119,6 +119,10 @@ See the [Smart Home Integration guide](https://hannah-docs.leonie.network/manual
 | `hannah.<instance>.info.connection` | boolean | `true` while connected to Hannah Core |
 | `hannah.<instance>.textCommand` | string | Write a text query here (ack=false) to send it to Hannah |
 
+## Messages for scripts and AI agents
+
+`sendTo('hannah.0', 'help', {})` answers `{ help, commands }`: a description of all messages (`announce`, `ask`, `sendDirect`, `sendNotification` ...) and of the states for AI agents (e.g. pi-agent) and script authors, and the list of all commands with `write` (`true` if the command has an effect, e.g. speaks or changes a satellite).
+
 ## Hannah Core configuration
 
 The adapter expects `HannahService.AgentConnect` to be available on the configured host/port. No additional Hannah-side configuration is required — the adapter identifies itself automatically on connect.
@@ -128,6 +132,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- (@GermanBluefox) Added: the message "help", a description of all messages for AI agents (e.g. pi-agent), and common.supportedMessages.help
+
 ### 1.8.1 (2026-11-15)
 - Fixed: the custom settings dialog of a state showed two checkboxes for the same switch, "Enabled" from the admin and "Override for Hannah" below it. Only the one from the admin is left.
 - Changed: the help text of the "Slot" field names the Hannah Core version it needs (0.94.0) instead of the name of the API.
