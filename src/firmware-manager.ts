@@ -36,7 +36,17 @@ export interface FirmwareResult {
     files: FirmwareFile[];
 }
 
-function fetchBuffer(url: string, token?: string): Promise<Buffer> {
+/** What a download returned. */
+interface Download {
+    /** the body */
+    data: Buffer;
+    /** HTTP status of the answer that delivered the body (after redirects) */
+    status: number;
+    /** Content-Type header of that answer, empty if there was none */
+    contentType: string;
+}
+
+function fetchBuffer(url: string, token?: string): Promise<Download> {
     return new Promise((resolve, reject) => {
         const parsed = new URL(url);
         const mod = parsed.protocol === 'https:' ? https : http;
@@ -58,7 +68,13 @@ function fetchBuffer(url: string, token?: string): Promise<Buffer> {
             }
             const chunks: Buffer[] = [];
             res.on('data', (chunk: Buffer) => chunks.push(chunk));
-            res.on('end', () => resolve(Buffer.concat(chunks)));
+            res.on('end', () =>
+                resolve({
+                    data: Buffer.concat(chunks),
+                    status: res.statusCode ?? 0,
+                    contentType: String(res.headers['content-type'] ?? ''),
+                }),
+            );
             res.on('error', reject);
         });
         req.setTimeout(30_000, () => {
@@ -67,6 +83,44 @@ function fetchBuffer(url: string, token?: string): Promise<Buffer> {
         req.on('error', reject);
         req.end();
     });
+}
+
+/** How much of a text answer the error message shows. */
+const SNIPPET_LENGTH = 200;
+
+/**
+ * Says what a download that is no ZIP archive is, so the admin does not have to guess: what the
+ * server answered, the start of it if it is text, and what that usually means.
+ *
+ * @param download - What came back
+ */
+export function describeNotZip(download: Download): string {
+    const { data, status, contentType } = download;
+    const kind = contentType.split(';')[0].trim().toLowerCase();
+    const head = `Downloaded file is not a valid ZIP archive (HTTP ${status}, ${kind || 'no content type'}, ${data.length} bytes)`;
+    if (data.length === 0) {
+        return `${head}: the answer is empty`;
+    }
+    // text if the start has no control characters other than line breaks and tabs
+    const start = data.subarray(0, SNIPPET_LENGTH).toString('utf8');
+    // eslint-disable-next-line no-control-regex
+    if (/[\x00-\x08\x0e-\x1f]/.test(start)) {
+        return head;
+    }
+    const snippet = start.replace(/\s+/g, ' ').trim();
+    const trimmed = data.length > SNIPPET_LENGTH ? `${snippet} ...` : snippet;
+    const text = data.toString('utf8', 0, 1024).trimStart();
+    let hint = '';
+    if (kind.includes('json') || text.startsWith('{') || text.startsWith('[')) {
+        hint =
+            ' The URL points at information about the firmware, not at the file. The update server needs' +
+            ' .../releases/latest?channel=<channel>.';
+    } else if (kind.includes('html') || /^<(!doctype|html)/i.test(text)) {
+        hint =
+            ' A web page came back: the web interface of the update server, or a page of a proxy or' +
+            ' firewall in between. Check the URL and the access to the server.';
+    }
+    return `${head}, it starts with: ${trimmed}.${hint}`;
 }
 
 /** Downloads firmware ZIPs from an update server and unpacks them for flashing. */
@@ -90,13 +144,13 @@ export class FirmwareManager {
 
     /** Download, unpack and return all firmware files ready for flashing. */
     async getFirmwareFiles(): Promise<FirmwareResult> {
-        const raw = await fetchBuffer(this.url, this.token);
+        const download = await fetchBuffer(this.url, this.token);
 
         let zip: AdmZip;
         try {
-            zip = new AdmZip(raw);
+            zip = new AdmZip(download.data);
         } catch {
-            throw new Error('Downloaded file is not a valid ZIP archive');
+            throw new Error(describeNotZip(download));
         }
 
         const manifestEntry = zip.getEntry('manifest.json');

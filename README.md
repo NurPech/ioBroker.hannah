@@ -134,6 +134,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
 -->
 ### **WORK IN PROGRESS**
 - Fixed (with a `hannah.v2` Core): the colour of a lamp composed from hue and saturation (1.9.0) did not work on real lamps, for example Matter lamps: hue and saturation stayed generic slots and Hannah answered that the lamp cannot be recoloured. Hue, saturation and colour temperature are numbers, they were taken for colours.
+- Fixed: if the firmware download for the Satellite Manager returns something that is no ZIP archive, the error now says what came back (HTTP status, content type, size and the start of a text answer) and what it usually means, for example that the URL points at the version information (JSON) instead of the file, or that a web page of a proxy or firewall answered. Before, it only said "Downloaded file is not a valid ZIP archive".
 
 ### 1.9.0 (2026-11-19)
 - (@GermanBluefox) Added: the message "help", a description of all messages for AI agents (e.g. pi-agent), and common.supportedMessages.help
