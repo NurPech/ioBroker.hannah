@@ -78,6 +78,7 @@
     "bytes": "bytes",
     "Opening WebSerial...": "Opening WebSerial...",
     "WebSerial is not supported by this browser (Chrome/Edge required)": "WebSerial is not supported by this browser (Chrome/Edge required)",
+    "WebSerial needs a secure connection. Open the ioBroker admin over HTTPS or on localhost, or use \"Download image\" and flash the image with the web flasher of Espressif (espressif.github.io/esptool-js).": "WebSerial needs a secure connection. Open the ioBroker admin over HTTPS or on localhost, or use \"Download image\" and flash the image with the web flasher of Espressif (espressif.github.io/esptool-js).",
     "Connecting to ESP...": "Connecting to ESP...",
     "Connected:": "Connected:",
     "Starting flash": "Starting flash",

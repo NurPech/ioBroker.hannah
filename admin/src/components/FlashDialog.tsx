@@ -18,6 +18,7 @@ import { ESPLoader, Transport, UsbJtagSerialReset } from 'esptool-js';
 import { encodeNVS } from '@m1kad0/esp-nvs-utils';
 import { I18n } from '@iobroker/gui-components';
 import { newUuid } from '../uuid';
+import { missingWebSerialMessage } from '../webserial';
 import type { AdminConnection } from '@iobroker/gui-components';
 import type { SatelliteDefaults } from './settings';
 
@@ -351,7 +352,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
             addLog(I18n.t('Opening WebSerial...'));
             const serial = (navigator as any).serial;
             if (!serial) {
-                throw new Error(I18n.t('WebSerial is not supported by this browser (Chrome/Edge required)'));
+                throw new Error(I18n.t(missingWebSerialMessage(window.isSecureContext)));
             }
             const port = await serial.requestPort();
             portRef.current = port;

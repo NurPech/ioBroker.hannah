@@ -113,6 +113,7 @@
     "Weather": "Погода",
     "Weather Source": "Источник погоды",
     "WebSerial is not supported by this browser (Chrome/Edge required)": "WebSerial не поддерживается этим браузером (требуется Chrome/Edge)",
+    "WebSerial needs a secure connection. Open the ioBroker admin over HTTPS or on localhost, or use \"Download image\" and flash the image with the web flasher of Espressif (espressif.github.io/esptool-js).": "WebSerial требуется безопасное соединение. Откройте администрацию ioBroker через HTTPS или на локальном хосте или используйте «Загрузить изображение» и прошейте изображение с помощью веб-прошивальщика Espressif (espressif.github.io/esptool-js).",
     "WiFi": "Wi-Fi",
     "Wind direction (text)": "Направление ветра (текст)",
     "Wind speed (m/s)": "Скорость ветра (м/с)",

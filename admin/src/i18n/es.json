@@ -113,6 +113,7 @@
     "Weather": "Clima",
     "Weather Source": "Fuente meteorológica",
     "WebSerial is not supported by this browser (Chrome/Edge required)": "WebSerial no es compatible con este navegador (se requiere Chrome/Edge)",
+    "WebSerial needs a secure connection. Open the ioBroker admin over HTTPS or on localhost, or use \"Download image\" and flash the image with the web flasher of Espressif (espressif.github.io/esptool-js).": "WebSerial necesita una conexión segura. Abra el administrador de ioBroker a través de HTTPS o en localhost, o use \"Descargar imagen\" y actualice la imagen con el flash web de Espressif (espressif.github.io/esptool-js).",
     "WiFi": "Wi-Fi",
     "Wind direction (text)": "Dirección del viento (texto)",
     "Wind speed (m/s)": "Velocidad del viento (m/s)",

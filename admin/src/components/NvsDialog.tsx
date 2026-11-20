@@ -17,6 +17,7 @@ import Typography from '@mui/material/Typography';
 import { ESPLoader, Transport, UsbJtagSerialReset } from 'esptool-js';
 import { encodeNVS } from '@m1kad0/esp-nvs-utils';
 import { I18n } from '@iobroker/gui-components';
+import { missingWebSerialMessage } from '../webserial';
 import type { AdminConnection } from '@iobroker/gui-components';
 import type { SatelliteDefaults } from './settings';
 
@@ -197,7 +198,7 @@ const NvsDialog: React.FC<Props> = ({ open, onClose, deviceId, displayName, onli
             addLog(I18n.t('Opening WebSerial...'));
             const serial = (navigator as any).serial;
             if (!serial) {
-                throw new Error(I18n.t('WebSerial is not supported by this browser (Chrome/Edge required)'));
+                throw new Error(I18n.t(missingWebSerialMessage(window.isSecureContext)));
             }
             const port = await serial.requestPort();
             const info = port.getInfo();
