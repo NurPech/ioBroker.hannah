@@ -650,6 +650,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                                     size="small"
                                     fullWidth
                                     placeholder="https://update.example.com"
+                                    helperText={I18n.t('Only the address of the update server, without a path. The satellite appends the rest itself. The link to the installation package belongs into the Firmware tab of the adapter settings.')}
                                     disabled={step !== 'config'}
                                 />
                                 <Box sx={{ display: 'flex', gap: 2 }}>

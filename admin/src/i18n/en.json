@@ -33,6 +33,8 @@
     "User": "User",
     "OTA": "OTA",
     "OTA URL": "OTA URL",
+    "Only the address of the update server, without a path. The satellite appends the rest itself. The link to the installation package belongs into the Firmware tab of the adapter settings.": "Only the address of the update server, without a path. The satellite appends the rest itself. The link to the installation package belongs into the Firmware tab of the adapter settings.",
+    "The full link to the installation package, not only the address of the server. The OTA URL of a satellite is a different one: only the address of the server.": "The full link to the installation package, not only the address of the server. The OTA URL of a satellite is a different one: only the address of the server.",
     "Channel": "Channel",
     "Token": "Token",
     "Asset Server": "Asset Server",
