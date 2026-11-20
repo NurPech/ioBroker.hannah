@@ -132,7 +132,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 1.9.1 (2026-11-20)
 - Fixed (with a `hannah.v2` Core): the colour of a lamp composed from hue and saturation (1.9.0) did not work on real lamps, for example Matter lamps: hue and saturation stayed generic slots and Hannah answered that the lamp cannot be recoloured. Hue, saturation and colour temperature are numbers, they were taken for colours.
 - Added: the "Firmware Source URL" (tab Firmware) and the "OTA URL" (Satellite Defaults and the flash dialog) now say what belongs into them. The first is the full link to the installation package, the second only the address of the update server, the satellite appends the rest itself. Before, nothing told the two apart, and the address of the server alone in the first field made the download fail with "Downloaded file is not a valid ZIP archive".
 - Fixed: flashing or downloading the image of a satellite in the Satellite Manager stopped with "crypto.randomUUID is not a function" when the ioBroker admin is opened over plain HTTP (not HTTPS or localhost). The pairing seed is created in every case now. Flashing directly from the browser (WebSerial) still needs HTTPS or localhost, the download of the image for esptool.py does not.
