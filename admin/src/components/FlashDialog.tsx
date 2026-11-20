@@ -17,6 +17,7 @@ import Typography from '@mui/material/Typography';
 import { ESPLoader, Transport, UsbJtagSerialReset } from 'esptool-js';
 import { encodeNVS } from '@m1kad0/esp-nvs-utils';
 import { I18n } from '@iobroker/gui-components';
+import { newUuid } from '../uuid';
 import type { AdminConnection } from '@iobroker/gui-components';
 import type { SatelliteDefaults } from './settings';
 
@@ -250,7 +251,7 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
         );
         setFirmwareVersion(fw.version ?? '');
 
-        const seed = crypto.randomUUID();
+        const seed = newUuid();
         addLog(I18n.t('Generating NVS partition...'));
         const nvsData = encodeNVS({
             hannah: [
