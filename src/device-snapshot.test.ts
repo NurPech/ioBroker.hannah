@@ -252,6 +252,77 @@ describe('device-snapshot', () => {
         });
     });
 
+    describe('colour of a lamp with hue and saturation (Matter ExtendedColorLight)', () => {
+        const lamp = 'matter.0.controller.1.ExtendedColorLight-1';
+        const enums = {
+            'enum.rooms.wohnzimmer': enumObject('enum.rooms.wohnzimmer', [lamp]),
+            'enum.functions.licht': enumObject('enum.functions.licht', [lamp]),
+        };
+        const lampObjects = (extra: ObjectMap = {}): ObjectMap => ({
+            [lamp]: { _id: lamp, type: 'device', common: { name: 'Licht' }, native: {} },
+            [`${lamp}.ON`]: stateObject(`${lamp}.ON`, { role: 'switch.light', type: 'boolean' }),
+            [`${lamp}.DIMMER`]: stateObject(`${lamp}.DIMMER`, {
+                role: 'level.dimmer',
+                type: 'number',
+                unit: '%',
+                min: 0,
+                max: 100,
+            }),
+            // as the matter adapter creates them: the hue without a range
+            [`${lamp}.HUE`]: stateObject(`${lamp}.HUE`, { role: 'level.color.hue', type: 'number', unit: '°' }),
+            [`${lamp}.SATURATION`]: stateObject(`${lamp}.SATURATION`, {
+                role: 'level.color.saturation',
+                type: 'number',
+                unit: '%',
+                min: 0,
+                max: 100,
+            }),
+            [`${lamp}.TEMPERATURE`]: stateObject(`${lamp}.TEMPERATURE`, {
+                role: 'level.color.temperature',
+                type: 'number',
+                unit: '°K',
+            }),
+            ...extra,
+        });
+        const values = {
+            [`${lamp}.ON`]: true,
+            [`${lamp}.DIMMER`]: 100,
+            [`${lamp}.HUE`]: 120,
+            [`${lamp}.SATURATION`]: 100,
+            [`${lamp}.TEMPERATURE`]: 4800,
+        };
+
+        it('gets a COLOR slot composed from hue and saturation', () => {
+            const objects = lampObjects();
+            const { model } = buildTypedDevices(collect(values, objects, enums), objects, enums);
+
+            expect(model.devices).to.have.length(1);
+            const slots = model.devices[0].slots;
+            const color = slots.find(s => s.kind === v2.device_model.SlotKind.SLOT_KIND_COLOR);
+            expect(color?.value).to.deep.equal({ rgb: 0x00ff00 });
+            expect(color?.writable).to.equal(true);
+            // the two states are parts of the colour, no slots of their own
+            expect(slots.map(s => s.slotId)).to.not.include.members(['HUE', 'SATURATION']);
+            expect(slots.map(s => s.slotId)).to.include.members(['brightness', 'color', 'color_temperature', 'on']);
+        });
+
+        it('a real RGB state still wins, hue and saturation are numbers then', () => {
+            const objects = lampObjects({
+                [`${lamp}.RGB`]: stateObject(`${lamp}.RGB`, { role: 'level.color.rgb', type: 'string' }),
+            });
+            const { model } = buildTypedDevices(
+                collect({ ...values, [`${lamp}.RGB`]: '#00ff00' }, objects, enums),
+                objects,
+                enums,
+            );
+
+            const slots = model.devices[0].slots;
+            expect(slots.filter(s => s.kind === v2.device_model.SlotKind.SLOT_KIND_COLOR)).to.have.length(1);
+            const hue = slots.find(s => s.slotId === 'HUE');
+            expect(hue?.kind).to.equal(v2.device_model.SlotKind.SLOT_KIND_GENERIC_NUMBER);
+        });
+    });
+
     it('lists the device objects that a merged device may be named after', () => {
         const ids = mergeDeviceIds([
             { id: 'dev.0.Kueche.1.on' },

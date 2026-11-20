@@ -37,6 +37,23 @@ const VALUE_TYPE_BY_STATE_TYPE: Partial<Record<shared.StateType, ValueType>> = {
     [shared.StateType.TEXT]: 'text',
 };
 
+/** The `level.color.*` roles that hold a plain number although `resolveStateType()` calls them a colour. */
+const NUMERIC_COLOR_ROLES = new Set(['level.color.hue', 'level.color.saturation', 'level.color.temperature']);
+
+/**
+ * What kind of value a state holds. The state type of the legacy path calls every `level.color.*`
+ * role a colour, but hue, saturation and colour temperature are numbers: only that lets the colour
+ * of a lamp be composed from hue and saturation, and a generic hue is a number, not a text.
+ *
+ * @param meta - What was resolved about the state
+ */
+function valueTypeOf(meta: DeviceMeta): ValueType {
+    if (meta.stateType === shared.StateType.COLOR && NUMERIC_COLOR_ROLES.has(meta.role)) {
+        return 'number';
+    }
+    return VALUE_TYPE_BY_STATE_TYPE[meta.stateType] ?? 'text';
+}
+
 /**
  * The IDs of the objects that `buildTypedDevices()` reads besides the ones of the states: the
  * device object a merged device is named after.
@@ -104,7 +121,7 @@ export function buildTypedDevices(
             min: meta.min,
             max: meta.max,
             value: state.val,
-            valueType: VALUE_TYPE_BY_STATE_TYPE[meta.stateType] ?? 'text',
+            valueType: valueTypeOf(meta),
             writable: meta.writable,
             typeHint: meta.type || found?.typeHint || '',
             inverted: meta.inverted === true,
