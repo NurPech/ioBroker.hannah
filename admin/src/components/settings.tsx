@@ -466,6 +466,7 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                     size="small"
                     fullWidth
                     placeholder="https://update.example.com"
+                    helperText={I18n.t('Only the address of the update server, without a path. The satellite appends the rest itself. The link to the installation package belongs into the Firmware tab of the adapter settings.')}
                 />
                 <Box sx={{ display: 'flex', gap: 2 }}>
                     <TextField
@@ -579,10 +580,11 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                     label={I18n.t('Firmware Source URL')}
                     value={native.firmwareSourceUrl || ''}
                     onChange={e => onChange('firmwareSourceUrl', e.target.value)}
-                    placeholder="https://update.example.com/releases/latest?channel=satellite-esp-stable-init"
+                    placeholder="https://update.example.com/releases/latest?channel=satellite-esp-stable-init-rev5"
                     variant="outlined"
                     size="small"
                     fullWidth
+                    helperText={I18n.t('The full link to the installation package, not only the address of the server. The OTA URL of a satellite is a different one: only the address of the server.')}
                 />
                 <TextField
                     label={I18n.t('Auth Token (optional)')}
