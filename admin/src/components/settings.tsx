@@ -22,6 +22,7 @@ import Typography from '@mui/material/Typography';
 import { I18n } from '@iobroker/gui-components';
 import type { EnumItem, WeatherLocation } from '../app';
 import DeviceDiagnostics from './DeviceDiagnostics';
+import WifiPasswordField from './WifiPasswordField';
 
 /** Default NVS values pre-filled when flashing or rewriting a satellite. */
 export interface SatelliteDefaults {
@@ -400,13 +401,9 @@ class Settings extends React.Component<SettingsProps, SettingsState> {
                         size="small"
                         fullWidth
                     />
-                    <TextField
-                        label={I18n.t('Password')}
+                    <WifiPasswordField
                         value={native.satWifiPass || ''}
-                        onChange={e => onChange('satWifiPass', e.target.value)}
-                        type="password"
-                        size="small"
-                        fullWidth
+                        onChange={v => onChange('satWifiPass', v)}
                     />
                 </Box>
 

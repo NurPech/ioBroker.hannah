@@ -133,6 +133,7 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
+- Added: the WiFi password fields of the flash dialog, the NVS dialog and the Satellite Defaults tab have a show/hide button, and they warn when the password starts or ends with a space or another whitespace character, a typical leftover of copy and paste from a router page. The value is not changed and writing is not blocked, a WiFi password may contain spaces. Before, a stray space was invisible and the satellite just never joined the WiFi.
 - Added: a "Reflash" button on every satellite in the Satellite Manager, next to "Configure" and "NVS". It writes the firmware from the Firmware Source URL onto the satellite over the USB cable (WebSerial) and leaves the settings alone: WiFi, MQTT, OTA and asset settings, the name and the room stay as they are, there is no new pairing seed and the satellite stays registered as it was. Use it when OTA cannot help, for example a satellite that crashes before an update arrives. Before, only "Flash new satellite" could put firmware on a satellite, and it needed all settings again.
 
 ### 1.9.1 (2026-11-20)
