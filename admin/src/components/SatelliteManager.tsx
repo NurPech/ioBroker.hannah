@@ -13,6 +13,7 @@ import { I18n } from '@iobroker/gui-components';
 import type { AdminConnection } from '@iobroker/gui-components';
 import FlashDialog from './FlashDialog';
 import NvsDialog from './NvsDialog';
+import ReflashDialog from './ReflashDialog';
 import type { SatelliteDefaults } from './settings';
 
 interface IoBrokerObject {
@@ -84,6 +85,7 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
     const [statesCache, setStatesCache] = useState<Record<string, IoBrokerState | null>>({});
     const [flashOpen, setFlashOpen] = useState(false);
     const [nvsTarget, setNvsTarget] = useState<{ deviceId: string; displayName: string; room: string; online: boolean } | null>(null);
+    const [reflashTarget, setReflashTarget] = useState<{ deviceId: string; displayName: string } | null>(null);
     const [satelliteDefaults, setSatelliteDefaults] = useState<SatelliteDefaults>({});
 
     const adapterNamespace = 'hannah.0';
@@ -178,6 +180,14 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                 socket={socket}
                 adapterNamespace={adapterNamespace}
             />
+            <ReflashDialog
+                open={reflashTarget !== null}
+                onClose={() => setReflashTarget(null)}
+                deviceId={reflashTarget?.deviceId ?? ''}
+                displayName={reflashTarget?.displayName ?? ''}
+                socket={socket}
+                adapterNamespace={adapterNamespace}
+            />
             <Typography
                 variant="h5"
                 sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}
@@ -263,6 +273,13 @@ const SatelliteManager: React.FC<Props> = ({ socket }) => {
                                             onClick={() => setNvsTarget({ deviceId: sat.deviceId, displayName: sat.deviceName, room: sat.room, online: sat.online })}
                                         >
                                             NVS
+                                        </Button>
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() => setReflashTarget({ deviceId: sat.deviceId, displayName: sat.deviceName })}
+                                        >
+                                            {I18n.t('Reflash')}
                                         </Button>
                                     </Box>
                                 </CardActions>
