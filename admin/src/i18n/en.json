@@ -138,7 +138,7 @@
     "Shows what Hannah gets with the room and function selection above, saved or not, and what is left out.": "Shows what Hannah gets with the room and function selection in the Device Discovery tab, saved or not, and what is left out.",
     "The WiFi password starts or ends with a space. Please check it.": "The WiFi password starts or ends with a space. Please check it.",
     "Show password": "Show password",
-    "Hide password": "Hide password"
+    "Hide password": "Hide password",
     "Reflash": "Reflash",
     "Reflash satellite": "Reflash satellite",
     "Writes the firmware from the Firmware Source URL onto the satellite over the USB cable. The settings of the satellite (WiFi, MQTT, OTA, assets, name, room) are kept, it stays registered as it is.": "Writes the firmware from the Firmware Source URL onto the satellite over the USB cable. The settings of the satellite (WiFi, MQTT, OTA, assets, name, room) are kept, it stays registered as it is.",
