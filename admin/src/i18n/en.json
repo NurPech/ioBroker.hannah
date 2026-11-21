@@ -135,5 +135,8 @@
     "States the adapter does not read": "States the adapter does not read",
     "states": "states",
     "Other findings": "Other findings",
-    "Shows what Hannah gets with the room and function selection above, saved or not, and what is left out.": "Shows what Hannah gets with the room and function selection in the Device Discovery tab, saved or not, and what is left out."
+    "Shows what Hannah gets with the room and function selection above, saved or not, and what is left out.": "Shows what Hannah gets with the room and function selection in the Device Discovery tab, saved or not, and what is left out.",
+    "The WiFi password starts or ends with a space. Please check it.": "The WiFi password starts or ends with a space. Please check it.",
+    "Show password": "Show password",
+    "Hide password": "Hide password"
 }

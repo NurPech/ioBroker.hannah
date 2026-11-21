@@ -19,6 +19,7 @@ import { encodeNVS } from '@m1kad0/esp-nvs-utils';
 import { I18n } from '@iobroker/gui-components';
 import { newUuid } from '../uuid';
 import { missingWebSerialMessage } from '../webserial';
+import WifiPasswordField from './WifiPasswordField';
 import type { AdminConnection } from '@iobroker/gui-components';
 import type { SatelliteDefaults } from './settings';
 
@@ -581,15 +582,11 @@ const FlashDialog: React.FC<Props> = ({ open, onClose, socket, adapterNamespace,
                                         disabled={step !== 'config'}
                                         required
                                     />
-                                    <TextField
-                                        label={I18n.t('Password')}
-                                        value={config.wifiPass}
-                                        onChange={set('wifiPass')}
-                                        type="password"
-                                        size="small"
-                                        fullWidth
-                                        disabled={step !== 'config'}
-                                    />
+                                <WifiPasswordField
+                                    value={config.wifiPass}
+                                    onChange={v => setConfig(prev => ({ ...prev, wifiPass: v }))}
+                                    disabled={step !== 'config'}
+                                />
                                 </Box>
 
                                 <Typography
