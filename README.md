@@ -132,6 +132,9 @@ The adapter expects `HannahService.AgentConnect` to be available on the configur
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+- Added: a "Reflash" button on every satellite in the Satellite Manager, next to "Configure" and "NVS". It writes the firmware from the Firmware Source URL onto the satellite over the USB cable (WebSerial) and leaves the settings alone: WiFi, MQTT, OTA and asset settings, the name and the room stay as they are, there is no new pairing seed and the satellite stays registered as it was. Use it when OTA cannot help, for example a satellite that crashes before an update arrives. Before, only "Flash new satellite" could put firmware on a satellite, and it needed all settings again.
+
 ### 1.9.1 (2026-11-20)
 - Fixed (with a `hannah.v2` Core): the colour of a lamp composed from hue and saturation (1.9.0) did not work on real lamps, for example Matter lamps: hue and saturation stayed generic slots and Hannah answered that the lamp cannot be recoloured. Hue, saturation and colour temperature are numbers, they were taken for colours.
 - Added: the "Firmware Source URL" (tab Firmware) and the "OTA URL" (Satellite Defaults and the flash dialog) now say what belongs into them. The first is the full link to the installation package, the second only the address of the update server, the satellite appends the rest itself. Before, nothing told the two apart, and the address of the server alone in the first field made the download fail with "Downloaded file is not a valid ZIP archive".
